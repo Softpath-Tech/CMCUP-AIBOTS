@@ -1,17 +1,21 @@
-from langchain_community.vectorstores import Qdrant
+from langchain_qdrant import QdrantVectorStore
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
-from config.settings import QDRANT_URL, QDRANT_COLLECTION
+from qdrant_client import QdrantClient
+import os
+from dotenv import load_dotenv
 
+load_dotenv()
 
-def get_retriever(k: int = 4):
-    embeddings = GoogleGenerativeAIEmbeddings(
-        model="models/embedding-001"
+def get_retriever():
+    # MUST MATCH THE MODEL USED IN INGESTION!
+    embeddings = GoogleGenerativeAIEmbeddings(model="models/text-embedding-004")
+    
+    client = QdrantClient(path="data/qdrant_db")
+    
+    vector_store = QdrantVectorStore(
+        client=client,
+        collection_name="rag_knowledge_base",
+        embedding=embeddings,
     )
-
-    db = Qdrant(
-        url=QDRANT_URL,
-        collection_name=QDRANT_COLLECTION,
-        embedding=embeddings
-    )
-
-    return db.as_retriever(search_kwargs={"k": k})
+    
+    return vector_store.as_retriever(search_kwargs={"k": 3})

@@ -8,7 +8,7 @@ if defined _OLD_CODEPAGE (
     "%SystemRoot%\System32\chcp.com" 65001 > nul
 )
 
-set VIRTUAL_ENV=C:\Users\Rishabh\Desktop\RISHABH AI LEARNING\RAG APP\rag-chatbot\venv
+set VIRTUAL_ENV=C:\Users\Rishabh\Desktop\RISHABH AI LEARNING\rag-chatbot\venv
 
 if not defined PROMPT set PROMPT=$P$G
 
