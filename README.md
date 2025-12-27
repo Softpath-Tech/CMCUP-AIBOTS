@@ -1,31 +1,132 @@
-Here is the comprehensive and professional README.md tailored exactly to your project context.Since you have a Git Merge Conflict, you should:Open README.md in VS Code.Delete everything inside it.Paste the content below.Save, Commit, and Push.🤖 CMCUP-AIBOTS: RAG Knowledge Base GeneratorThis repository contains the data processing pipeline for the CM Cup AI Chatbot.Its primary purpose is to transform raw structured data (CSV snapshots) into context-rich natural language text. These generated text files serve as the "Knowledge Base" for a Retrieval-Augmented Generation (RAG) system, allowing the AI to answer complex queries about the tournament's schedule, geography, and officials.⚠️ Important Data Architecture Note:No Direct SQL Connection: This repository does not connect to the live SQL database.External Extraction: The data extraction (SQL → CSV) is performed in a separate local environment/folder.Input Method: This project accepts the exported CSV files in the data/ directory as its source of truth.📂 Repository StructureThe project is organized to separate raw inputs from processed outputs.PlaintextCMCUP-AIBOTS/
-│
-├── data/                       # [INPUT] Raw CSV Snapshots (Exported from SQL)
-│   ├── districtmaster.csv      # District names & IDs (e.g., Adilabad, Nirmal)
-│   ├── mandalmaster.csv        # Administrative hierarchy (Mandals linked to Districts)
-│   ├── clustermaster.csv       # Cluster details & Incharge Officer contacts
-│   ├── villagemaster.csv       # Village level data
-│   ├── tb_fixtures.csv         # Match schedules, venues, timings, and results
-│   ├── tb_events.csv           # Sports event definitions (Kabaddi, Kho-Kho, etc.)
-│   └── tb_discipline.csv       # Sports discipline metadata & icons
-│
-├── rag_knowledge_base/         # [OUTPUT] AI-Ready Text Files (Generated)
-│   ├── rag_fixtures.txt        # "Narrative" style match schedules
-│   ├── rag_locations.txt       # Geographical hierarchy sentences
-│   └── rag_contacts.txt        # Official contact & cluster management details
-│
-├── process_sql_data.py         # Main ETL Script (Clean -> Join -> Generate)
-├── requirements.txt            # Python dependencies
-└── README.md                   # Project Documentation
-⚙️ The Processing PipelineThe process_sql_data.py script acts as the bridge between raw data and the AI model. It performs three critical steps:1. Data Cleaning & StandardizationFilename Correction: Automatically detects and handles typos (e.g., dustermaster.csv vs clustermaster.csv).Header Normalization: Converts inconsistent headers (e.g., " District Name ") to a standard format (district_name).Null Handling: Intelligently manages missing data (e.g., NULL, nan) to ensure the AI doesn't generate broken sentences like "Match at nan venue".2. Denormalization (The "Join" Phase)Raw database tables use numerical IDs (e.g., TeamID: 4). The script creates lookup maps to replace these with human-readable names.Before: Match 1: Team 12 vs Team 14After: Match 1: Adilabad vs Mahabubnagar3. Natural Language Generation (NLG)The final step converts the processed rows into semantic sentences optimized for Vector Search (Embeddings).Output FileContent DescriptionExample AI-Ready Outputrag_fixtures.txtMatch Schedules`MATCH: Kabaddirag_locations.txtGeographyLOCATION: Bela is a Mandal located within Adilabad District.rag_contacts.txtOfficialsCONTACT: The Echoda Cluster in Adilabad District is managed by Incharge Officer Ravi Kumar.🛠️ Setup & Usage1. PrerequisitesPython 3.10+Git2. InstallationBashgit clone https://github.com/Softpath-Tech/CMCUP-AIBOTS.git
-cd CMCUP-AIBOTS
+# 🤖 CMCUP-AIBOTS: Hybrid RAG Chatbot
 
-# Create Virtual Environment (Recommended)
-python -m venv venv
-source venv/bin/activate  # Linux/Mac
-.\venv\Scripts\activate   # Windows
+This project is an advanced AI Chatbot designed for the **CM Cup Sports Tournament**.
+It uses a **Hybrid Strategy** to provide accurate answers:
+1.  **Direct Lookup:** For sensitive or high-change data (Player Status, Scores) using exact matching.
+2.  **RAG (Retrieval-Augmented Generation):** For general knowledge (Fixtures, Districts, Rules) using Semantic Search + LLM.
+
+---
+
+## 🏗️ Architecture
+
+### 1. The Direct Lookup System (Privacy & Accuracy)
+*   **Trigger:** Detects valid **10-digit Mobile Numbers**.
+*   **Data Source:** `data/csvs/player_details.csv`, `tb_selected_players.csv`, `tb_player_results.csv`.
+*   **Mechanism:** Direct Pandas search. Bypass Vector DB.
+*   **Output:** Precise "Player Status Card" with Name, Reg ID, Level (Mapped), Status, and Score.
+
+### 2. The RAG System (General Knowledge)
+*   **Trigger:** Any query NOT containing a phone number.
+*   **Data Source:** 7 General CSVs (`districtmaster`, `tb_fixtures`, `tb_events`, etc.).
+*   **Pipeline:**
+    1.  **CSV → Text:** `process_sql_data.py` converts rows into narrative Markdown.
+    2.  **Ingestion:** `ingestion/run_ingestion.py` chunks and embeds text.
+    3.  **Vector Store:** **Qdrant** stores embeddings (using `text-embedding-004`).
+    4.  **LLM:** **Gemini 2.0 Flash Experimental** answers based on retrieved context.
+
+---
+
+## 📂 Project Structure
+
+```plaintext
+rag-chatbot/
+│
+├── api/
+│   └── main.py             # FastAPI App (Routes user queries)
+│
+├── data/
+│   ├── csvs/               # Raw Input Data (10 Tables)
+│   ├── mdFiles/            # Generated Narrative Data for RAG
+│   └── qdrant_db/          # Vector Database Storage
+│
+├── ingestion/
+│   ├── run_ingestion.py    # Embeds mdFiles -> Qdrant
+│   └── embed_store.py      # Embedding Logic
+│
+├── rag/
+│   ├── lookup.py           # Logic for Player CSV Search
+│   ├── chain.py            # RAG Chain setup (Gemini 2.0)
+│   └── retriever.py        # Qdrant Retriever
+│
+├── process_sql_data.py     # Script to convert CSV -> Markdown
+└── requirements.txt        # Dependencies
+```
+
+---
+
+## 🛠️ Setup & Installation
+
+### 1. Prerequisites
+*   Python 3.10+
+*   A **Google Gemini API Key** (Free Tier is fine).
+
+### 2. Installation
+```bash
+# Clone Repository
+git clone <repo-url>
+cd rag-chatbot
 
 # Install Dependencies
-pip install pandas
-3. Updating the Knowledge BaseWhen new data is available from the SQL database:Export the SQL tables to CSV format locally.Paste the CSV files into the data/ folder (overwrite old files).Run the processing script:Bashpython process_sql_data.py
-Verify the text files in rag_knowledge_base/ are updated.📊 Dataset DictionaryTB_Fixtures: The core schedule containing Match Dates, Times, Venues (if assigned), and Team pairings.District/Mandal/Village Master: Defines the geographical hierarchy of Telangana for the tournament.Cluster Master: Groups mandals into operational clusters and assigns Incharge officers.TB_Events / Discipline: Metadata describing specific sporting events (Category, Gender, Age Group).🤝 Contribution GuidelinesDo not edit the .txt files manually. They are auto-generated.If you need to change the phrasing of the AI's knowledge, modify the generate_text functions inside process_sql_data.py.
+pip install -r requirements.txt
+```
+
+### 3. Environment Config
+Create a `.env` file in the root directory:
+```env
+GOOGLE_API_KEY=your_gemini_api_key_here
+```
+*Note: This single key powers both the Chat Model (`gemini-2.0-flash-exp`) and Embeddings (`text-embedding-004`).*
+
+---
+
+## 🚀 Usage Guide
+
+### A. Initialize Data (First Run)
+If you have new CSV data:
+1.  **Convert Data:**
+    ```bash
+    python process_sql_data.py
+    ```
+    *Generates MD files in `data/mdFiles`.*
+
+2.  **Ingest to Brain:**
+    ```bash
+    python ingestion/run_ingestion.py
+    ```
+    *Creates/Updates the Qdrant Vector Store.*
+
+### B. Run the Chatbot API
+Start the server:
+```bash
+uvicorn api.main:app --reload
+```
+*Server runs at: `http://127.0.0.1:8000`*
+
+### C. Test the Bot
+**Endpoint:** `POST /ask`
+
+**Example 1: Player Lookup**
+```json
+{
+  "question": "Status for 7416613302"
+}
+```
+*Result:* Returns detailed Player Card (Name, ID, Level, Score).
+
+**Example 2: General RAG**
+```json
+{
+  "question": "Tell me about the match schedule for Fixture 1"
+}
+```
+*Result:* Returns AI-generated answer based on stored knowledge.
+
+---
+
+## ⚠️ Known Issues
+*   **Google API Quota:** The Free Tier has rate limits. If you see `429 Resource Exhausted`, wait 60 seconds or upgrade the key.
+    *   *Note:* Player Lookup does NOT use the API, so it always works!
+
+---
+
+**Built with:** LangChain 🦜🔗, Qdrant 🧠, and Google Gemini ✨.

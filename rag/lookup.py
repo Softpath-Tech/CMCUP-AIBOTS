@@ -20,12 +20,12 @@ def get_level_from_code(code):
     """
     s = str(code).strip()
     
-    # MAPPING LOGIC
-    if s == '1': return "📍 **Village / Cluster Level**"
-    if s == '2': return "🥈 **MANDAL Level**"
-    if s == '3': return "🏛️ **ASSEMBLY Constituency Level**"
-    if s == '4': return "🥇 **DISTRICT Level**"
-    if s == '5': return "🏆 **STATE Level**"
+    # MAPPING LOGIC (Based on User Hierarchy)
+    if s == '1': return "📍 **Village Level / Cluster Level**"
+    if s == '2': return "🥈 **Mandal / Taluk / Tehsil Level**"
+    if s == '3': return "🏛️ **Assembly Constituency Level**"
+    if s == '4': return "🥇 **District Level**"
+    if s == '5': return "🏆 **State Level**"
     
     return None
 
@@ -108,13 +108,15 @@ def get_player_status(phone_number):
         f"━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
         f"👤 **Name:** {name}\n"
         f"🆔 **Reg ID:** {reg_id}\n"
+        f"🎂 **Age:** {age} Years\n"
+        f"⚧ **Gender:** {gender}\n"
         f"📍 **Village/GP:** {village}\n"
-        f"🎂 **Age/Gender:** {age} Yrs / {gender}\n"
         f"━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+        f"🏆 **Playing Level:**\n"
+        f"{level_msg}\n\n"
         f"📌 **Current Status:**\n"
-        f"• **Status:** {status_msg}\n"
-        f"• **Current Level:** {level_msg}\n"
-        f"• **Score:** {score_msg}\n"
+        f"• **Selection:** {status_msg}\n"
+        f"• **Recent Score:** {score_msg}\n"
         f"━━━━━━━━━━━━━━━━━━━━━━━━━━"
     )
 

@@ -10,7 +10,7 @@ load_dotenv()
 def get_rag_chain():
     # 1. Setup Brain (Using Gemini 2.0 Flash Experimental)
     llm = ChatGoogleGenerativeAI(
-        model="	gemini-2.5-flash", # <--- UPDATED to 2.0 Flash
+        model="gemini-2.0-flash-exp", # <--- UPDATED to 2.0 Flash
         temperature=0.2
     )
 

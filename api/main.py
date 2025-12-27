@@ -11,7 +11,22 @@ class QueryRequest(BaseModel):
     question: str
 
 
+import re
+from rag.lookup import get_player_status
+
 @app.post("/ask")
 def ask_question(request: QueryRequest):
-    answer = qa_chain.run(request.question)
+    # 1. Direct Lookup Strategy: Check for Mobile Number (10 digits)
+    phone_match = re.search(r'\b\d{10}\b', request.question)
+    
+    if phone_match:
+        phone_number = phone_match.group(0)
+        print(f"🔢 Detected Phone Number: {phone_number} -> Using Lookup Tool")
+        # Direct Call to Lookup Logic
+        answer = get_player_status(phone_number)
+        return {"answer": answer}
+
+    # 2. RAG Strategy: General Questions
+    print("🧠 No ID found -> Using RAG Vector Store")
+    answer = qa_chain.invoke(request.question)
     return {"answer": answer}
