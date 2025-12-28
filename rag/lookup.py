@@ -104,20 +104,20 @@ def get_player_by_phone(phone_number):
 
     # 6. Final Card
     return (
-        f"**📋 CM CUP PLAYER STATUS**\n"
-        f"━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-        f"👤 **Name:** {name}\n"
-        f"🆔 **Reg ID:** {reg_id}\n"
-        f"🎂 **Age:** {age} Years\n"
-        f"⚧ **Gender:** {gender}\n"
-        f"📍 **Village/GP:** {village}\n"
-        f"━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-        f"🏆 **Playing Level:**\n"
+        f"📋 CM CUP PLAYER STATUS\n"
+        f"\n"
+        f"👤Name:{name}\n"
+        f"🆔 Reg ID:{reg_id}\n"
+        f"🎂 Age:{age} Years\n"
+        f"⚧ Gender:{gender}\n"
+        f"📍 Village/GP: {village}\n"
+        f"\n"
+        f"🏆 Playing Level:\n"
         f"{level_msg}\n\n"
-        f"📌 **Current Status:**\n"
-        f"• **Selection:** {status_msg}\n"
-        f"• **Recent Score:** {score_msg}\n"
-        f"━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        f"📌 Current Status:\n"
+        f"• Selection: {status_msg}\n"
+        f"• Recent Score: {score_msg}\n"
+        f""
     )
 
 if __name__ == "__main__":
