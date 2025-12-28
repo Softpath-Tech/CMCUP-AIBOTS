@@ -1,8 +1,9 @@
 import sys
 import os
 import re
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Response
 from pydantic import BaseModel
+from typing import Optional
 from fastapi.middleware.cors import CORSMiddleware
 
 # --------------------------------------------------
@@ -44,6 +45,12 @@ app.add_middleware(
 class ChatRequest(BaseModel):
     query: str
 
+
+class WhatsAppChatRequest(BaseModel):
+    user_message: str
+    first_name: Optional[str] = None
+    phone_number: Optional[str] = None
+
 # --------------------------------------------------
 # 6. Global RAG Cache (Lazy Loaded)
 # --------------------------------------------------
@@ -61,6 +68,35 @@ def get_or_init_rag_chain():
         rag_chain = get_rag_chain()
         print("✅ RAG chain initialized")
     return rag_chain
+
+
+def extract_plain_text(resp) -> str:
+    """Try to extract a single answer string from various response shapes.
+
+    Handles:
+    - plain strings
+    - dicts with common keys like 'response', 'answer', 'text', 'content'
+    - nested dicts/lists (recurses)
+    - lists (returns first non-empty string item)
+    Falls back to str(resp) if nothing better found.
+    """
+    # Delegate to small top-level helpers to keep this function simple.
+    if resp is None:
+        return ""
+
+    if isinstance(resp, (str, int, float)):
+        return str(resp)
+
+    if isinstance(resp, dict):
+        return _extract_from_dict(resp)
+
+    if isinstance(resp, (list, tuple)):
+        return _extract_from_list(resp)
+
+    try:
+        return str(resp)
+    except Exception:
+        return ""
 
 
 # --------------------------------------------------
@@ -140,3 +176,39 @@ async def chat_endpoint(request: ChatRequest):
             status_code=500,
             detail=f"RAG Error: {str(e)}"
         )
+
+
+# --------------------------------------------------
+# WhatsApp Chat Endpoint
+# --------------------------------------------------
+@app.post("/whatsappchat")
+async def whatsapp_chat_endpoint(request: WhatsAppChatRequest):
+    """
+    Accepts a JSON body with:
+    {
+      "user_message": "...",
+      "first_name": "...",
+      "phone_number": "..."
+    }
+
+    Behavior:
+    - If phone_number is provided (non-empty) -> call SQL lookup via get_player_by_phone
+      and return the result as plain text.
+    - Else -> send user_message to RAG chain and return the generated text as plain text.
+    """
+
+    # Use `user_message` as the query source. `phone_number` is intentionally ignored per request.
+    user_message = (request.user_message or "").strip()
+
+    if not user_message:
+        raise HTTPException(status_code=400, detail="user_message cannot be empty")
+
+    try:
+        rag = get_or_init_rag_chain()
+        response_text = rag.invoke(user_message)
+        # Return plain text only
+        return Response(content=str(response_text), media_type="text/plain")
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"RAG Error: {str(e)}")
