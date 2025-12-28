@@ -2,8 +2,8 @@ import pandas as pd
 import os
 
 # Paths
-CSV_DIR = r"c:\Users\Rishabh\Desktop\RISHABH AI LEARNING\rag-chatbot\data\csvs"
-MD_DIR = r"c:\Users\Rishabh\Desktop\RISHABH AI LEARNING\rag-chatbot\data\mdFiles"
+CSV_DIR = r"./data/csvs"
+MD_DIR = r"./data/mdFiles"
 
 os.makedirs(MD_DIR, exist_ok=True)
 
