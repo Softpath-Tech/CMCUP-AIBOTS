@@ -79,3 +79,23 @@ You can test if it's working by opening another terminal (remember to `source ve
 ```bash
 python tests/run_quick_test.py
 ```
+
+## 7. How to Query (RAG Engine)
+
+You can use the dedicated `/ask` endpoint to query the RAG engine directly.
+
+**Using curl (Terminal):**
+
+```bash
+curl -X POST "http://127.0.0.1:8000/ask" \
+     -H "Content-Type: application/json" \
+     -d '{"query": "What are the rules for red cards?"}'
+```
+
+**Response:**
+```json
+{
+  "response": "A red card results in the player being sent off...",
+  "source": "rag_knowledge_base"
+}
+```

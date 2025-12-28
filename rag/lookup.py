@@ -1,124 +1,65 @@
 import pandas as pd
-import os
+from rag.sql_queries import search_players_sql
 
-# --- CONFIGURATION ---
-current_dir = os.path.dirname(os.path.abspath(__file__))
-project_root = os.path.dirname(current_dir)
-CSV_DIR = os.path.join(project_root, "data", "csvs")
-
-def clean_text(text):
-    """Fixes 'nan' and empty values."""
-    s = str(text).strip()
-    if s.lower() in ['nan', 'null', 'none', '', 'nat']:
-        return "N/A"
-    return s
-
-def get_level_from_code(code):
+def format_player_card(p):
     """
-    Maps the numeric 'is_level_code' to the actual Hierarchy Text.
-    1 -> Village, 2 -> Mandal, 3 -> Assembly, 4 -> District, 5 -> State
+    Formats a single player dictionary into Markdown.
     """
-    s = str(code).strip()
-    
-    # MAPPING LOGIC (Based on User Hierarchy)
-    if s == '1': return "📍 **Village Level / Cluster Level**"
-    if s == '2': return "🥈 **Mandal / Taluk / Tehsil Level**"
-    if s == '3': return "🏛️ **Assembly Constituency Level**"
-    if s == '4': return "🥇 **District Level**"
-    if s == '5': return "🏆 **State Level**"
-    
-    return None
+    # Helper to safely get values
+    def get_val(key, default="N/A"):
+        val = p.get(key)
+        if val is None or str(val).lower() == "nan" or str(val).strip() == "":
+            return default
+        return str(val).strip()
+
+    card = f"""
+### 👤 Player Profile: {get_val('player_nm')}
+
+**🆔 Registration ID:** `{get_val('player_reg_id')}`  
+**📞 Mobile:** `{get_val('mobile_no')}`  
+**🎂 Age/Gender:** {get_val('player_age')} / {get_val('gender')}  
+**📍 Village:** {get_val('vill_gp_name')}
+
+---
+**🏛️ Cluster Details**  
+**Name:** {get_val('clustername')}  
+**Incharge:** {get_val('cluster_incharge')} ({get_val('incharge_mobile')})
+
+---
+**🏆 Game & Schedule**  
+**Event:** {get_val('event_name')}  
+**🏟️ Venue:** {get_val('venue', 'TBD')}  
+**📅 Date:** {get_val('match_date', 'TBD')} ({get_val('match_day', 'TBD')}) @ {get_val('match_time', 'TBD')}
+
+"""
+    return card
 
 def get_player_by_phone(phone_number):
-    # 1. Load Data
-    try:
-        df_players = pd.read_csv(os.path.join(CSV_DIR, "player_details.csv"), dtype=str)
-        df_selected = pd.read_csv(os.path.join(CSV_DIR, "tb_selected_players.csv"), dtype=str)
-        df_results = pd.read_csv(os.path.join(CSV_DIR, "tb_player_results.csv"), dtype=str)
+    """
+    Public API: Lookup by Phone (SQL Backend)
+    """
+    results = search_players_sql(phone_number, search_type="mobile")
+    
+    if not results:
+        return f"❌ No Record Found for phone: {phone_number}"
+    
+    response = f"**Found {len(results)} Record(s)**\n"
+    for p in results:
+        response += format_player_card(p)
         
-        # Clean Headers
-        for df in [df_players, df_selected, df_results]:
-            df.columns = df.columns.str.strip().str.lower()
-            
-        # Fix ID Mapping
-        if 'player_id' not in df_players.columns and 'id' in df_players.columns:
-            df_players['player_id'] = df_players['id']
+    return response
 
-    except Exception as e:
-        return f"⚠️ System Error: {str(e)}"
-
-    # 2. Find Player
-    clean_phone = str(phone_number).replace("+91", "").replace("-", "").replace(" ", "").strip()
-    player_row = df_players[df_players['mobile_no'] == clean_phone]
-
-    if player_row.empty:
-        return f"❌ No Record Found for {clean_phone}"
-
-    # 3. Extract Details
-    row = player_row.iloc[0]
-    pid = clean_text(row.get('player_id'))
-    name = clean_text(row.get('player_nm'))
-    reg_id = clean_text(row.get('player_reg_id'))
-    village = clean_text(row.get('vill_gp_name'))
-    age = clean_text(row.get('player_age'))
+def get_player_by_reg_id(reg_id):
+    """
+    Public API: Lookup by Reg ID (SQL Backend)
+    """
+    results = search_players_sql(reg_id, search_type="reg_id")
     
-    # Gender
-    gender_val = str(row.get('gender', '')).strip()
-    gender = "Male" if gender_val in ['1', '1.0'] else "Female" if gender_val in ['2', '2.0'] else "Other"
-
-    # 4. Determine Level & Status (Using Level Code)
-    status_msg = "✅ **Active**" # Default if they exist
-    level_msg = "📍 Village / Cluster Level" # Default base
+    if not results:
+        return f"❌ No Record Found for reg_id: {reg_id}"
     
-    # Check 'is_level_code' in player_details (Primary Source)
-    level_code = row.get('is_level_code')
-    decoded_level = get_level_from_code(level_code)
-    
-    if decoded_level:
-        level_msg = decoded_level
-    
-    # Also Check Selection Table for Override/Confirmation
-    if 'player_id' in df_selected.columns:
-        sel_row = df_selected[df_selected['player_id'] == pid]
-        if not sel_row.empty:
-            s_row = sel_row.iloc[0]
-            # Check if selection table has a higher/newer level code
-            sel_code = s_row.get('is_level_code')
-            sel_decoded = get_level_from_code(sel_code)
-            if sel_decoded:
-                level_msg = sel_decoded
-                
-            # Check selection status
-            is_sel = str(s_row.get('is_select', '')).strip().lower()
-            if is_sel in ['1', '1.0', 'true', 'yes']:
-                status_msg = "✅ **SELECTED**"
-            elif is_sel in ['0', '0.0', 'false', 'no']:
-                status_msg = "❌ Not Selected in recent round"
-
-    # 5. Check Score
-    score_msg = "No score yet"
-    if 'player_id' in df_results.columns:
-        res_row = df_results[df_results['player_id'] == pid]
-        if not res_row.empty:
-            score_msg = clean_text(res_row.iloc[0].get('score'))
-
-    # 6. Final Card
-    return (
-        f"**📋 CM CUP PLAYER STATUS**\n"
-        f"━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-        f"👤 **Name:** {name}\n"
-        f"🆔 **Reg ID:** {reg_id}\n"
-        f"🎂 **Age:** {age} Years\n"
-        f"⚧ **Gender:** {gender}\n"
-        f"📍 **Village/GP:** {village}\n"
-        f"━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-        f"🏆 **Playing Level:**\n"
-        f"{level_msg}\n\n"
-        f"📌 **Current Status:**\n"
-        f"• **Selection:** {status_msg}\n"
-        f"• **Recent Score:** {score_msg}\n"
-        f"━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    )
-
-if __name__ == "__main__":
-    print(get_player_by_phone('8328508582'))
+    response = f"**Found {len(results)} Record(s)**\n"
+    for p in results:
+        response += format_player_card(p)
+        
+    return response

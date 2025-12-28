@@ -1,4 +1,4 @@
-from langchain.prompts import PromptTemplate
+from langchain_core.prompts import PromptTemplate
 
 RAG_PROMPT = PromptTemplate(
     input_variables=["context", "question"],
@@ -17,3 +17,6 @@ Question:
 Answer:
 """
 )
+
+def get_prompt_template():
+    return RAG_PROMPT
