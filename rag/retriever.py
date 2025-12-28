@@ -1,5 +1,5 @@
 from langchain_qdrant import QdrantVectorStore
-from langchain_google_genai import GoogleGenerativeAIEmbeddings
+from langchain_huggingface import HuggingFaceEmbeddings
 from qdrant_client import QdrantClient
 import os
 from dotenv import load_dotenv
@@ -8,7 +8,8 @@ load_dotenv()
 
 def get_retriever():
     # MUST MATCH THE MODEL USED IN INGESTION!
-    embeddings = GoogleGenerativeAIEmbeddings(model="models/text-embedding-004")
+    from langchain_openai import OpenAIEmbeddings
+    embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
     
     client = QdrantClient(path="data/qdrant_db")
     
@@ -18,4 +19,7 @@ def get_retriever():
         embedding=embeddings,
     )
     
-    return vector_store.as_retriever(search_kwargs={"k": 3})
+    return vector_store.as_retriever(
+        search_type="similarity",
+        search_kwargs={"k": 10}
+    )

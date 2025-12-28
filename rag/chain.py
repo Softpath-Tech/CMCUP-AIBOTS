@@ -1,43 +1,36 @@
-from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.runnables import RunnablePassthrough
-from langchain_core.output_parsers import StrOutputParser
+from langchain_core.runnables import RunnablePassthrough, RunnableLambda
 from rag.retriever import get_retriever
 from dotenv import load_dotenv
+from rag.llm_manager import ask_llm
 
 load_dotenv()
 
 def get_rag_chain():
-    # 1. Setup Brain (Using Gemini 2.0 Flash Experimental)
-    llm = ChatGoogleGenerativeAI(
-        model="gemini-2.0-flash-exp", # <--- UPDATED to 2.0 Flash
-        temperature=0.2
-    )
-
-    # 2. Setup Memory
+    # 1. Setup Retriever
     retriever = get_retriever()
-
-    # 3. Create Prompt
-    template = """You are a helpful assistant for the Sports Authority of Telangana (SATG).
-    Answer the question based ONLY on the following context.
-    If you don't know the answer, say "I don't have that information."
-
-    Context:
-    {context}
-
-    Question: {question}
-    """
-    prompt = ChatPromptTemplate.from_template(template)
 
     def format_docs(docs):
         return "\n\n".join(doc.page_content for doc in docs)
 
+    def run_orchestrator(input_dict):
+        """
+        Custom function to run the RAG logic through our LLM Manager (LiteLLM).
+        """
+        question = input_dict["question"]
+        context = input_dict["context"]
+        
+        # Call the manager which handles:
+        # 1. Language Detection
+        # 2. System Prompt Selection
+        # 3. Model Fallback (Gemini -> OpenAI)
+        result = ask_llm(context, question)
+        return result
+
     # 4. Build Chain
+    # We return a dict immediately, so no StrOutputParser needed.
     chain = (
         {"context": retriever | format_docs, "question": RunnablePassthrough()}
-        | prompt
-        | llm
-        | StrOutputParser()
+        | RunnableLambda(run_orchestrator)
     )
 
     return chain

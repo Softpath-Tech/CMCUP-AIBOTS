@@ -27,13 +27,47 @@ def process_districts():
     except Exception as e:
         print(f"❌ Districts Failed: {e}")
 
+def load_mandal_map():
+    try:
+        df = pd.read_csv(os.path.join(CSV_DIR, "mandalmaster.csv"))
+        # Map ID -> MandalName (mandalmaster uses 'ID')
+        return dict(zip(df['ID'], df['MandalName']))
+    except Exception as e:
+        print(f"⚠️ Could not load mandal map: {e}")
+        return {}
+
+def load_discipline_map():
+    try:
+        df = pd.read_csv(os.path.join(CSV_DIR, "tb_discipline.csv"))
+        # Map game_id -> dist_game_nm
+        return dict(zip(df['game_id'], df['dist_game_nm']))
+    except Exception as e:
+        print(f"⚠️ Could not load discipline map: {e}")
+        return {}
+
+def load_district_map():
+    try:
+        df = pd.read_csv(os.path.join(CSV_DIR, "districtmaster.csv"))
+        # Map DistrictNo -> DistrictName
+        return dict(zip(df['DistrictNo'], df['DistrictName']))
+    except Exception as e:
+        print(f"⚠️ Could not load district map: {e}")
+        return {}
+
+DISTRICT_MAP = load_district_map()
+MANDAL_MAP = load_mandal_map()
+DISCIPLINE_MAP = load_discipline_map()
+
 def process_mandals():
     print("Processing Mandals...")
     try:
         df = pd.read_csv(os.path.join(CSV_DIR, "mandalmaster.csv"))
         lines = []
         for _, row in df.iterrows():
-            line = f"Mandal **{clean_text(row.get('MandalName'))}** is in District ID {row.get('DistrictNo')}. It falls under Assembly Constituency **{clean_text(row.get('ac_name'))}**."
+            dist_id = row.get('DistrictNo')
+            dist_name = DISTRICT_MAP.get(dist_id, f"ID {dist_id}")
+            
+            line = f"Mandal **{clean_text(row.get('MandalName'))}** is in District **{dist_name}** (ID: {dist_id}). It falls under Assembly Constituency **{clean_text(row.get('ac_name'))}**."
             lines.append(line)
         
         with open(os.path.join(MD_DIR, "rag_mandals.md"), "w", encoding="utf-8") as f:
@@ -49,7 +83,13 @@ def process_villages():
         lines = []
         # Limiting output if too huge, but RAG can handle text. For safety, let's dump all.
         for _, row in df.iterrows():
-            line = f"Village **{clean_text(row.get('VillageName'))}** belongs to Mandal ID {row.get('MandalNo')} in District ID {row.get('DistNo')}."
+            mandal_id = row.get('MandalNo')
+            dist_id = row.get('DistNo')
+            
+            mandal_name = MANDAL_MAP.get(mandal_id, f"ID {mandal_id}")
+            dist_name = DISTRICT_MAP.get(dist_id, f"ID {dist_id}")
+            
+            line = f"Village **{clean_text(row.get('VillageName'))}** belongs to Mandal **{mandal_name}** (ID: {mandal_id}) in District **{dist_name}** (ID: {dist_id})."
             lines.append(line)
         
         with open(os.path.join(MD_DIR, "rag_villages.md"), "w", encoding="utf-8") as f:
@@ -64,7 +104,13 @@ def process_clusters():
         df = pd.read_csv(os.path.join(CSV_DIR, "clustermaster.csv"))
         lines = []
         for _, row in df.iterrows():
-            line = f"Cluster **{clean_text(row.get('clustername'))}** (ID: {row.get('cluster_id')}) is in Mandal ID {row.get('mand_id')}, District ID {row.get('dist_id')}."
+            mandal_id = row.get('mand_id')
+            dist_id = row.get('dist_id')
+            
+            mandal_name = MANDAL_MAP.get(mandal_id, f"ID {mandal_id}")
+            dist_name = DISTRICT_MAP.get(dist_id, f"ID {dist_id}")
+
+            line = f"Cluster **{clean_text(row.get('clustername'))}** (ID: {row.get('cluster_id')}) is in Mandal **{mandal_name}** (ID: {mandal_id}), District **{dist_name}** (ID: {dist_id})."
             lines.append(line)
         
         with open(os.path.join(MD_DIR, "rag_clusters.md"), "w", encoding="utf-8") as f:
@@ -95,7 +141,10 @@ def process_events():
         df = pd.read_csv(os.path.join(CSV_DIR, "tb_events.csv"))
         lines = []
         for _, row in df.iterrows():
-            line = f"Event **{clean_text(row.get('event_name'))}** belongs to Discipline ID {row.get('discipline_id')}. Category: {clean_text(row.get('cat_no'))}."
+            disc_id = row.get('discipline_id')
+            disc_name = DISCIPLINE_MAP.get(disc_id, f"Sports ID {disc_id}")
+            
+            line = f"Event **{clean_text(row.get('event_name'))}** belongs to Sport: **{disc_name}** (ID: {disc_id}). Category: {clean_text(row.get('cat_no'))}."
             lines.append(line)
         
         with open(os.path.join(MD_DIR, "rag_events.md"), "w", encoding="utf-8") as f:
@@ -111,7 +160,19 @@ def process_fixtures():
         lines = []
         for _, row in df.iterrows():
             match_name = clean_text(row.get('match_no'))
-            line = f"Match **{match_name}** (Fixture ID: {row.get('fixture_id')}) is scheduled for **{clean_text(row.get('match_day'))}** at **{clean_text(row.get('match_time'))}**. Venue: {clean_text(row.get('venue'))}. Match is between District ID {row.get('team1_dist_id')} and District ID {row.get('team2_dist_id')}."
+            
+            # Resolve Team Names
+            t1_id = row.get('team1_dist_id')
+            t2_id = row.get('team2_dist_id')
+            
+            t1_name = DISTRICT_MAP.get(t1_id, f"District ID {t1_id}") if pd.notna(t1_id) else "TBD"
+            t2_name = DISTRICT_MAP.get(t2_id, f"District ID {t2_id}") if pd.notna(t2_id) else "TBD"
+            
+            # Use TBD for unknown match names
+            if match_name == "Unknown":
+                match_name = "TBD"
+                
+            line = f"Match **{match_name}** (Fixture ID: {row.get('fixture_id')}) is scheduled for **{clean_text(row.get('match_day'))}** at **{clean_text(row.get('match_time'))}**. Venue: {clean_text(row.get('venue'))}. Match is between **{t1_name}** and **{t2_name}**."
             lines.append(line)
         
         with open(os.path.join(MD_DIR, "rag_fixtures.md"), "w", encoding="utf-8") as f:
