@@ -99,6 +99,38 @@ def extract_plain_text(resp) -> str:
         return ""
 
 
+def _extract_from_dict(d: dict) -> str:
+    # Preferred scalar keys
+    for key in ("response", "answer", "text", "content", "message", "output", "result"):
+        v = d.get(key)
+        if isinstance(v, (str, int, float)):
+            return str(v)
+
+    # Nested containers
+    for key in ("choices", "outputs", "results"):
+        if key in d:
+            return extract_plain_text(d[key])
+
+    # Recurse into values
+    for v in d.values():
+        candidate = extract_plain_text(v)
+        if candidate:
+            return candidate
+
+    return ""
+
+
+def _extract_from_list(lst) -> str:
+    for item in lst:
+        candidate = extract_plain_text(item)
+        if candidate:
+            return candidate
+    try:
+        return " ".join([str(x) for x in lst])
+    except Exception:
+        return ""
+
+
 # --------------------------------------------------
 # 7. Health Check (IMPORTANT for Render)
 # --------------------------------------------------
@@ -206,8 +238,9 @@ async def whatsapp_chat_endpoint(request: WhatsAppChatRequest):
     try:
         rag = get_or_init_rag_chain()
         response_text = rag.invoke(user_message)
-        # Return plain text only
-        return Response(content=str(response_text), media_type="text/plain")
+        # Extract plain answer when rag returns dict/list-like results
+        plain = extract_plain_text(response_text)
+        return Response(content=plain, media_type="text/plain")
     except Exception as e:
         import traceback
         traceback.print_exc()
