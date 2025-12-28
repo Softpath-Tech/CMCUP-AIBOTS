@@ -1,28 +1,44 @@
-# 🤖 CMCUP-AIBOTS: Hybrid RAG Chatbot
+# 🤖 CMCUP-AIBOTS: Multilingual Hybrid RAG Chatbot
 
-This project is an advanced AI Chatbot designed for the **CM Cup Sports Tournament**.
-It uses a **Hybrid Strategy** to provide accurate answers:
-1.  **Direct Lookup:** For sensitive or high-change data (Player Status, Scores) using exact matching.
-2.  **RAG (Retrieval-Augmented Generation):** For general knowledge (Fixtures, Districts, Rules) using Semantic Search + LLM.
+An advanced **AI-powered Chatbot** built for the **CM Cup Sports Tournament**. 
+This system employs a **Hybrid RAG Strategy** to deliver precise, context-aware answers in **English, Hindi, and Telugu**. It seamlessly switches between direct data lookups for player stats and semantic search for general tournament queries.
 
 ---
 
-## 🏗️ Architecture
+## ✨ Key Features
 
-### 1. The Direct Lookup System (Privacy & Accuracy)
-*   **Trigger:** Detects valid **10-digit Mobile Numbers**.
-*   **Data Source:** `data/csvs/player_details.csv`, `tb_selected_players.csv`, `tb_player_results.csv`.
-*   **Mechanism:** Direct Pandas search. Bypass Vector DB.
-*   **Output:** Precise "Player Status Card" with Name, Reg ID, Level (Mapped), Status, and Score.
+- **🧠 Hybrid Intelligence:**
+  - **Direct Lookup:** Instantly retrieves volatile data (Player Status, Scores) using Regex matching for accuracy.
+  - **RAG (Retrieval-Augmented Generation):** Uses Vector Search (Qdrant) to answer general questions about fixtures, rules, and venues.
+  - **LLM Fallback:** Gracefully handles out-of-scope queries using large language models.
 
-### 2. The RAG System (General Knowledge)
-*   **Trigger:** Any query NOT containing a phone number.
-*   **Data Source:** 7 General CSVs (`districtmaster`, `tb_fixtures`, `tb_events`, etc.).
+- **🌐 Multilingual Support:**
+  - Full support for **English**, **Hindi**, and **Telugu**.
+  - Automatically detects query language and responds in the same language.
+
+- **🛡️ Robust Architecture:**
+  - **Orchestration:** Powered by **LiteLLM** for reliable model switching (OpenAI GPT-4 / Google Gemini).
+  - **Vector Database:** **Qdrant** for high-performance similarity search.
+  - **API:** Fast and asynchronous **FastAPI** backend.
+
+---
+
+## 🏗️ System Architecture
+
+### 1. The Direct Lookup Layer (High Precision)
+*   **Trigger:** Detects a valid **10-digit Mobile Number**.
+*   **Source:** `data/csvs/player_details.csv` & related tables.
+*   **Action:** Bypasses LLM to fetch exact rows.
+*   **Result:** A deterministic "Player Status Card" with zero hallucinations.
+
+### 2. The RAG Layer (Knowledge Base)
+*   **Trigger:** General questions (e.g., "When is the Kho-Kho final?").
 *   **Pipeline:**
-    1.  **CSV → Text:** `process_sql_data.py` converts rows into narrative Markdown.
-    2.  **Ingestion:** `ingestion/run_ingestion.py` chunks and embeds text.
-    3.  **Vector Store:** **Qdrant** stores embeddings (using `text-embedding-004`).
-    4.  **LLM:** **Gemini 2.0 Flash Experimental** answers based on retrieved context.
+    1.  **Ingestion:** CSVs are converted to narrative Markdown via `process_sql_data.py`.
+    2.  **Embedding:** Text is chunked and embedded using **OpenAI/HuggingFace** models.
+    3.  **Storage:** Vectors stored locally in `data/qdrant_db`.
+    4.  **Retrieval:** Top-k relevant chunks extracted based on query semantic similarity.
+    5.  **Generation:** LLM synthesizes an answer using the retrieved context.
 
 ---
 
@@ -30,103 +46,123 @@ It uses a **Hybrid Strategy** to provide accurate answers:
 
 ```plaintext
 rag-chatbot/
-│
 ├── api/
-│   └── main.py             # FastAPI App (Routes user queries)
-│
+│   └── main.py             # FastAPI Application & Routing
 ├── data/
-│   ├── csvs/               # Raw Input Data (10 Tables)
-│   ├── mdFiles/            # Generated Narrative Data for RAG
-│   └── qdrant_db/          # Vector Database Storage
-│
+│   ├── csvs/               # Raw Source Data (CSVs)
+│   ├── mdFiles/            # Processed Knowledge Base (Markdown)
+│   └── qdrant_db/          # Local Vector Database
 ├── ingestion/
-│   ├── run_ingestion.py    # Embeds mdFiles -> Qdrant
-│   └── embed_store.py      # Embedding Logic
-│
+│   ├── run_ingestion.py    # Main Ingestion Script
+│   └── embed_store.py      # Embedding & Storage Logic
 ├── rag/
-│   ├── lookup.py           # Logic for Player CSV Search
-│   ├── chain.py            # RAG Chain setup (Gemini 2.0)
-│   └── retriever.py        # Qdrant Retriever
-│
-├── process_sql_data.py     # Script to convert CSV -> Markdown
-└── requirements.txt        # Dependencies
+│   ├── chain.py            # RAG Pipeline & LiteLLM Config
+│   ├── lookup.py           # Direct Player Lookup Logic
+│   └── retriever.py        # Qdrant Retriever Configuration
+├── tests/                  # Test Suites & Stress Tests
+├── process_sql_data.py     # Data Processing Script (CSV -> Markdown)
+├── requirements.txt        # Python Dependencies
+├── render.yaml             # Render Deployment Config
+└── start.sh                # Deployment Startup Script
 ```
 
 ---
 
 ## 🛠️ Setup & Installation
 
-### 1. Prerequisites
-*   Python 3.10+
-*   A **Google Gemini API Key** (Free Tier is fine).
+We have detailed guides for every operating system:
 
-### 2. Installation
-```bash
-# Clone Repository
-git clone <repo-url>
-cd rag-chatbot
+- 🍎 **[Mac Setup Guide](SETUP_MAC.md)**
+- 🪟 **[Windows Setup Guide](SETUP_WINDOWS.md)**
+- 🐧 **[Linux Setup Guide](SETUP_LINUX.md)**
 
-# Install Dependencies
-pip install -r requirements.txt
-```
+### Quick Start (General)
 
-### 3. Environment Config
-Create a `.env` file in the root directory:
-```env
-GOOGLE_API_KEY=your_gemini_api_key_here
-```
-*Note: This single key powers both the Chat Model (`gemini-2.0-flash-exp`) and Embeddings (`text-embedding-004`).*
+1.  **Clone & Install:**
+    ```bash
+    git clone <repo_url>
+    pip install -r requirements.txt
+    ```
+2.  **Configure Secrets:**
+    Create a `.env` file with your keys:
+    ```env
+    OPENAI_API_KEY=sk-...
+    GOOGLE_API_KEY=AI...
+    ```
+3.  **Build Knowledge Base** (Critical Step):
+    ```bash
+    python process_sql_data.py          # Convert Data
+    python -m ingestion.run_ingestion   # Build Vector DB
+    ```
+4.  **Run API:**
+    ```bash
+    uvicorn api.main:app --reload
+    ```
 
 ---
 
-## 🚀 Usage Guide
+## 🚀 Deployment
 
-### A. Initialize Data (First Run)
-If you have new CSV data:
-1.  **Convert Data:**
-    ```bash
-    python process_sql_data.py
-    ```
-    *Generates MD files in `data/mdFiles`.*
+This project is "Deploy Ready" for **Render.com**.
 
-2.  **Ingest to Brain:**
-    ```bash
-    python ingestion/run_ingestion.py
-    ```
-    *Creates/Updates the Qdrant Vector Store.*
+👉 **[Read the Render Deployment Guide](DEPLOYMENT_RENDER.md)**
 
-### B. Run the Chatbot API
-Start the server:
-```bash
-uvicorn api.main:app --reload
-```
-*Server runs at: `http://127.0.0.1:8000`*
+It includes a `render.yaml` Blueprint for zero-config deployment and a `start.sh` script that handles data persistence and server startup automatically.
 
-### C. Test the Bot
-**Endpoint:** `POST /ask`
+---
 
-**Example 1: Player Lookup**
+## 🔌 API Usage
+
+**Base URL:** `http://localhost:8000`
+
+### `POST /ask`
+
+Ask a question to the bot.
+
+**Request:**
 ```json
 {
   "question": "Status for 7416613302"
 }
 ```
-*Result:* Returns detailed Player Card (Name, ID, Level, Score).
 
-**Example 2: General RAG**
+**Response (Direct Lookup):**
 ```json
 {
-  "question": "Tell me about the match schedule for Fixture 1"
+  "response": "Player Name: Ravi Kumar...\nStatus: Selected",
+  "model_used": "Direct Lookup"
 }
 ```
-*Result:* Returns AI-generated answer based on stored knowledge.
+
+**Request (Multilingual RAG):**
+```json
+{
+  "question": "Kabaddi matches kab hain?"
+}
+```
+
+**Response:**
+```json
+{
+  "response": "Kabaddi ke matches 28th Dec ko subah 10 baje shuru honge...",
+  "model_used": "gpt-4o-mini"
+}
+```
 
 ---
 
-## ⚠️ Known Issues
-*   **Google API Quota:** The Free Tier has rate limits. If you see `429 Resource Exhausted`, wait 60 seconds or upgrade the key.
-    *   *Note:* Player Lookup does NOT use the API, so it always works!
+## 🧪 Testing
+
+Run our built-in test suite to verify the system:
+
+```bash
+# Quick System Check
+python tests/run_quick_test.py
+
+# Multilingual Stress Test
+python tests/test_multilingual.py
+```
 
 ---
 
-**Built with:** LangChain 🦜🔗, Qdrant 🧠, and Google Gemini ✨.
+**Built with:** 🦜🔗 LangChain, 🧠 Qdrant, 🚀 FastAPI, and LiteLLM.
