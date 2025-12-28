@@ -29,7 +29,7 @@ def get_level_from_code(code):
     
     return None
 
-def get_player_status(phone_number):
+def get_player_by_phone(phone_number):
     # 1. Load Data
     try:
         df_players = pd.read_csv(os.path.join(CSV_DIR, "player_details.csv"), dtype=str)
@@ -121,4 +121,4 @@ def get_player_status(phone_number):
     )
 
 if __name__ == "__main__":
-    print(get_player_status('8328508582'))
+    print(get_player_by_phone('8328508582'))

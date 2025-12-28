@@ -122,7 +122,7 @@ Ask a question to the bot.
 **Request:**
 ```json
 {
-  "question": "Status for 7416613302"
+  "query": "Status for 7416613302"
 }
 ```
 
@@ -130,14 +130,14 @@ Ask a question to the bot.
 ```json
 {
   "response": "Player Name: Ravi Kumar...\nStatus: Selected",
-  "model_used": "Direct Lookup"
+  "source": "sql_database"
 }
 ```
 
 **Request (Multilingual RAG):**
 ```json
 {
-  "question": "Kabaddi matches kab hain?"
+  "query": "Kabaddi matches kab hain?"
 }
 ```
 
@@ -145,7 +145,7 @@ Ask a question to the bot.
 ```json
 {
   "response": "Kabaddi ke matches 28th Dec ko subah 10 baje shuru honge...",
-  "model_used": "gpt-4o-mini"
+  "source": "rag_knowledge_base"
 }
 ```
 
