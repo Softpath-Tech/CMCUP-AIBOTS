@@ -185,6 +185,8 @@
         </div>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purify.min.js"></script>
     <script>
         const input = document.getElementById('user-input');
         const chatHistory = document.getElementById('chat-history');
@@ -234,7 +236,16 @@
         function addMessage(text, sender) {
             const div = document.createElement('div');
             div.className = `message ${sender}`;
-            div.textContent = text;
+
+            if (sender === 'bot') {
+                // Parse markdown and sanitize for bot messages
+                const rawHtml = marked.parse(text);
+                div.innerHTML = DOMPurify.sanitize(rawHtml);
+            } else {
+                // Keep user messages as plain text to prevent XSS from user input
+                div.textContent = text;
+            }
+
             chatHistory.appendChild(div);
             chatHistory.scrollTop = chatHistory.scrollHeight;
         }
