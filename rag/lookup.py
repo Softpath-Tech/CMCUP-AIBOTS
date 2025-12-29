@@ -12,12 +12,17 @@ def format_player_card(p):
             return default
         return str(val).strip()
 
+    # Map Values
+    gender_map = {'1': 'Male', '2': 'Female', 'M': 'Male', 'F': 'Female', '0': 'Female'}
+    gender_raw = str(p.get('gender', '')).strip()
+    gender_disp = gender_map.get(gender_raw, gender_raw if gender_raw else 'N/A')
+
     card = f"""
 ### 👤 Player Profile: {get_val('player_nm')}
 
 **🆔 Registration ID:** `{get_val('player_reg_id')}`  
 **📞 Mobile:** `{get_val('mobile_no')}`  
-**🎂 Age/Gender:** {get_val('player_age')} / {get_val('gender')}  
+**🎂 Age/Gender:** {get_val('player_age')} / {gender_disp}  
 **📍 Village:** {get_val('vill_gp_name')}
 
 ---

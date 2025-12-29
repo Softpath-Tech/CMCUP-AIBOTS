@@ -16,7 +16,9 @@ def search_players_sql(value, search_type="mobile"):
         p.mobile_no,
         p.gender,
         p.player_age,
-        p.vill_gp_name,
+        
+        -- Location Info
+        v.villagename as vill_gp_name,
         
         -- Cluster Info
         c.clustername,
@@ -32,8 +34,8 @@ def search_players_sql(value, search_type="mobile"):
 
     FROM player_details p
     
-    -- Link Village -> Cluster
-    LEFT JOIN villagemaster v ON TRIM(LOWER(p.vill_gp_name)) = TRIM(LOWER(v.villagename))
+    -- Link Village -> Cluster (Using IDs)
+    LEFT JOIN villagemaster v ON p.village_id = v.id
     LEFT JOIN clustermaster c ON v.cluster_id = c.cluster_id
     
     -- Link Event -> Fixture
