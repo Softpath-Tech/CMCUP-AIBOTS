@@ -216,6 +216,7 @@ def get_disciplines_by_level(level_name):
     
     level_map = {
         "cluster": 1,
+        "village": 1, 
         "mandal": 2,
         "district": 3,
         "state": 3 
