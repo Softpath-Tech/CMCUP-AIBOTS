@@ -3,12 +3,11 @@ from rag.sql_queries import search_players_sql
 
 def format_player_card(p):
     """
-    Formats a single player dictionary into Markdown.
+    Formats a single player dictionary into a compact Markdown card.
     """
-    # Helper to safely get values
     def get_val(key, default="N/A"):
         val = p.get(key)
-        if val is None or str(val).lower() == "nan" or str(val).strip() == "":
+        if val is None or str(val).lower() == "nan" or str(val).strip() in ["", "0"]:
             return default
         return str(val).strip()
 
@@ -17,25 +16,21 @@ def format_player_card(p):
     gender_raw = str(p.get('gender', '')).strip()
     gender_disp = gender_map.get(gender_raw, gender_raw if gender_raw else 'N/A')
 
+    # Construct clean card
+    # Using blockquotes or specific structure to make it stand out
     card = f"""
-### 👤 Player Profile: {get_val('player_nm')}
+### 👤 {get_val('player_nm')}
+**🆔 Reg ID:** `{get_val('player_reg_id')}`
+**📍 Village:** {get_val('vill_gp_name')} | **🎂 Info:** {get_val('player_age')} Y / {gender_disp}
+    --
+    **🏆 Game & Schedule**  
+    **Event:** {get_val('event_name', get_val('sport_name'))}  
+    **🏟️ Venue:** {get_val('venue', 'TBD')}  
+    **📅 Date:** {get_val('match_date', 'TBD')} ({get_val('match_day', 'TBD')}) @ {get_val('match_time', 'TBD')}
 
-**🆔 Registration ID:** `{get_val('player_reg_id')}`  
-**📞 Mobile:** `{get_val('mobile_no')}`  
-**🎂 Age/Gender:** {get_val('player_age')} / {gender_disp}  
-**📍 Village:** {get_val('vill_gp_name')}
-
----
-**🏛️ Cluster Details**  
-**Name:** {get_val('clustername')}  
-**Incharge:** {get_val('cluster_incharge')} ({get_val('incharge_mobile')})
-
----
-**🏆 Game & Schedule**  
-**Event:** {get_val('event_name')}  
-**🏟️ Venue:** {get_val('venue', 'TBD')}  
-**📅 Date:** {get_val('match_date', 'TBD')} ({get_val('match_day', 'TBD')}) @ {get_val('match_time', 'TBD')}
-
+**🏛️ Cluster Info:**
+- **Name:** {get_val('clustername')}
+- **Contact:** {get_val('cluster_incharge')} ({get_val('incharge_mobile')})
 """
     return card
 

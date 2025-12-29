@@ -27,6 +27,7 @@ def search_players_sql(value, search_type="mobile"):
 
         -- Event/Game Info
         e.event_name,
+        d.dist_game_nm as sport_name,
         f.venue,
         f.match_date,
         f.match_time,
@@ -38,9 +39,15 @@ def search_players_sql(value, search_type="mobile"):
     LEFT JOIN villagemaster v ON p.village_id = v.id
     LEFT JOIN clustermaster c ON v.cluster_id = c.cluster_id
     
-    -- Link Event -> Fixture
+    -- Link Game/Event Data
+    LEFT JOIN tb_discipline d ON p.game_id = d.game_id
     LEFT JOIN tb_events e ON p.event_id = e.id
-    LEFT JOIN tb_fixtures f ON e.discipline_id = f.disc_id
+
+    -- Link Fixture (Using Game ID + Gender + District)
+    LEFT JOIN tb_fixtures f ON 
+        p.game_id = f.disc_id 
+        AND p.gender = f.gender
+        AND (p.district_id = f.team1_dist_id OR p.district_id = f.team2_dist_id)
 
     WHERE 
     """

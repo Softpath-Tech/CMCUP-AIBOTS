@@ -18,7 +18,7 @@ def ask_api(question_data):
     for attempt in range(max_retries):
         start_time = time.time()
         try:
-            response = requests.post(API_URL, json={"question": question}, timeout=30)
+            response = requests.post(API_URL, json={"query": question}, timeout=30)
             end_time = time.time()
             latency = round(end_time - start_time, 2)
             
@@ -142,7 +142,7 @@ def generate_report(results):
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 """
     for r in results:
-         safe_ans = r['answer'].replace("|", " ").replace("\n", " ")[:150]
+         safe_ans = str(r['answer'] or "").replace("|", " ").replace("\n", " ")[:150]
          report += f"| {r['id']} | {r['language']} | {r['topic']} | {r['status']} | {r['latency']}s | {r['model']} | {r['question']} | {safe_ans} |\n"
             
     return report
