@@ -351,7 +351,8 @@ async def whatsapp_chat_endpoint(request: WhatsAppChatRequest):
         rag = get_or_init_rag_chain()
         response_text = rag.invoke(user_message)
         plain = extract_plain_text(response_text)
-        return Response(content=plain, media_type="text/plain")
+        # Return as JSON so WhatsApp integrations receive a JSON payload
+        return {"response": plain, "source": "rag_knowledge_base"}
     except Exception as e:
         import traceback
         traceback.print_exc()
