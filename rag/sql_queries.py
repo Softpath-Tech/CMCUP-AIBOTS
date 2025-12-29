@@ -219,14 +219,14 @@ def get_disciplines_by_level(level_name):
         "village": 1, 
         "mandal": 2,
         "district": 3,
-        "state": 3 
+        "state": 5
     }
     
     code = level_map.get(level_name.lower().strip())
     if not code:
         return []
         
-    query = "SELECT dist_game_nm FROM tb_discipline WHERE is_level_code = ?"
+    query = "SELECT dist_game_nm FROM tb_discipline WHERE is_level_code <= ?"
     df = ds.query(query, (code,))
     
     if df.empty:
