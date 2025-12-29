@@ -269,7 +269,7 @@ async def chat_endpoint(request: ChatRequest):
                 print(f"SQL Error: {e}")
 
     # 5.5 Discipline/Level Lookup
-    level_pattern = r"(disciplines|sports|games).*?(cluster|mandal|district|state)\s*(?:level)?"
+    level_pattern = r"(disciplines?|sports?|games?|events?).*?\b(cluster|mandal|district|state)\b\s*(?:level)?"
     level_match = re.search(level_pattern, original_query, re.IGNORECASE)
     if level_match:
         level_name = level_match.group(2).lower()
