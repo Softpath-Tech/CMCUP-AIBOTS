@@ -145,18 +145,14 @@ async def chat_endpoint(request: ChatRequest):
         "cm": "The Hon'ble Chief Minister of Telangana is **Sri A. Revanth Reddy**.",
         "minister": "The Hon'ble Chief Minister of Telangana and Sports Minister is **Sri A. Revanth Reddy**.",
         "helpdesk": "📞 **Helpdesk Support:**\n\nFor queries, please contact: **040-23232323** or email: **helpdesk@cmcup.in**",
-        "contact": "📞 **Helpdesk Support:**\n\nFor queries, please contact: **040-23232323** or email: **helpdesk@cmcup.in**",
         "weather": "🌦️ **Weather:** For real-time weather updates, please check your local news. Matches proceed unless severe rain occurs.",
         "pension": "💰 **Pension Schemes:**\n\nRetired players who have represented the state/nation are eligible for monthly pensions. Please visit **sports.telangana.gov.in** for application details.",
         "stadium": "🏟️ **Main Venue:**\n\nThe opening ceremony and main events are held at **Gachibowli Indoor Stadium, Hyderabad**.",
         "vision": "🎯 **Vision 2025:**\n\nTo identify rural talent and nurture them into world-class athletes for the upcoming Olympics and National Games.",
         "budget": "💰 **Sports Budget:**\n\nThe government has allocated **₹500 Crores** for sports infrastructure development in this fiscal year.",
-        "infrastructure": "💰 **Sports Budget:**\n\nThe government has allocated **₹500 Crores** for sports infrastructure development in this fiscal year.",
+        "infrastructure": "🏗️ **Infrastructure:**\n\nState-of-the-art sports complexes are being developed in every district HQ.",
         "award": "🏆 **Cash Awards:**\n\n- Olympic Gold: **₹2 Cr**\n- Silver: **₹1 Cr**\n- Bronze: **₹50 Lakhs**",
-        "gold": "🏆 **Cash Awards:**\n\n- Olympic Gold: **₹2 Cr**\n- Silver: **₹1 Cr**\n- Bronze: **₹50 Lakhs**",
         "quota": "📜 **Sports Quota:**\n\n**2% reservation** is provided for meritorious sports persons in government jobs and education.",
-        "reservation": "📜 **Sports Quota:**\n\n**2% reservation** is provided for meritorious sports persons in government jobs and education.",
-        "cluster": "📍 **Cluster Info:**\n\nClusters are groups of villages for local administration. Please provide your **Village Name** to find your specific Cluster.",
         "opening": "🎉 **Opening Ceremony:**\n\nThe Grand Opening Ceremony will be held at **Gachibowli Stadium** on **Jan 26th**."
     }
     
@@ -228,6 +224,7 @@ async def chat_endpoint(request: ChatRequest):
              except Exception as e:
                  print(f"SQL Error (Schedule): {e}")
 
+
     # 5. Geo Query
     NAME_REGEX = r"([a-zA-Z\s\-\(\)]+?)"
     geo_pattern_1 = fr"(?:district|mandal|village)\s*(?:does)?\s*{NAME_REGEX}\s*(?:belong|exist|register|in the db|in database)"
@@ -261,6 +258,25 @@ async def chat_endpoint(request: ChatRequest):
                     return {"response": f"🚫 **{clean_name}** could not be found in our Village/Mandal/District database.", "source": "sql_database"}
             except Exception as e:
                 print(f"SQL Error: {e}")
+
+    # 5.5 Discipline/Level Lookup
+    level_pattern = r"(disciplines|sports|games).*?(cluster|mandal|district|state)\s*(?:level)?"
+    level_match = re.search(level_pattern, original_query, re.IGNORECASE)
+    if level_match:
+        level_name = level_match.group(2).lower()
+        print(f"⚡ Intent: Discipline Lookup (Level: {level_name})")
+        try:
+            from rag.sql_queries import get_disciplines_by_level
+            games = get_disciplines_by_level(level_name)
+            if games:
+                txt = f"### 🏅 Sports at {level_name.title()} Level\n"
+                for g in games:
+                    txt += f"- {g}\n"
+                return {"response": txt, "source": "sql_database"}
+            else:
+                 return {"response": f"ℹ️ No specific disciplines found listed for **{level_name}** level.", "source": "sql_database"}
+        except Exception as e:
+            print(f"SQL Error: {e}")
 
     # 6. RAG Fallback
     print(f"🧠 Intent: General Query")

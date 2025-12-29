@@ -201,3 +201,34 @@ def get_sport_schedule(sport_name):
         
     return df.to_dict(orient="records")
 
+
+def get_disciplines_by_level(level_name):
+    """
+    Get list of disciplines (games) played at a specific level.
+    Based on is_level_code in tb_discipline.
+    Mapping (inferred):
+    1: Cluster Level
+    2: Mandal Level
+    3: District/State Level
+    """
+    ds = get_datastore()
+    if not ds.initialized: ds.init_db()
+    
+    level_map = {
+        "cluster": 1,
+        "mandal": 2,
+        "district": 3,
+        "state": 3 
+    }
+    
+    code = level_map.get(level_name.lower().strip())
+    if not code:
+        return []
+        
+    query = "SELECT dist_game_nm FROM tb_discipline WHERE is_level_code = ?"
+    df = ds.query(query, (code,))
+    
+    if df.empty:
+        return []
+        
+    return df['dist_game_nm'].tolist()
