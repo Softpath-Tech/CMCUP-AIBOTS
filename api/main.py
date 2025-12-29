@@ -18,9 +18,9 @@ if PROJECT_ROOT not in sys.path:
 # 2. Imports
 # --------------------------------------------------
 from rag.chain import get_rag_chain
-from rag.sql_queries import get_fixture_details, get_geo_details, get_sport_schedule, get_player_by_reg_id
+from rag.sql_queries import get_fixture_details, get_geo_details, get_sport_schedule
 # Also importing get_player_by_phone from lookup (which uses SQL now)
-from rag.lookup import get_player_by_phone
+from rag.lookup import get_player_by_phone, get_player_by_reg_id
 
 # --------------------------------------------------
 # 3. Initialize FastAPI App
