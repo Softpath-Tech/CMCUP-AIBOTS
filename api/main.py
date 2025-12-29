@@ -163,6 +163,17 @@ async def chat_endpoint(request: ChatRequest):
              print(f"⚡ Intent: Static Data ({key})")
              return {"response": response, "source": "static_knowledge"}
              
+    # 0.2 Year/Version Mismatch Interceptor
+    # If user asks for past years (e.g. 2015, 2024), redirect to 2025.
+    year_match = re.search(r'\b(20\d{2})\b', user_query)
+    if year_match:
+        year = int(year_match.group(1))
+        if year != 2025 and ("cm" in user_query or "cup" in user_query):
+             return {
+                 "response": f"ℹ️ **Note:** I currently only have information for the **Key Minister's Cup (CM Cup) 2025**. I don't have data for {year}.",
+                 "source": "logic_interceptor"
+             }
+
     # 0.5 Participation Stats (New)
     if any(k in user_query for k in ["total participation", "how many players", "total registration", "total players", "no participation"]):
         from rag.sql_queries import get_participation_stats
