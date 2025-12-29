@@ -1,27 +1,40 @@
 import sys
 import os
 import re
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Response
 from pydantic import BaseModel
+from typing import Optional
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
-# 1. Ensure Python can find your 'rag' folder
-sys.path.append(os.getcwd())
+# --------------------------------------------------
+# 1. Ensure Python can find project root (Render-safe)
+# --------------------------------------------------
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if PROJECT_ROOT not in sys.path:
+    sys.path.append(PROJECT_ROOT)
 
-# 2. Import Brains & Data Store
+# --------------------------------------------------
+# 2. Imports
+# --------------------------------------------------
 from rag.chain import get_rag_chain
-from rag.sql_queries import get_fixture_details, get_geo_details, get_sport_schedule
+from rag.sql_queries import get_fixture_details, get_geo_details, get_sport_schedule, get_player_by_reg_id
+# Also importing get_player_by_phone from lookup (which uses SQL now)
+from rag.lookup import get_player_by_phone
 
-# 3. Initialize App
+# --------------------------------------------------
+# 3. Initialize FastAPI App
+# --------------------------------------------------
 app = FastAPI(
     title="SATG Sports Chatbot API",
     description="Hybrid RAG + SQL Engine for Player Stats & Rules",
     version="1.1.0"
 )
 
+# Mount Static Files (Demo UI)
 app.mount("/demo", StaticFiles(directory="static", html=True), name="static")
 
+# 4. Enable CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -30,35 +43,89 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# --------------------------------------------------
+# 5. Models and Globals
+# --------------------------------------------------
 class ChatRequest(BaseModel):
     query: str
 
+class WhatsAppChatRequest(BaseModel):
+    user_message: str
+    first_name: Optional[str] = None
+    phone_number: Optional[str] = None
+
+# Global RAG Cache (Lazy Loaded)
 rag_chain = None
 
-@app.on_event("startup")
-async def startup_event():
-    """Load the RAG Brain and SQL Store once when server starts."""
+def get_or_init_rag_chain():
+    """
+    Lazy-load RAG chain.
+    This prevents Render startup timeout.
+    """
     global rag_chain
-    print("🚀 Server Starting... Loading RAG Chain & Data Store...")
-    
-    # 1. Init RAG
-    try:
+    if rag_chain is None:
+        print("🧠 Initializing RAG chain (lazy)...")
         rag_chain = get_rag_chain()
-        print("✅ RAG Chain Loaded Successfully!")
-    except Exception as e:
-        print(f"❌ Error loading RAG Chain: {e}")
+        print("✅ RAG chain initialized")
+    return rag_chain
 
-    # 2. Init SQL DataStore
+# --------------------------------------------------
+# 6. Helpers
+# --------------------------------------------------
+def extract_plain_text(resp) -> str:
+    """Try to extract a single answer string from various response shapes."""
+    if resp is None:
+        return ""
+    if isinstance(resp, (str, int, float)):
+        return str(resp)
+    if isinstance(resp, dict):
+        return _extract_from_dict(resp)
+    if isinstance(resp, (list, tuple)):
+        return _extract_from_list(resp)
+    return str(resp)
+
+def _extract_from_dict(d: dict) -> str:
+    # Preferred scalar keys
+    for key in ("response", "answer", "text", "content", "message", "output", "result"):
+        v = d.get(key)
+        if isinstance(v, (str, int, float)):
+            return str(v)
+    for key in ("choices", "outputs", "results"):
+        if key in d:
+            return extract_plain_text(d[key])
+    for v in d.values():
+        candidate = extract_plain_text(v)
+        if candidate:
+            return candidate
+    return ""
+
+def _extract_from_list(lst) -> str:
+    for item in lst:
+        candidate = extract_plain_text(item)
+        if candidate:
+            return candidate
     try:
-        ds = get_datastore()
-        ds.init_db()
-    except Exception as e:
-        print(f"❌ Error loading DataStore: {e}")
+        return " ".join([str(x) for x in lst])
+    except Exception:
+        return ""
+
+# --------------------------------------------------
+# 7. Health Check
+# --------------------------------------------------
+@app.get("/health")
+def health():
+    return {"status": "ok"}
 
 @app.get("/")
 def read_root():
-    return {"status": "online", "message": "SATG Chatbot Engine is Running 🚀"}
+    return {
+        "status": "online",
+        "message": "SATG Chatbot Engine is Running 🚀"
+    }
 
+# --------------------------------------------------
+# 8. Main Chat Endpoint (Hybrid Router)
+# --------------------------------------------------
 @app.post("/chat")
 async def chat_endpoint(request: ChatRequest):
     """
@@ -74,7 +141,6 @@ async def chat_endpoint(request: ChatRequest):
     user_query = request.query.strip().lower() # Normalize Lower
     
     # 0. Static Data Interceptor
-    # Hardcoded for 100% reliability on common questions
     STATIC_KNOWLEDGE = {
         "cm": "The Hon'ble Chief Minister of Telangana is **Sri A. Revanth Reddy**.",
         "minister": "The Hon'ble Chief Minister of Telangana and Sports Minister is **Sri A. Revanth Reddy**.",
@@ -145,20 +211,11 @@ async def chat_endpoint(request: ChatRequest):
             print(f"SQL Error: {e}")
 
     # 4. Sport Schedule (New)
-    # "List events for Wrestling", "Schedule for Kabaddi", "Basketball matches today"
-    # Capture "Wrestling", "Kabaddi", "Basketball" but ignore "matches today"
-    
-    # Regex Strategy: Capture everything after key phrase, then clean it.
     sport_pattern = r'(?:schedule|events|matches)\s*(?:for|of|in)?\s*([a-zA-Z\s]+)'
     sport_match = re.search(sport_pattern, original_query, re.IGNORECASE)
     if sport_match:
-        # e.g. "Basketball matches today" -> "Basketball matches today"
         raw_sport = sport_match.group(1).strip()
-        
-        # Clean specific suffixes common in natural phrasing
         clean_sport = re.sub(r'\s+(matches|events|schedule|today|tomorrow)\b', '', raw_sport, flags=re.IGNORECASE).strip()
-        
-        # Filter out stopwords
         if clean_sport.lower() not in ["the", "this"] and len(clean_sport) > 3:
              print(f"⚡ Intent: Sport Schedule ({clean_sport})")
              try:
@@ -183,7 +240,6 @@ async def chat_endpoint(request: ChatRequest):
 
     if geo_match:
         raw_name = geo_match.group(1).strip()
-        # Clean suffixes
         clean_name = re.sub(r'\s+(district|mandal|village|zila|jilla)\b', '', raw_name, flags=re.IGNORECASE).strip()
         
         if len(clean_name) > 3 and clean_name.lower() not in ["the", "this", "that"]:
@@ -209,18 +265,41 @@ async def chat_endpoint(request: ChatRequest):
     # 6. RAG Fallback
     print(f"🧠 Intent: General Query")
     
-    if not rag_chain:
-        # Fallback to simple static response if RAG is dead
-        return {"response": "The AI Brain is initializing. Please try again in 10 seconds.", "source": "system"}
-
     try:
-        response_text = rag_chain.invoke(original_query)
+        # Use Lazy Loaded Chain
+        rag = get_or_init_rag_chain()
+        if not rag:
+             return {"response": "The AI Brain is initializing. Please try again in 10 seconds.", "source": "system"}
+        
+        response_text = rag.invoke(original_query)
         return {"response": response_text, "source": "rag_knowledge_base"}
     except Exception as e:
-        # Fail gracefully
         print(f"RAG Crash: {e}")
         return {"response": "I encountered an error accessing the knowledge base. Please contact helpdesk.", "source": "error_handler"}
 
 @app.post("/ask")
 async def ask_endpoint(request: ChatRequest):
     return await chat_endpoint(request)
+
+# --------------------------------------------------
+# 9. WhatsApp Endpoint
+# --------------------------------------------------
+@app.post("/whatsappchat")
+async def whatsapp_chat_endpoint(request: WhatsAppChatRequest):
+    """
+    WhatsApp specialized endpoint: accepts JSON with user_message.
+    """
+    user_message = (request.user_message or "").strip()
+
+    if not user_message:
+        raise HTTPException(status_code=400, detail="user_message cannot be empty")
+
+    try:
+        rag = get_or_init_rag_chain()
+        response_text = rag.invoke(user_message)
+        plain = extract_plain_text(response_text)
+        return Response(content=plain, media_type="text/plain")
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"RAG Error: {str(e)}")

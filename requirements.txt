@@ -8,9 +8,7 @@ qdrant-client
 fastapi
 uvicorn
 python-dotenv
-langchain-groq
-langchain-huggingface
-sentence-transformers
 litellm
 langdetect
 langchain-openai
+pandas
