@@ -156,11 +156,20 @@ async def chat_endpoint(request: ChatRequest):
         "opening": "🎉 **Opening Ceremony:**\n\nThe Grand Opening Ceremony will be held at **Gachibowli Stadium** on **Jan 26th**."
     }
     
-    # Keyword search for static data
     for key, response in STATIC_KNOWLEDGE.items():
-        if key in user_query and len(user_query) < 50: # Short queries only
+        pattern = r'\b' + re.escape(key) + r'\b'
+        if re.search(pattern, user_query): 
              print(f"⚡ Intent: Static Data ({key})")
              return {"response": response, "source": "static_knowledge"}
+             
+    # 0.5 Participation Stats (New)
+    if any(k in user_query for k in ["total participation", "how many players", "total registration", "total players", "no participation"]):
+        from rag.sql_queries import get_participation_stats
+        count = get_participation_stats()
+        return {
+            "response": f"📊 **Participation Status:**\n\nA total of **{count} players** have registered for the Chief Minister's Cup (CM Cup) 2025 so far!",
+            "model_used": "sql_database"
+        }
 
     # 1. Phone Number match
     original_query = request.query.strip() # Keep casing for Reg IDs if needed

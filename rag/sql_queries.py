@@ -67,6 +67,22 @@ def search_players_sql(value, search_type="mobile"):
     
     return df.to_dict(orient="records")
 
+def get_participation_stats():
+    """
+    Returns total number of players registered.
+    """
+    ds = get_datastore()
+    if not ds.initialized:
+        ds.init_db()
+        
+    query = "SELECT COUNT(*) as total FROM player_details"
+    df = ds.query(query)
+    
+    if df.empty:
+        return 0
+        
+    return df.iloc[0]['total']
+
 def get_fixture_details(fixture_id):
     """
     Lookup match schedule using Fixture ID or Match No.

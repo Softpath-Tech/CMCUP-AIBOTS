@@ -68,7 +68,7 @@ def ask_llm(context: str, question: str, language: str = None) -> dict:
     # 3. Define Models (Tier 1: OpenAI, Tier 2: Gemini)
     # Using 'gemini/...' prefix for Google AI Studio
     primary_model = "openai/gpt-4o-mini"
-    secondary_model = "gemini/gemini-2.5-flash"
+    secondary_model = "gemini/gemini-2.0-flash-exp"
     
     try:
         # Attempt Primary Model

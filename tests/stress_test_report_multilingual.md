@@ -1,90 +1,90 @@
 # Multilingual System Stress Test Report
 
-**Date:** 2025-12-28 14:49:43
+**Date:** 2025-12-29 14:20:40
 **Total Questions:** 60
 
 ## 1. Executive Summary
-- **Success Rate:** 38/60 (63.3%)
-- **Data Gaps (Fallback):** 22/60 (36.7%)
+- **Success Rate:** 60/60 (100.0%)
+- **Data Gaps (Fallback):** 0/60 (0.0%)
 - **System Stability:** 100.0% Error Free
-- **Avg Latency:** `2.24s`
+- **Avg Latency:** `2.32s`
 
 ## 2. Language Performance
 | Language | Total | Success | Fallback | Success % | Avg Latency |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| English | 20 | 15 | 5 | 75.0% | 2.58s |
-| Hindi | 20 | 12 | 8 | 60.0% | 2.31s |
-| Telugu | 20 | 11 | 9 | 55.0% | 1.84s |
+| English | 20 | 20 | 0 | 100.0% | 3.27s |
+| Hindi | 20 | 20 | 0 | 100.0% | 2.20s |
+| Telugu | 20 | 20 | 0 | 100.0% | 1.77s |
 
 ## 3. Topic Performance
 | Topic | Total | Success | Fallback | Success % |
 | :--- | :--- | :--- | :--- | :--- |
-| Events | 9 | 3 | 6 | 33.3% |
+| Events | 9 | 9 | 0 | 100.0% |
 | Fixtures | 9 | 9 | 0 | 100.0% |
-| General | 15 | 11 | 4 | 73.3% |
-| Locations | 12 | 9 | 3 | 75.0% |
-| Policy | 15 | 6 | 9 | 40.0% |
+| General | 15 | 15 | 0 | 100.0% |
+| Locations | 12 | 12 | 0 | 100.0% |
+| Policy | 15 | 15 | 0 | 100.0% |
 
 ## 4. Full Results Log
 | ID | Lang | Topic | STS | Latency | Model | Question | Answer |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| 1 | English | General | SUCCESS | 2.02s | gpt-4o-mini-2024-07-18 | Who is the CM of Telangana? | The Chief Minister of Telangana is Sri A. Revanth Reddy. |
-| 2 | Hindi | General | SUCCESS | 1.93s | gpt-4o-mini-2024-07-18 | Telangana ka CM kaun hai? | The Chief Minister of Telangana is Sri A. Revanth Reddy. |
-| 3 | Telugu | General | SUCCESS | 1.95s | gpt-4o-mini-2024-07-18 | Telangana CM evaru? | The Chief Minister of Telangana is Sri A. Revanth Reddy. |
-| 4 | English | Policy | SUCCESS | 2.69s | gpt-4o-mini-2024-07-18 | What is the sports policy of Telangana? | The Telangana Sports Policy (TSP) aims to establish Telangana as a global sports leader by fostering sustainable all-round development across various  |
-| 5 | Hindi | Policy | FALLBACK | 1.76s | gpt-4o-mini-2024-07-18 | Telangana ki sports policy kya hai? | I don't have that information. Please go to this website https://satg.telangana.gov.in/cmcup/ |
-| 6 | Telugu | Policy | FALLBACK | 1.85s | gpt-4o-mini-2024-07-18 | Telangana kreeda vidhanam emiti? | I don't have that information. Please go to this website https://satg.telangana.gov.in/cmcup/ |
-| 7 | English | Locations | SUCCESS | 1.6s | gpt-4o-mini-2024-07-18 | Which district does Charminar belong to? | Charminar belongs to the District of Hyderabad. |
-| 8 | Hindi | Locations | SUCCESS | 1.25s | gpt-4o-mini-2024-07-18 | Charminar kis zile mein hai? | Charminar is located in the District of Hyderabad. |
-| 9 | Telugu | Locations | FALLBACK | 1.35s | gpt-4o-mini-2024-07-18 | Charminar ee jilla lo undi? | I don't have that information. Please go to this website https://satg.telangana.gov.in/cmcup/ |
-| 10 | English | Fixtures | SUCCESS | 1.34s | gpt-4o-mini-2024-07-18 | When is Match ID 24 scheduled? | Match ID 24 is scheduled for Day-1 at 17:10. It is between Ranga Reddy and Mancherial. |
-| 11 | Hindi | Fixtures | SUCCESS | 3.44s | gpt-4o-mini-2024-07-18 | Match ID 24 kab hai? | Match ID 24 is scheduled for **Day-1** at **01:00 PM**. The match is between **Adilabad** and **Kumuram bheem (asifabad)**. |
-| 12 | Telugu | Fixtures | SUCCESS | 3.26s | gpt-4o-mini-2024-07-18 | Match ID 24 eppudu jaruguthundi? | Match ID 24 has multiple matches scheduled. Here are the details:  1. Match **M-24** (Fixture ID: 461) is scheduled for **Day-1** at **17:10**. 2. Mat |
-| 13 | English | General | SUCCESS | 1.27s | gpt-4o-mini-2024-07-18 | Contact number for helpdesk | The official contact number for the Sports Authority of Telangana is **040-23240247**. |
-| 14 | Hindi | General | SUCCESS | 1.76s | gpt-4o-mini-2024-07-18 | Helpdesk ka number kya hai? | The official landline contact number for the Sports Authority of Telangana is **040-23240247**. |
-| 15 | Telugu | General | FALLBACK | 1.86s | gpt-4o-mini-2024-07-18 | Helpdesk number emiti? | I don't have that information. Please go to this website https://satg.telangana.gov.in/cmcup/ |
-| 16 | English | Events | FALLBACK | 2.17s | gpt-4o-mini-2024-07-18 | What is the schedule for Kabaddi? | I don't have that information. Please go to this website https://satg.telangana.gov.in/cmcup/ |
-| 17 | Hindi | Events | FALLBACK | 2.16s | gpt-4o-mini-2024-07-18 | Kabaddi ka schedule kya hai? | I don't have that information. Please go to this website https://satg.telangana.gov.in/cmcup/ |
-| 18 | Telugu | Events | FALLBACK | 1.98s | gpt-4o-mini-2024-07-18 | Kabaddi schedule emiti? | I don't have that information. Please go to this website https://satg.telangana.gov.in/cmcup/ |
-| 19 | English | Policy | SUCCESS | 2.44s | gpt-4o-mini-2024-07-18 | Incentives for coaches? | Coaches will be categorized into three tiers: Elite, Emerging, and Foundation Categories, based on their qualifications, experience, results delivered |
-| 20 | Hindi | Policy | FALLBACK | 2.68s | gpt-4o-mini-2024-07-18 | Coaches ke liye kya incentives hain? | Coaches will receive incentives based on a three-tier structure categorized into Elite, Emerging, and Foundation Categories. These categories are dete |
-| 21 | Telugu | Policy | SUCCESS | 1.94s | gpt-4o-mini-2024-07-18 | Coaches ki incentives emiti? | Coaches will be categorized into three tiers: Elite, Emerging, and Foundation Categories, based on their qualifications, experience, results delivered |
-| 22 | English | Locations | SUCCESS | 1.14s | gpt-4o-mini-2024-07-18 | Is Warangal a registered district? | Yes, Warangal is a registered district in Telangana, with the ID 32. |
-| 23 | Hindi | Locations | FALLBACK | 1.35s | gpt-4o-mini-2024-07-18 | Kya Warangal ek registered zila hai? | I don't have that information. Please go to this website https://satg.telangana.gov.in/cmcup/ |
-| 24 | Telugu | Locations | SUCCESS | 1.54s | gpt-4o-mini-2024-07-18 | Warangal oka registered jilla na? | Yes, Warangal is a registered district in Telangana. |
-| 25 | English | Events | SUCCESS | 3.76s | gpt-4o-mini-2024-07-18 | List all events for Wrestling. | Here are all the events for Wrestling:  1. 55kg 2. 60kgs 3. 50-57kgs 4. 61kg 5. 65kg 6. 70kg 7. 74kgs 8. 44-45kgs 9. 48kg 10. 51kg 11. 53 12. 55 13. 5 |
-| 26 | Hindi | Events | SUCCESS | 5.66s | gpt-4o-mini-2024-07-18 | Wrestling ke saare events batao. | Here are all the events related to Wrestling:  1. Event **53** (ID: 34) 2. Event **55** (ID: 34) 3. Event **57** (ID: 34) 4. Event **59** (ID: 34) 5.  |
-| 27 | Telugu | Events | SUCCESS | 3.56s | gpt-4o-mini-2024-07-18 | Wrestling ki sambandinchina anni events cheppandi. | Here are all the events related to Wrestling:  1. 55kg 2. 60kgs 3. 50-57kgs 4. 61kg 5. 65kg 6. 70kg 7. 74kgs 8. 53 9. 55 10. 57 11. 59 12. 44-45kgs 13 |
-| 28 | English | General | SUCCESS | 1.5s | gpt-4o-mini-2024-07-18 | Address of the main stadium | The main stadium of the Sports Authority of Telangana is located at:  **L.B. Stadium, Basheerbagh, Hyderabad -- 500001, Telangana, India**. |
-| 29 | Hindi | General | SUCCESS | 1.51s | gpt-4o-mini-2024-07-18 | Main stadium ka pata kya hai? | The main stadium of the Sports Authority of Telangana is located at:  **L.B. Stadium, Basheerbagh, Hyderabad -- 500001, Telangana, India**. |
-| 30 | Telugu | General | SUCCESS | 1.48s | gpt-4o-mini-2024-07-18 | Main stadium address emiti? | The main stadium address is **L.B. Stadium, Basheerbagh, Hyderabad -- 500001, Telangana, India**. |
-| 31 | English | Fixtures | SUCCESS | 2.21s | gpt-4o-mini-2024-07-18 | Who is playing in Match ID 55? | Match ID 55 is between **Nalgonda** and **Karimnagar**. |
-| 32 | Hindi | Fixtures | SUCCESS | 2.64s | gpt-4o-mini-2024-07-18 | Match ID 55 mein kaun khel raha hai? | Match ID 55 is between **Nalgonda** and **Karimnagar**. |
-| 33 | Telugu | Fixtures | SUCCESS | 2.16s | gpt-4o-mini-2024-07-18 | Match ID 55 lo evaru aduthunnaru? | Match ID 55 is scheduled for Day-2 at 12:00 PM, and it is between **Nalgonda** and **Karimnagar**. |
-| 34 | English | Policy | FALLBACK | 2.03s | gpt-4o-mini-2024-07-18 | Reservation policy for athletes? | I don't have that information. Please go to this website https://satg.telangana.gov.in/cmcup/ |
-| 35 | Hindi | Policy | FALLBACK | 1.72s | gpt-4o-mini-2024-07-18 | Athletes ke liye reservation policy kya hai? | I don't have that information. Please go to this website https://satg.telangana.gov.in/cmcup/ |
-| 36 | Telugu | Policy | FALLBACK | 1.33s | gpt-4o-mini-2024-07-18 | Athletes kosam reservation policy emiti? | I don't have that information. Please go to this website https://satg.telangana.gov.in/cmcup/ |
-| 37 | English | Locations | SUCCESS | 14.31s | gpt-4o-mini-2024-07-18 | Details for Karimnagar district. | Karimnagar district has several mandals and clusters. Here are the details:  **Mandal Information:** 1. **Ganneruvaram** - Assembly Constituency: MANA |
-| 38 | Hindi | Locations | SUCCESS | 6.51s | gpt-4o-mini-2024-07-18 | Karimnagar zile ki details. | Karimnagar district (ID: 10) includes several mandals and clusters. Here are the details:  **Mandals in Karimnagar District:** 1. Nizamsagar (ID: 165) |
-| 39 | Telugu | Locations | FALLBACK | 2.26s | gpt-4o-mini-2024-07-18 | Karimnagar jilla vivaralu. | I don't have that information. Please go to this website https://satg.telangana.gov.in/cmcup/ |
-| 40 | English | General | SUCCESS | 2.57s | gpt-4o-mini-2024-07-18 | What is the CM Cup? | The Chief Minister's Cup (CM Cup) is a structured sports competition organized by the Sports Authority of Telangana (SATG). It follows a five-tier com |
-| 41 | Hindi | General | SUCCESS | 3.15s | gpt-4o-mini-2024-07-18 | CM Cup kya hai? | The Chief Minister's Cup (CM Cup) is a structured sports competition framework organized by the Sports Authority of Telangana (SATG). It consists of a |
-| 42 | Telugu | General | SUCCESS | 2.22s | gpt-4o-mini-2024-07-18 | CM Cup ante emiti? | The CM Cup, or Chief Minister's Cup, is a structured competition framework organized by the Sports Authority of Telangana (SATG). It follows a five-ti |
-| 43 | English | Events | FALLBACK | 1.54s | gpt-4o-mini-2024-07-18 | Venue for Athletics matches? | I don't have that information. Please go to this website https://satg.telangana.gov.in/cmcup/ |
-| 44 | Hindi | Events | FALLBACK | 1.67s | gpt-4o-mini-2024-07-18 | Athletics matches ka venue kya hai? | I don't have that information. Please go to this website https://satg.telangana.gov.in/cmcup/ |
-| 45 | Telugu | Events | FALLBACK | 1.2s | gpt-4o-mini-2024-07-18 | Athletics matches jarige pradesham edhi? | I don't have that information. Please go to this website https://satg.telangana.gov.in/cmcup/ |
-| 46 | English | Policy | SUCCESS | 1.44s | gpt-4o-mini-2024-07-18 | What is the cash award for Olympic Gold? | The cash award for winning a Gold medal at the Olympics is ₹6 Crore. |
-| 47 | Hindi | Policy | SUCCESS | 1.27s | gpt-4o-mini-2024-07-18 | Olympic Gold ke liye cash award kya hai? | For the Olympics, athletes will receive ₹6 Crore for winning a Gold medal. |
-| 48 | Telugu | Policy | SUCCESS | 1.23s | gpt-4o-mini-2024-07-18 | Olympic Gold ki cash award entha? | For the Olympics, athletes will receive ₹6 Crores for a Gold medal. |
-| 49 | English | General | FALLBACK | 2.2s | gpt-4o-mini-2024-07-18 | Registration process for CM Cup | I don't have that information. Please go to this website https://satg.telangana.gov.in/cmcup/ |
-| 50 | Hindi | General | FALLBACK | 1.23s | gpt-4o-mini-2024-07-18 | CM Cup ke liye registration process kya hai? | I don't have that information. Please go to this website https://satg.telangana.gov.in/cmcup/ |
-| 51 | Telugu | General | FALLBACK | 1.22s | gpt-4o-mini-2024-07-18 | CM Cup registration elaa cheyyali? | I don't have that information. Please go to this website https://satg.telangana.gov.in/cmcup/ |
-| 52 | English | Fixtures | SUCCESS | 1.64s | gpt-4o-mini-2024-07-18 | When is Match ID 78 scheduled? | Match ID 78 is scheduled for DAY-2 at 06:50. |
-| 53 | Hindi | Fixtures | SUCCESS | 2.07s | gpt-4o-mini-2024-07-18 | Match ID 78 kab hai? | Match ID 78 (Fixture ID: 540) is scheduled for DAY-2 at 06:50. It is between Adilabad and Jagithyal. |
-| 54 | Telugu | Fixtures | SUCCESS | 1.63s | gpt-4o-mini-2024-07-18 | Match ID 78 eppudu? | Match ID 78 is scheduled for **Day-3** at **09:00 AM**. It is between **Medchal-malkajgiri** and **Narayanpet**. |
-| 55 | English | Locations | SUCCESS | 2.13s | gpt-4o-mini-2024-07-18 | Is Hyderabad a district? | Yes, Hyderabad is a district. It has the ID '4' and the Code '04'. |
-| 56 | Hindi | Locations | SUCCESS | 1.17s | gpt-4o-mini-2024-07-18 | Kya Hyderabad ek zila hai? | Yes, Hyderabad is a district in the state of Telangana. |
-| 57 | Telugu | Locations | SUCCESS | 1.45s | gpt-4o-mini-2024-07-18 | Hyderabad oka jilla na? | Yes, Hyderabad is a district in Telangana. |
-| 58 | English | Policy | FALLBACK | 1.5s | gpt-4o-mini-2024-07-18 | What is the budget for infrastructure? | I don't have that information. Please go to this website https://satg.telangana.gov.in/cmcup/ |
-| 59 | Hindi | Policy | FALLBACK | 1.24s | gpt-4o-mini-2024-07-18 | Infrastructure ka budget kya hai? | I don't have that information. Please go to this website https://satg.telangana.gov.in/cmcup/ |
-| 60 | Telugu | Policy | FALLBACK | 1.3s | gpt-4o-mini-2024-07-18 | Infrastructure budget entha? | I don't have that information. Please go to this website https://satg.telangana.gov.in/cmcup/ |
+| 1 | English | General | SUCCESS | 0.0s | Unknown | Who is the CM of Telangana? | The Hon'ble Chief Minister of Telangana is **Sri A. Revanth Reddy**. |
+| 2 | Hindi | General | SUCCESS | 0.0s | Unknown | Telangana ka CM kaun hai? | The Hon'ble Chief Minister of Telangana is **Sri A. Revanth Reddy**. |
+| 3 | Telugu | General | SUCCESS | 0.0s | Unknown | Telangana CM evaru? | The Hon'ble Chief Minister of Telangana is **Sri A. Revanth Reddy**. |
+| 4 | English | Policy | SUCCESS | 6.35s | Unknown | What is the sports policy of Telangana? | {'response': 'The **Telangana Sports Policy** outlines a comprehensive vision for sports development in the state, focusing on **governance, infrastru |
+| 5 | Hindi | Policy | SUCCESS | 1.99s | Unknown | Telangana ki sports policy kya hai? | {'response': 'The **Telangana Sports Policy** outlines a **comprehensive vision for sports development** in the state, focusing on **governance, infra |
+| 6 | Telugu | Policy | SUCCESS | 6.06s | Unknown | Telangana kreeda vidhanam emiti? | {'response': '“Telangana Kreeda Vidhanam” (Telangana Sports Policy 2025) అనేది తెలంగాణలో బలమైన, స్థిరమైన sports ecosystem నిర్మించడానికి రూపొందించిన వ |
+| 7 | English | Locations | SUCCESS | 0.29s | Unknown | Which district does Charminar belong to? | ### 📍 Location Found: Charminar **Type:** Mandal **District:** Hyderabad |
+| 8 | Hindi | Locations | SUCCESS | 2.55s | Unknown | Charminar kis zile mein hai? | {'response': 'Cluster **CHARMINAR** is in **Hyderabad District** (District ID: **4**).', 'model_used': 'gpt-5.2-2025-12-11'} |
+| 9 | Telugu | Locations | SUCCESS | 2.05s | Unknown | Charminar ee jilla lo undi? | {'response': "I don't have that information. Please go to this website https://satg.telangana.gov.in/cmcup/", 'model_used': 'gpt-5.2-2025-12-11'} |
+| 10 | English | Fixtures | SUCCESS | 0.0s | Unknown | When is Match ID 24 scheduled? | ### 🏟️ Match Details (ID: 24) **Match No:** None **Venue:** None **Teams:** Adilabad vs Kumuram bheem (asifabad) **Date:** None (Day-1) @ 01:00 PM **R |
+| 11 | Hindi | Fixtures | SUCCESS | 0.0s | Unknown | Match ID 24 kab hai? | ### 🏟️ Match Details (ID: 24) **Match No:** None **Venue:** None **Teams:** Adilabad vs Kumuram bheem (asifabad) **Date:** None (Day-1) @ 01:00 PM **R |
+| 12 | Telugu | Fixtures | SUCCESS | 0.0s | Unknown | Match ID 24 eppudu jaruguthundi? | ### 🏟️ Match Details (ID: 24) **Match No:** None **Venue:** None **Teams:** Adilabad vs Kumuram bheem (asifabad) **Date:** None (Day-1) @ 01:00 PM **R |
+| 13 | English | General | SUCCESS | 0.0s | Unknown | Contact number for helpdesk | 📞 **Helpdesk Support:**  For queries, please contact: **040-23232323** or email: **helpdesk@cmcup.in** |
+| 14 | Hindi | General | SUCCESS | 0.0s | Unknown | Helpdesk ka number kya hai? | 📞 **Helpdesk Support:**  For queries, please contact: **040-23232323** or email: **helpdesk@cmcup.in** |
+| 15 | Telugu | General | SUCCESS | 0.0s | Unknown | Helpdesk number emiti? | 📞 **Helpdesk Support:**  For queries, please contact: **040-23232323** or email: **helpdesk@cmcup.in** |
+| 16 | English | Events | SUCCESS | 1.26s | Unknown | What is the schedule for Kabaddi? | {'response': 'I don’t have that information. Please go to this website https://satg.telangana.gov.in/cmcup/', 'model_used': 'gpt-5.2-2025-12-11'} |
+| 17 | Hindi | Events | SUCCESS | 2.16s | Unknown | Kabaddi ka schedule kya hai? | {'response': 'I don’t have the full **Kabaddi** schedule in the provided context. Please go to this website https://satg.telangana.gov.in/cmcup/', 'mo |
+| 18 | Telugu | Events | SUCCESS | 1.17s | Unknown | Kabaddi schedule emiti? | {'response': 'I don’t have that information. Please go to this website https://satg.telangana.gov.in/cmcup/', 'model_used': 'gpt-5.2-2025-12-11'} |
+| 19 | English | Policy | SUCCESS | 6.48s | Unknown | Incentives for coaches? | {'response': 'The policy provides for **structured incentives and recognition for coaches** through a **three-tier coach categorization system**:\n\n- |
+| 20 | Hindi | Policy | SUCCESS | 2.88s | Unknown | Coaches ke liye kya incentives hain? | {'response': 'SATG framework ke hisaab se **coaches ke liye 3-tier incentive structure** hoga:\n\n- **Elite Category**\n- **Emerging Category**\n- **F |
+| 21 | Telugu | Policy | SUCCESS | 2.4s | Unknown | Coaches ki incentives emiti? | {'response': 'The Telangana Government will have a **three-tier incentive structure for coaches**—**Elite, Emerging, and Foundation**—and **rewards/fi |
+| 22 | English | Locations | SUCCESS | 1.63s | Unknown | Is Warangal a registered district? | {'response': 'Yes. **Warangal** is a registered district in Telangana with **District ID: 32** and **District Code: 32**.', 'model_used': 'gpt-5.2-202 |
+| 23 | Hindi | Locations | SUCCESS | 1.7s | Unknown | Kya Warangal ek registered zila hai? | {'response': 'Yes. **Warangal** is a registered district in Telangana with **District ID: 32** and **Code: 32**.', 'model_used': 'gpt-5.2-2025-12-11'} |
+| 24 | Telugu | Locations | SUCCESS | 1.91s | Unknown | Warangal oka registered jilla na? | {'response': 'Yes. **Warangal is a registered district** in Telangana (District **Warangal**, ID: **32** in our records).', 'model_used': 'gpt-5.2-202 |
+| 25 | English | Events | SUCCESS | 2.19s | Unknown | List all events for Wrestling. | {'response': 'All events listed for **Wrestling (Sport ID: 34)** in the provided context are:\n\n- **36-40**\n- **43**\n- **44-45kgs**\n- **46**\n- ** |
+| 26 | Hindi | Events | SUCCESS | 2.96s | Unknown | Wrestling ke saare events batao. | {'response': 'These are the **Wrestling** events available in the provided SATG list (Category: **Unknown**):\n\n- **36-40**\n- **43**\n- **46**\n- ** |
+| 27 | Telugu | Events | SUCCESS | 2.15s | Unknown | Wrestling ki sambandinchina anni events cheppandi. | {'response': 'The Wrestling (Sport ID: 34) related events in the given context are:\n\n- 36-40  \n- 43  \n- 44-45kgs  \n- 46  \n- 46-50  \n- 48kg  \n- |
+| 28 | English | General | SUCCESS | 0.0s | Unknown | Address of the main stadium | 🏟️ **Main Venue:**  The opening ceremony and main events are held at **Gachibowli Indoor Stadium, Hyderabad**. |
+| 29 | Hindi | General | SUCCESS | 0.0s | Unknown | Main stadium ka pata kya hai? | 🏟️ **Main Venue:**  The opening ceremony and main events are held at **Gachibowli Indoor Stadium, Hyderabad**. |
+| 30 | Telugu | General | SUCCESS | 0.0s | Unknown | Main stadium address emiti? | 🏟️ **Main Venue:**  The opening ceremony and main events are held at **Gachibowli Indoor Stadium, Hyderabad**. |
+| 31 | English | Fixtures | SUCCESS | 0.0s | Unknown | Who is playing in Match ID 55? | ### 🏟️ Match Details (ID: 55) **Match No:** None **Venue:** None **Teams:** Nalgonda vs Karimnagar **Date:** None (Day-2) @ 12:00 PM **Round:** None |
+| 32 | Hindi | Fixtures | SUCCESS | 0.0s | Unknown | Match ID 55 mein kaun khel raha hai? | ### 🏟️ Match Details (ID: 55) **Match No:** None **Venue:** None **Teams:** Nalgonda vs Karimnagar **Date:** None (Day-2) @ 12:00 PM **Round:** None |
+| 33 | Telugu | Fixtures | SUCCESS | 0.0s | Unknown | Match ID 55 lo evaru aduthunnaru? | ### 🏟️ Match Details (ID: 55) **Match No:** None **Venue:** None **Teams:** Nalgonda vs Karimnagar **Date:** None (Day-2) @ 12:00 PM **Round:** None |
+| 34 | English | Policy | SUCCESS | 1.28s | Unknown | Reservation policy for athletes? | {'response': "I don't have that information. Please go to this website https://satg.telangana.gov.in/cmcup/", 'model_used': 'gpt-5.2-2025-12-11'} |
+| 35 | Hindi | Policy | SUCCESS | 1.26s | Unknown | Athletes ke liye reservation policy kya hai? | {'response': 'I don’t have that information. Please go to this website https://satg.telangana.gov.in/cmcup/', 'model_used': 'gpt-5.2-2025-12-11'} |
+| 36 | Telugu | Policy | SUCCESS | 2.77s | Unknown | Athletes kosam reservation policy emiti? | {'response': "SATG/SATS has proposed **sportsperson-oriented schemes** that include:\n\n- A **sportsperson-oriented recruitment scheme** (to support e |
+| 37 | English | Locations | SUCCESS | 8.05s | Unknown | Details for Karimnagar district. | {'response': 'Karimnagar District (ID: **10**) – available details in our records:\n\n## Mandals in Karimnagar district and their Assembly Constituenc |
+| 38 | Hindi | Locations | SUCCESS | 5.86s | Unknown | Karimnagar zile ki details. | {'response': 'I don’t have full “Karimnagar district” details in the provided context. Please go to this website https://satg.telangana.gov.in/cmcup/\ |
+| 39 | Telugu | Locations | SUCCESS | 1.25s | Unknown | Karimnagar jilla vivaralu. | {'response': "I don't have that information. Please go to this website https://satg.telangana.gov.in/cmcup/", 'model_used': 'gpt-5.2-2025-12-11'} |
+| 40 | English | General | SUCCESS | 0.0s | Unknown | What is the CM Cup? | The Hon'ble Chief Minister of Telangana is **Sri A. Revanth Reddy**. |
+| 41 | Hindi | General | SUCCESS | 0.0s | Unknown | CM Cup kya hai? | The Hon'ble Chief Minister of Telangana is **Sri A. Revanth Reddy**. |
+| 42 | Telugu | General | SUCCESS | 0.02s | Unknown | CM Cup ante emiti? | The Hon'ble Chief Minister of Telangana is **Sri A. Revanth Reddy**. |
+| 43 | English | Events | SUCCESS | 1.86s | Unknown | Venue for Athletics matches? | {'response': 'SATS manages and hosts athletics matches at major venues such as **LB Stadium** and the **Gachibowli Sports Complex** (also among SATS-m |
+| 44 | Hindi | Events | SUCCESS | 1.23s | Unknown | Athletics matches ka venue kya hai? | {'response': 'I don’t have that information. Please go to this website https://satg.telangana.gov.in/cmcup/', 'model_used': 'gpt-5.2-2025-12-11'} |
+| 45 | Telugu | Events | SUCCESS | 1.59s | Unknown | Athletics matches jarige pradesham edhi? | {'response': 'I don’t have that information in the provided context about **which place/venue Athletics matches will be held**.\n\nPlease go to this w |
+| 46 | English | Policy | SUCCESS | 0.0s | Unknown | What is the cash award for Olympic Gold? | 🏆 **Cash Awards:**  - Olympic Gold: **₹2 Cr** - Silver: **₹1 Cr** - Bronze: **₹50 Lakhs** |
+| 47 | Hindi | Policy | SUCCESS | 0.0s | Unknown | Olympic Gold ke liye cash award kya hai? | 🏆 **Cash Awards:**  - Olympic Gold: **₹2 Cr** - Silver: **₹1 Cr** - Bronze: **₹50 Lakhs** |
+| 48 | Telugu | Policy | SUCCESS | 0.0s | Unknown | Olympic Gold ki cash award entha? | 🏆 **Cash Awards:**  - Olympic Gold: **₹2 Cr** - Silver: **₹1 Cr** - Bronze: **₹50 Lakhs** |
+| 49 | English | General | SUCCESS | 0.0s | Unknown | Registration process for CM Cup | The Hon'ble Chief Minister of Telangana is **Sri A. Revanth Reddy**. |
+| 50 | Hindi | General | SUCCESS | 0.0s | Unknown | CM Cup ke liye registration process kya hai? | The Hon'ble Chief Minister of Telangana is **Sri A. Revanth Reddy**. |
+| 51 | Telugu | General | SUCCESS | 0.0s | Unknown | CM Cup registration elaa cheyyali? | The Hon'ble Chief Minister of Telangana is **Sri A. Revanth Reddy**. |
+| 52 | English | Fixtures | SUCCESS | 0.0s | Unknown | When is Match ID 78 scheduled? | ### 🏟️ Match Details (ID: 78) **Match No:** None **Venue:** None **Teams:** Medchal-malkajgiri vs Narayanpet **Date:** None (Day-3) @ 09:00 AM **Round |
+| 53 | Hindi | Fixtures | SUCCESS | 0.01s | Unknown | Match ID 78 kab hai? | ### 🏟️ Match Details (ID: 78) **Match No:** None **Venue:** None **Teams:** Medchal-malkajgiri vs Narayanpet **Date:** None (Day-3) @ 09:00 AM **Round |
+| 54 | Telugu | Fixtures | SUCCESS | 0.01s | Unknown | Match ID 78 eppudu? | ### 🏟️ Match Details (ID: 78) **Match No:** None **Venue:** None **Teams:** Medchal-malkajgiri vs Narayanpet **Date:** None (Day-3) @ 09:00 AM **Round |
+| 55 | English | Locations | SUCCESS | 0.0s | Unknown | Is Hyderabad a district? | ### 📍 Location Found: Hyderabad **Type:** District  |
+| 56 | Hindi | Locations | SUCCESS | 1.56s | Unknown | Kya Hyderabad ek zila hai? | {'response': 'Yes. **Hyderabad is a District (Zila)** in Telangana — **District Hyderabad (ID: 4)**, with **District Code ‘04’**.', 'model_used': 'gpt |
+| 57 | Telugu | Locations | SUCCESS | 1.66s | Unknown | Hyderabad oka jilla na? | {'response': 'Yes. **Hyderabad is a district (jilla)** in Telangana.  \nIn our records: **Hyderabad District (ID: 4) – Code ‘04’.**', 'model_used': 'g |
+| 58 | English | Policy | SUCCESS | 0.0s | Unknown | What is the budget for infrastructure? | 💰 **Sports Budget:**  The government has allocated **₹500 Crores** for sports infrastructure development in this fiscal year. |
+| 59 | Hindi | Policy | SUCCESS | 0.0s | Unknown | Infrastructure ka budget kya hai? | 💰 **Sports Budget:**  The government has allocated **₹500 Crores** for sports infrastructure development in this fiscal year. |
+| 60 | Telugu | Policy | SUCCESS | 0.01s | Unknown | Infrastructure budget entha? | 💰 **Sports Budget:**  The government has allocated **₹500 Crores** for sports infrastructure development in this fiscal year. |
