@@ -55,8 +55,62 @@ class DataStore:
             except Exception:
                 pass # Table or col might not exist
 
+        self.create_views()
+
         self.initialized = True
         print("✅ DataStore Ready!")
+
+    def create_views(self):
+        """
+        Create simplified, secure views for the LLM Agent.
+        - EXCLUDES Aadhar/Sensitive PII.
+        - INCLUDES Mobile/RegID for lookup.
+        - Denormalizes data (joins) for easier natural language querying.
+        """
+        print("🛡️ Creating Secure SQL Views for AI...")
+        
+        # 1. view_player_unified
+        # Joins: player -> village -> mandal -> district
+        # Joins: player -> discipline (sport)
+        # Joins: player -> events
+        view_query = """
+        CREATE VIEW IF NOT EXISTS view_player_unified AS
+        SELECT 
+            p.player_nm,
+            p.player_reg_id,
+            p.mobile_no,
+            p.gender,
+            p.player_age,
+            
+            -- Location Names
+            v.villagename,
+            m.mandalname,
+            d.districtname,
+            c.clustername,
+            
+            -- Sport/Event Info
+            dis.dist_game_nm as sport_name,
+            e.event_name,
+            f.venue,
+            f.match_date
+
+        FROM player_details p
+        LEFT JOIN villagemaster v ON p.village_id = v.id
+        LEFT JOIN mandalmaster m ON p.mandal_id = m.id  -- Assuming mandal_id key
+        LEFT JOIN districtmaster d ON p.district_id = d.districtno -- Assuming district_id maps to districtno
+        LEFT JOIN clustermaster c ON v.cluster_id = c.cluster_id
+        LEFT JOIN tb_discipline dis ON p.game_id = dis.game_id
+        LEFT JOIN tb_events e ON p.event_id = e.id
+        LEFT JOIN tb_fixtures f ON p.game_id = f.disc_id 
+             AND p.gender = f.gender 
+             AND (p.district_id = f.team1_dist_id OR p.district_id = f.team2_dist_id)
+        """
+        try:
+            self.conn.execute(view_query)
+            print("   -> Created View: view_player_unified")
+        except Exception as e:
+            print(f"   ❌ Error creating view: {e}")
+
 
     def query(self, query, params=()):
         return pd.read_sql_query(query, self.conn, params=params)

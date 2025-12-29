@@ -21,6 +21,7 @@ from rag.chain import get_rag_chain
 from rag.sql_queries import get_fixture_details, get_geo_details, get_sport_schedule
 # Also importing get_player_by_phone from lookup (which uses SQL now)
 from rag.lookup import get_player_by_phone, get_player_by_reg_id
+from rag.sql_agent import run_sql_agent
 
 # --------------------------------------------------
 # 3. Initialize FastAPI App
@@ -287,7 +288,23 @@ async def chat_endpoint(request: ChatRequest):
         except Exception as e:
             print(f"SQL Error: {e}")
 
-    # 6. RAG Fallback
+    # 6. Complex SQL Queries (Agentic)
+    # Detects questions about counts, lists, specific aggregations
+    sql_intent_pattern = r"(how many|count|total|list|show|who is|what is|find).*(player|registration|venue|match|game|sport|cluster|incharge)"
+    if re.search(sql_intent_pattern, original_query, re.IGNORECASE):
+        print(f"🤖 Intent: Complex/Agentic SQL Query")
+        try:
+            sql_response = run_sql_agent(original_query)
+            # if agent fails to understand, it might return a generic error.
+            # We can check specific error strings if we want to fallback to RAG.
+            if "I try to query" not in sql_response and "error" not in sql_response.lower():
+                return {"response": sql_response, "source": "sql_agent"}
+        except Exception as e:
+            print(f"SQL Agent Failed: {e}")
+            # Fallthrough to RAG if SQL agent fails
+            pass
+
+    # 7. RAG Fallback
     print(f"🧠 Intent: General Query")
     
     try:

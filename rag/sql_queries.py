@@ -31,7 +31,12 @@ def search_players_sql(value, search_type="mobile"):
         f.venue,
         f.match_date,
         f.match_time,
-        f.match_day
+        f.match_day,
+        
+        -- Level Info
+        sp.is_mandal_level,
+        sp.is_district_level,
+        sp.is_state_level
 
     FROM player_details p
     
@@ -42,6 +47,9 @@ def search_players_sql(value, search_type="mobile"):
     -- Link Game/Event Data
     LEFT JOIN tb_discipline d ON p.game_id = d.game_id
     LEFT JOIN tb_events e ON p.event_id = e.id
+
+    -- Link Selection Levels
+    LEFT JOIN tb_selected_players sp ON p.id = sp.player_id
 
     -- Link Fixture (Using Game ID + Gender + District)
     LEFT JOIN tb_fixtures f ON 
