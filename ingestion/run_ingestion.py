@@ -14,7 +14,8 @@ def run_ingestion():
     loader = DirectoryLoader(
         "data/mdFiles", 
         glob="**/*.md",
-        loader_cls=TextLoader
+        loader_cls=TextLoader,
+        loader_kwargs={'encoding': 'utf-8'}
     )
     
     raw_docs = loader.load()
