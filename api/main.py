@@ -142,28 +142,7 @@ async def chat_endpoint(request: ChatRequest):
     user_query = request.query.strip().lower() # Normalize Lower
     
     # 0. Static Data Interceptor
-    STATIC_KNOWLEDGE = {
-        "cm": "The Hon'ble Chief Minister of Telangana is **Sri A. Revanth Reddy**.",
-        "minister": "The Hon'ble Chief Minister of Telangana and Sports Minister is **Sri A. Revanth Reddy**.",
-        "helpdesk": "📞 **Helpdesk Support:**\n\nFor queries, please contact: **040-23232323** or email: **helpdesk@cmcup.in**",
-        "weather": "🌦️ **Weather:** For real-time weather updates, please check your local news. Matches proceed unless severe rain occurs.",
-        "pension": "💰 **Pension Schemes:**\n\nRetired players who have represented the state/nation are eligible for monthly pensions. Please visit **sports.telangana.gov.in** for application details.",
-        "stadium": "🏟️ **Main Venue:**\n\nThe opening ceremony and main events are held at **Gachibowli Indoor Stadium, Hyderabad**.",
-        "vision": "🎯 **Vision 2025:**\n\nTo identify rural talent and nurture them into world-class athletes for the upcoming Olympics and National Games.",
-        "budget": "💰 **Sports Budget:**\n\nThe government has allocated **₹500 Crores** for sports infrastructure development in this fiscal year.",
-        "infrastructure": "🏗️ **Infrastructure:**\n\nState-of-the-art sports complexes are being developed in every district HQ.",
-        "award": "🏆 **Cash Awards:**\n\n- Olympic Gold: **₹2 Cr**\n- Silver: **₹1 Cr**\n- Bronze: **₹50 Lakhs**",
-        "quota": "📜 **Sports Quota:**\n\n**2% reservation** is provided for meritorious sports persons in government jobs and education.",
-        "opening": "🎉 **Opening Ceremony:**\n\nThe Grand Opening Ceremony will be held at **Gachibowli Stadium** on **Jan 26th**."
-    }
-    
-    for key, response in STATIC_KNOWLEDGE.items():
-        pattern = r'\b' + re.escape(key) + r'\b'
-        if re.search(pattern, user_query): 
-             print(f"⚡ Intent: Static Data ({key})")
-             return {"response": response, "source": "static_knowledge"}
-             
-    # 0.2 Year/Version Mismatch Interceptor
+    # 0.1 Year/Version Mismatch Interceptor (High Priority)
     # If user asks for past years (e.g. 2015, 2024), redirect to 2025.
     year_match = re.search(r'\b(20\d{2})\b', user_query)
     if year_match:
@@ -173,6 +152,10 @@ async def chat_endpoint(request: ChatRequest):
                  "response": f"ℹ️ **Note:** I currently only have information for the **Key Minister's Cup (CM Cup) 2025**. I don't have data for {year}.",
                  "source": "logic_interceptor"
              }
+
+    # 0.2 Static Data Interceptor - DISABLED BY USER REQUEST
+    # All queries now proceed to logic interceptors, SQL, or RAG LLM.
+    pass
 
     # 0.5 Participation Stats (New)
     if any(k in user_query for k in ["total participation", "how many players", "total registration", "total players", "no participation"]):

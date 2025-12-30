@@ -1,9 +1,15 @@
 import os
-from litellm import completion
+import requests
+import json
 from langdetect import detect
 from dotenv import load_dotenv
 
 load_dotenv()
+
+# Configuration for Exact Models
+# User Request: "Gemini 2.5 Flash" and "GPT 5.2" (Pro failed verification)
+PRIMARY_MODEL = "gemini-2.5-flash" 
+SECONDARY_MODEL = "gpt-5.2"
 
 def get_system_prompt(language: str) -> str:
     """
@@ -70,66 +76,106 @@ def get_system_prompt(language: str) -> str:
         """
 
 def detect_language(text: str) -> str:
-    """
-    Detects language using langdetect. Returns 'Hindi', 'Telugu', or 'English'.
-    """
     try:
         lang_code = detect(text)
-        if lang_code == 'hi':
-            return "Hindi"
-        elif lang_code == 'te':
-            return "Telugu"
-        else:
-            return "English"
+        if lang_code == 'hi': return "Hindi"
+        elif lang_code == 'te': return "Telugu"
+        else: return "English"
     except:
         return "English"
 
-def ask_llm(context: str, question: str, language: str = None) -> dict:
+def call_google_api(model, system_prompt, user_query, context):
     """
-    Orchestrates the LLM call using LiteLLM with fallbacks.
+    Direct call to Google Generative Language API
     """
+    api_key = os.getenv("GOOGLE_API_KEY")
+    if not api_key:
+        raise Exception("GOOGLE_API_KEY not found")
+
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
     
-    # 1. Detect Language if not provided
-    if not language:
-        language = detect_language(question)
+    # Construct prompt
+    full_prompt = f"{system_prompt}\n\nCONTEXT:\n{context}\n\nUSER QUESTION:\n{user_query}"
+    
+    payload = {
+        "contents": [{
+            "parts": [{"text": full_prompt}]
+        }]
+    }
+    
+    headers = {"Content-Type": "application/json"}
+    
+    response = requests.post(url, headers=headers, json=payload, timeout=30)
+    
+    if response.status_code != 200:
+        raise Exception(f"Google API Error {response.status_code}: {response.text}")
         
-    # 2. Get System Prompt
-    system_prompt = get_system_prompt(language)
-    
-    print(f"DEBUG: Context Content (First 200 chars): {context[:200]}")
+    data = response.json()
+    try:
+        return data["candidates"][0]["content"]["parts"][0]["text"]
+    except (KeyError, IndexError):
+        raise Exception(f"Unexpected Google Response format: {data}")
+
+def call_openai_api(model, system_prompt, user_query, context):
+    """
+    Direct call to OpenAI API
+    """
+    api_key = os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        raise Exception("OPENAI_API_KEY not found")
+
+    url = "https://api.openai.com/v1/chat/completions"
     
     messages = [
         {"role": "system", "content": f"{system_prompt}\n\nContext:\n{context}"},
-        {"role": "user", "content": question}
+        {"role": "user", "content": user_query}
     ]
     
-    # 3. Define Models (Tier 1: OpenAI GPT-4o-mini - Verified Access)
-    primary_model = "openai/gpt-4o-mini"
-    secondary_model = "gemini/gemini-2.0-flash-exp"
+    payload = {
+        "model": model,
+        "messages": messages,
+        "temperature": 0.2
+    }
     
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {api_key}"
+    }
+    
+    response = requests.post(url, headers=headers, json=payload, timeout=30)
+    
+    if response.status_code != 200:
+        raise Exception(f"OpenAI API Error {response.status_code}: {response.text}")
+        
+    data = response.json()
+    return data["choices"][0]["message"]["content"]
+
+def ask_llm(context: str, question: str, language: str = None) -> dict:
+    """
+    Orchestrates the LLM call with manual fallback.
+    """
+    if not language:
+        language = detect_language(question)
+        
+    system_prompt = get_system_prompt(language)
+    
+    print(f"DEBUG: Using Primary Model: {PRIMARY_MODEL}")
+    
+    # 1. Try Primary (Google)
     try:
-        # Attempt Primary Model
-        response = completion(
-            model=primary_model,
-            messages=messages,
-            fallbacks=[secondary_model], 
-            temperature=0.2
-        )
-        
-        # Extract content and model
-        answer = response.choices[0].message.content
-        model_used = response.model
-        
-        return {
-            "response": answer,
-            "model_used": model_used
-        }
-        
+        answer = call_google_api(PRIMARY_MODEL, system_prompt, question, context)
+        return {"response": answer, "model_used": PRIMARY_MODEL}
     except Exception as e:
-        # Fallback manual logic if LiteLLM fallbacks param behavior is unexpected in specific version
-        # But 'fallbacks' param in completion method should handle it.
-        # If it fails entirely:
-        return {
-            "response": f"Error fulfilling request: {str(e)}",
-            "model_used": "None"
-        }
+        print(f"⚠️ Primary Model ({PRIMARY_MODEL}) Failed: {str(e)}")
+        print(f"DEBUG: Falling back to Secondary Model: {SECONDARY_MODEL}")
+        
+        # 2. Try Secondary (OpenAI)
+        try:
+            answer = call_openai_api(SECONDARY_MODEL, system_prompt, question, context)
+            return {"response": answer, "model_used": SECONDARY_MODEL}
+        except Exception as e2:
+            print(f"❌ Secondary Model ({SECONDARY_MODEL}) Failed: {str(e2)}")
+            return {
+                "response": f"I apologize, but I am unable to process your request at the moment due to system connectivity issues. (Primary Err: {str(e)}, Secondary Err: {str(e2)})",
+                "model_used": "None"
+            }
