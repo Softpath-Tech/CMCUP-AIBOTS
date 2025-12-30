@@ -47,8 +47,12 @@ app.add_middleware(
 # --------------------------------------------------
 # 5. Models and Globals
 # --------------------------------------------------
+# --------------------------------------------------
+# 5. Models and Globals
+# --------------------------------------------------
 class ChatRequest(BaseModel):
     query: str
+    session_id: Optional[str] = None  # Added for memory
 
 class WhatsAppChatRequest(BaseModel):
     user_message: str
@@ -57,6 +61,9 @@ class WhatsAppChatRequest(BaseModel):
 
 # Global RAG Cache (Lazy Loaded)
 rag_chain = None
+
+# In-Memory Chat History: {session_id: [(user, bot), ...]}
+CHAT_SESSIONS = {}
 
 def get_or_init_rag_chain():
     """
@@ -187,7 +194,11 @@ async def chat_endpoint(request: ChatRequest):
     pass
 
     # 0.5 Participation Stats (New)
-    if any(k in user_query for k in ["total participation", "how many players", "total registration", "total players", "no participation"]):
+    # Check for general count queries, but exclude "rules" or "limit" type queries (e.g., "how many players can register")
+    stats_keywords = ["total participation", "how many players", "total registration", "total players", "no participation"]
+    rule_exclusions = ["can", "limit", "allow", "eligible", "team size", "per team"]
+    
+    if any(k in user_query for k in stats_keywords) and not any(e in user_query for e in rule_exclusions):
         from rag.sql_queries import get_participation_stats
         count = get_participation_stats()
         return {
@@ -336,9 +347,35 @@ async def chat_endpoint(request: ChatRequest):
         if not rag:
              return {"response": "The AI Brain is initializing. Please try again in 10 seconds.", "source": "system"}
         
-        response_text = rag.invoke(original_query)
-        final_answer = extract_plain_text(response_text)
-        return {"response": final_answer, "source": "rag_knowledge_base"}
+        # Memory Management
+        session_id = request.session_id
+        chat_history = []
+        if session_id:
+            chat_history = CHAT_SESSIONS.get(session_id, [])
+        
+        # Invoke Chain with History
+        input_payload = {"question": original_query, "chat_history": chat_history}
+        
+        # rag.invoke now expects a dict because we updated chain.py
+        response_data = rag.invoke(input_payload)
+        
+        # response_data is a dictionary from ask_llm {"response", "model_used"}
+        if isinstance(response_data, dict):
+            final_answer = response_data.get("response", "No response")
+            model = response_data.get("model_used", "rag")
+        else:
+             final_answer = str(response_data)
+             model = "rag"
+
+        # Update Memory
+        if session_id:
+            # Append turn: (User, AI)
+            chat_history.append(("User", original_query))
+            chat_history.append(("AI", final_answer))
+            # Keep last 10 turns (20 items)
+            CHAT_SESSIONS[session_id] = chat_history[-20:]
+
+        return {"response": final_answer, "source": "rag_knowledge_base", "model_used": model}
     except Exception as e:
         print(f"RAG Crash: {e}")
         return {"response": f"I encountered an error accessing the knowledge base. Error: {str(e)}", "source": "error_handler"}

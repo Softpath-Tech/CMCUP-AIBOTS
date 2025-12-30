@@ -18,18 +18,26 @@ def get_rag_chain():
         """
         question = input_dict["question"]
         context = input_dict["context"]
+        chat_history = input_dict.get("chat_history", [])
         
         # Call the manager which handles:
         # 1. Language Detection
         # 2. System Prompt Selection
         # 3. Model Fallback (Gemini -> OpenAI)
-        result = ask_llm(context, question)
+        result = ask_llm(context, question, chat_history=chat_history)
         return result
 
     # 4. Build Chain
-    # We return a dict immediately, so no StrOutputParser needed.
+    # Expects input: {"question": "...", "chat_history": [...]}
+    def extract_q(x):
+        return x["question"]
+
     chain = (
-        {"context": retriever | format_docs, "question": RunnablePassthrough()}
+        {
+            "context": RunnableLambda(extract_q) | retriever | format_docs, 
+            "question": RunnableLambda(extract_q),
+            "chat_history": RunnableLambda(lambda x: x.get("chat_history", []))
+        }
         | RunnableLambda(run_orchestrator)
     )
 

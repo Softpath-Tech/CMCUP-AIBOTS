@@ -169,10 +169,21 @@ def process_fixtures():
             t2_name = DISTRICT_MAP.get(t2_id, f"District ID {t2_id}") if pd.notna(t2_id) else "TBD"
             
             # Use TBD for unknown match names
-            if match_name == "Unknown":
-                match_name = "TBD"
+            # Clean match name: remove "Match" prefix if present to avoid "Match Match- 1"
+            match_name_clean = match_name.replace("Match", "").replace("-", "").strip()
+            # If it became empty or just a number, label it nicely
+            if match_name_clean.isdigit():
+                 display_match_name = f"Match {match_name_clean}"
+            elif match_name.lower().startswith("match"):
+                 display_match_name = match_name # Keep original if complex
+            else:
+                 display_match_name = f"Match {match_name}"
+
+            # Remove double "Match Match" if it slipped through
+            if "Match Match" in display_match_name:
+                display_match_name = display_match_name.replace("Match Match", "Match")
                 
-            line = f"Match **{match_name}** (Fixture ID: {row.get('fixture_id')}) is scheduled for **{clean_text(row.get('match_day'))}** at **{clean_text(row.get('match_time'))}**. Venue: {clean_text(row.get('venue'))}. Match is between **{t1_name}** and **{t2_name}**."
+            line = f"- **{display_match_name}** (ID: {row.get('fixture_id')}) is scheduled for **{clean_text(row.get('match_day'))}** at **{clean_text(row.get('match_time'))}**. Venue: {clean_text(row.get('venue'))}. Teams: **{t1_name}** vs **{t2_name}**."
             lines.append(line)
         
         with open(os.path.join(MD_DIR, "rag_fixtures.md"), "w", encoding="utf-8") as f:
@@ -180,6 +191,33 @@ def process_fixtures():
         print("✅ Fixtures Done.")
     except Exception as e:
         print(f"❌ Fixtures Failed: {e}")
+
+def process_players():
+    print("Processing Players...")
+    try:
+        df = pd.read_csv(os.path.join(CSV_DIR, "player_details.csv"))
+        lines = []
+        for _, row in df.iterrows():
+            player_name = clean_text(row.get('player_nm'))
+            father_name = clean_text(row.get('father_nm'))
+            
+            game_id = row.get('game_id')
+            discipline = DISCIPLINE_MAP.get(game_id, f"Sport ID {game_id}")
+            
+            dist_id = row.get('district_id')
+            district = DISTRICT_MAP.get(dist_id, f"District ID {dist_id}")
+            
+            mandal_id = row.get('mandal_id')
+            mandal = MANDAL_MAP.get(mandal_id, f"Mandal ID {mandal_id}")
+            
+            line = f"Player **{player_name}** (Father: {father_name}) plays **{discipline}**. Represents District **{district}**, Mandal **{mandal}**."
+            lines.append(line)
+            
+        with open(os.path.join(MD_DIR, "rag_players.md"), "w", encoding="utf-8") as f:
+            f.write("# Player Details\n\n" + "\n".join(lines))
+        print("✅ Players Done.")
+    except Exception as e:
+        print(f"❌ Players Failed: {e}")
 
 if __name__ == "__main__":
     process_districts()
@@ -189,4 +227,5 @@ if __name__ == "__main__":
     process_disciplines()
     process_events()
     process_fixtures()
+    process_players()
     print("\n🎉 All CSVs processed into Markdown files for RAG!")

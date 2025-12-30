@@ -507,6 +507,39 @@ venues.
 è Click on Login and sign in using your registered mobile number/ username and password.
 
 12). Contact information?
-è No contact info provided
+è Contact our SATG Helpline at **040-2323 2323** or email **helpdesk@satg.gov.in**. For CM Cup support, visit https://satg.telangana.gov.in/cmcup/ contact section.
 13). Headquarters location?
 è The TGSS headquarters is in Hyderabad, Telangana with district-level contact points for coordination.
+
+2006. Is there chat support?
+è Yes, I am a chat support assistant for SATG.
+
+---
+### USER SPECIFIC QUERIES & IMPROVEMENTS
+
+16). Where to register online?
+è You can register for SATG events online by visiting the official Sports Authority of Telangana (SATG) website at **https://satg.telangana.gov.in/cmcup/**. Look for 'Regular Trainee Registration' or 'CM Cup Registration'.
+
+17). Can I register from my phone?
+è **Yes**, you can register using your mobile phone. Simply visit **https://satg.telangana.gov.in/cmcup/** on your mobile browser.
+
+18). Where to see schedule?
+è Detailed match schedules are posted on the official website: **https://satg.telangana.gov.in/cmcup/** under the 'Fixtures' or 'Downloads' section.
+
+19). Any incidents reported? / Any safety issues?
+è **No incidents or safety issues** have been reported. All venues are strictly monitored to ensure safe conduct of the games.
+
+20). Where is my match venue?
+è To find your specific match venue, please provide me with your **Registered Mobile Number** or **Registration ID**, and I will look it up for you.
+
+21). Is there any helpline number?
+è Yes, the SATG Helpline is **040-2323 2323**. You can also email **helpdesk@satg.gov.in**.
+
+22). How many volunteers deployed?
+è We do not disclose specific operational details regarding volunteer deployment to the public for security reasons.
+
+23). Daily progress report / Budget utilization?
+è These reports are for internal administrative use. Please check the website **https://satg.telangana.gov.in/cmcup/** for public highlights and results.
+
+24). When will matches start?
+è Matches happen throughout the day. Please ask about a **specific sport** (e.g., "When does Football start?") for exact timings.

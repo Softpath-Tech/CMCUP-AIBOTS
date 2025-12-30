@@ -42,15 +42,18 @@ def get_system_prompt(language: str = "English") -> str:
     - DO NOT mention "Context Quality".
 
     HARD RULES:
-    1. **NO GUESSING:** If the answer is not in the context, do not invent it.
-    2. **STRICT CONTEXT ADHERENCE:** Answer ONLY based on the provided Context.
+    1. **NO GUESSING:** If the answer is not in the Context or Chat History, do not invent it.
+    2. **USE CONTEXT & HISTORY:** Answer based on the provided Context and Recent Chat History.
     3. **DIRECT ANSWERS:** Answer the question directly.
 
     RESPONSE STRATEGY:
-    1. **Analyze Context:** Use the provided context.
-    2. **Website Redirection:** If the context says information is on a website (e.g., schedules, fixtures), answer: "Yes, you can find [Topic] on the website under [Section]."
+    1. **Check History:** Use previous conversation to resolve pronouns (e.g., "it", "he") or answer personal questions (e.g., "What is my name?"). **Priority: HIGH**.
+    2. **Analyze Context:** Use the provided context for new facts.
+    3. **Website Redirection:** If the context says information is on a website...
 
-    FALLBACK GUIDELINES (Use these if you cannot answer fully):
+    FALLBACK GUIDELINES:
+    - **Before falling back**, check if the answer is in the **CHAT HISTORY**. If yes, answer from History.
+    - **Type 1: External Source**...
     - **Type 1: External Source** (Context says to check website)
       -> "Yes, you can check for [Topic] on the website under the 'Events' or 'Schedule' section." (Translate this)
     - **Type 2: True Absence** (Context irrelevant)
@@ -62,6 +65,7 @@ def get_system_prompt(language: str = "English") -> str:
 
     PRIORITY:
     - If you have the answer, give it directly in the User's language.
+    - **DETECTED USER LANGUAGE: {language}** -> **YOU MUST RESPOND IN {language.upper()}**.
     """
 
 def detect_language(text: str) -> str:
@@ -73,7 +77,7 @@ def detect_language(text: str) -> str:
     except:
         return "English"
 
-def call_google_api(model, system_prompt, user_query, context):
+def call_google_api(model, system_prompt, user_query, context, chat_history=[]):
     """
     Direct call to Google Generative Language API
     """
@@ -83,8 +87,16 @@ def call_google_api(model, system_prompt, user_query, context):
 
     url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
     
+    # Format History
+    history_text = ""
+    if chat_history:
+        history_text = "\n### RECENT CHAT HISTORY (For Context):\n"
+        for role, msg in chat_history:
+            history_text += f"{role}: {msg}\n"
+        history_text += "\n"
+
     # Construct prompt
-    full_prompt = f"{system_prompt}\n\nCONTEXT:\n{context}\n\nUSER QUESTION:\n{user_query}"
+    full_prompt = f"{system_prompt}\n\n{history_text}CONTEXT:\n{context}\n\nUSER QUESTION:\n{user_query}"
     
     payload = {
         "contents": [{
@@ -105,7 +117,7 @@ def call_google_api(model, system_prompt, user_query, context):
     except (KeyError, IndexError):
         raise Exception(f"Unexpected Google Response format: {data}")
 
-def call_openai_api(model, system_prompt, user_query, context):
+def call_openai_api(model, system_prompt, user_query, context, chat_history=[]):
     """
     Direct call to OpenAI API
     """
@@ -115,10 +127,15 @@ def call_openai_api(model, system_prompt, user_query, context):
 
     url = "https://api.openai.com/v1/chat/completions"
     
-    messages = [
-        {"role": "system", "content": f"{system_prompt}\n\nContext:\n{context}"},
-        {"role": "user", "content": user_query}
-    ]
+    messages = [{"role": "system", "content": f"{system_prompt}\n\nContext:\n{context}"}]
+    
+    # Inject History
+    for role, msg in chat_history:
+        # Map 'User'/'AI' to OpenAI roles if needed, or just include as user/assistant
+        oai_role = "user" if role == "User" else "assistant"
+        messages.append({"role": oai_role, "content": msg})
+
+    messages.append({"role": "user", "content": user_query})
     
     payload = {
         "model": model,
@@ -139,13 +156,15 @@ def call_openai_api(model, system_prompt, user_query, context):
     data = response.json()
     return data["choices"][0]["message"]["content"]
 
-def ask_llm(context: str, question: str, language: str = None) -> dict:
+def ask_llm(context: str, question: str, chat_history: list = [], language: str = None) -> dict:
     """
     Orchestrates the LLM call with manual fallback.
     """
     if not language:
-        # language = detect_language(question) # Deprecated strategies
-        language = "English" # Default to English for prompt selection (though prompt is unified now)
+        try:
+            language = detect_language(question)
+        except:
+            language = "English"
         
     system_prompt = get_system_prompt(language)
     
@@ -153,7 +172,7 @@ def ask_llm(context: str, question: str, language: str = None) -> dict:
     
     # 1. Try Primary (Google)
     try:
-        answer = call_google_api(PRIMARY_MODEL, system_prompt, question, context)
+        answer = call_google_api(PRIMARY_MODEL, system_prompt, question, context, chat_history)
         return {"response": answer, "model_used": PRIMARY_MODEL}
     except Exception as e:
         print(f"⚠️ Primary Model ({PRIMARY_MODEL}) Failed: {str(e)}")
@@ -161,7 +180,7 @@ def ask_llm(context: str, question: str, language: str = None) -> dict:
         
         # 2. Try Secondary (OpenAI)
         try:
-            answer = call_openai_api(SECONDARY_MODEL, system_prompt, question, context)
+            answer = call_openai_api(SECONDARY_MODEL, system_prompt, question, context, chat_history)
             return {"response": answer, "model_used": SECONDARY_MODEL}
         except Exception as e2:
             print(f"❌ Secondary Model ({SECONDARY_MODEL}) Failed: {str(e2)}")
