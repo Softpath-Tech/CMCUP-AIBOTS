@@ -78,7 +78,22 @@ def extract_plain_text(resp) -> str:
     if resp is None:
         return ""
     if isinstance(resp, (str, int, float)):
-        return str(resp)
+        s = str(resp).strip()
+        # Attempt to parse if it looks like a JSON dict or Python dict
+        if s.strip().startswith("{") and s.strip().endswith("}"):
+            try:
+                import json
+                parsed = json.loads(s)
+                return _extract_from_dict(parsed)
+            except:
+                try:
+                    import ast
+                    parsed = ast.literal_eval(s)
+                    if isinstance(parsed, dict):
+                        return _extract_from_dict(parsed)
+                except:
+                    pass
+        return s
     if isinstance(resp, dict):
         return _extract_from_dict(resp)
     if isinstance(resp, (list, tuple)):
