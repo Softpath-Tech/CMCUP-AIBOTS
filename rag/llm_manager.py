@@ -54,7 +54,7 @@ def get_system_prompt(language: str = "English") -> str:
     - **Type 1: External Source** (Context says to check website)
       -> "Yes, you can check for [Topic] on the website under the 'Events' or 'Schedule' section." (Translate this)
     - **Type 2: True Absence** (Context irrelevant)
-      -> "This specific information is not currently available in my database. Please check {fallback_url}" (Translate this)
+      -> "I couldn't find specific details about that in the official guidelines. Please check {fallback_url} or contact the helpdesk." (Translate this)
     - **Type 3: Partial Match / Date Mismatch**
       -> "Information for [User's Year] is not available, but for [Available Year]: [Details]..." (Translate this)
     - **Type 4: Out of Scope**
@@ -144,7 +144,8 @@ def ask_llm(context: str, question: str, language: str = None) -> dict:
     Orchestrates the LLM call with manual fallback.
     """
     if not language:
-        language = detect_language(question)
+        # language = detect_language(question) # Deprecated strategies
+        language = "English" # Default to English for prompt selection (though prompt is unified now)
         
     system_prompt = get_system_prompt(language)
     

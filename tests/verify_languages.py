@@ -6,7 +6,7 @@ def test_multilingual(query, name, script_hint):
     print(f"\n🌍 Testing [{name}] Query: '{query}'")
     try:
         response = requests.post(
-            "http://localhost:8001/chat",
+            "http://localhost:8000/chat",
             json={"query": query},
             headers={"Content-Type": "application/json"}
         )

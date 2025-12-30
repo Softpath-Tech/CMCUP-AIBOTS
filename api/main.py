@@ -77,41 +77,55 @@ def extract_plain_text(resp) -> str:
     """Try to extract a single answer string from various response shapes."""
     if resp is None:
         return ""
-    if isinstance(resp, (str, int, float)):
-        s = str(resp).strip()
-        # Attempt to parse if it looks like a JSON dict or Python dict
-        if s.strip().startswith("{") and s.strip().endswith("}"):
-            try:
-                import json
-                parsed = json.loads(s)
-                return _extract_from_dict(parsed)
-            except:
-                try:
-                    import ast
-                    parsed = ast.literal_eval(s)
-                    if isinstance(parsed, dict):
-                        return _extract_from_dict(parsed)
-                except:
-                    pass
-        return s
+    
+    # If it's a dict, extract text from it
     if isinstance(resp, dict):
         return _extract_from_dict(resp)
+        
+    # If it's a list/tuple, extract from first item
     if isinstance(resp, (list, tuple)):
         return _extract_from_list(resp)
-    return str(resp)
+
+    # Convert to string
+    s = str(resp).strip()
+    
+    # RECURSIVE PARSING: If the string ITSELF looks like a JSON dict, parse it!
+    # Check for both standard JSON {"key": "val"} and Python Dict {'key': 'val'}
+    if (s.startswith("{") and s.endswith("}")):
+        # 1. Try JSON
+        try:
+            import json
+            parsed = json.loads(s)
+            # Recursively extract from the parsed dict
+            return extract_plain_text(parsed)
+        except:
+            # 2. Try Python Literal (for single quotes)
+            try:
+                import ast
+                parsed = ast.literal_eval(s)
+                if isinstance(parsed, dict):
+                    return extract_plain_text(parsed)
+            except:
+                pass
+                
+    return s
 
 def _extract_from_dict(d: dict) -> str:
     # Preferred scalar keys
     for key in ("response", "answer", "text", "content", "message", "output", "result"):
         v = d.get(key)
-        if isinstance(v, (str, int, float)):
-            return str(v)
+        # If we find a value, we must potentially UNWRAP it again if it's a JSON string
+        if v:
+            return extract_plain_text(v)
+            
     for key in ("choices", "outputs", "results"):
         if key in d:
             return extract_plain_text(d[key])
+            
+    # Heuristic: return the first string value found
     for v in d.values():
         candidate = extract_plain_text(v)
-        if candidate:
+        if candidate and candidate != "None" and len(candidate) > 0:
             return candidate
     return ""
 
@@ -327,7 +341,7 @@ async def chat_endpoint(request: ChatRequest):
         return {"response": final_answer, "source": "rag_knowledge_base"}
     except Exception as e:
         print(f"RAG Crash: {e}")
-        return {"response": "I encountered an error accessing the knowledge base. Please contact helpdesk.", "source": "error_handler"}
+        return {"response": f"I encountered an error accessing the knowledge base. Error: {str(e)}", "source": "error_handler"}
 
 @app.post("/ask")
 async def ask_endpoint(request: ChatRequest):
