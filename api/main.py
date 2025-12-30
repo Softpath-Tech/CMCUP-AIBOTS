@@ -308,7 +308,8 @@ async def chat_endpoint(request: ChatRequest):
              return {"response": "The AI Brain is initializing. Please try again in 10 seconds.", "source": "system"}
         
         response_text = rag.invoke(original_query)
-        return {"response": response_text, "source": "rag_knowledge_base"}
+        final_answer = extract_plain_text(response_text)
+        return {"response": final_answer, "source": "rag_knowledge_base"}
     except Exception as e:
         print(f"RAG Crash: {e}")
         return {"response": "I encountered an error accessing the knowledge base. Please contact helpdesk.", "source": "error_handler"}

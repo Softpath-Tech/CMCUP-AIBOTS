@@ -5,7 +5,7 @@ def test_query(query, description):
     print(f"\n🔎 Testing [{description}]: '{query}'")
     try:
         response = requests.post(
-            "http://localhost:8000/chat",
+            "http://localhost:8001/chat",
             json={"query": query},
             headers={"Content-Type": "application/json"}
         )
@@ -26,5 +26,8 @@ if __name__ == "__main__":
     # 2. Tone Check: Should be formal
     test_query("eligibility", "Tone: Eligibility")
 
-    # 3. Hard Rule Check: Should not align with out of context
-    test_query("How to bake a cake?", "Hard Rule: Irrelevant")
+    # 3. Context Quality Check
+    test_query("Who organizes this event?", "Checking for usage of Context Quality debug info")
+
+    # 4. Confidence Check
+    test_query("Can I download the schedule?", "Checking for unconfident phrases")

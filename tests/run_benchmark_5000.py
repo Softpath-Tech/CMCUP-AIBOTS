@@ -63,9 +63,17 @@ def ask_api(q_data, index):
         
         if response.status_code == 200:
             data = response.json()
-            answer = data.get("response", "")
+            answer_raw = data.get("response", "")
+            
+            # Handle nested response if applicable
+            if isinstance(answer_raw, dict):
+                answer = answer_raw.get("response", "")
+                model = answer_raw.get("model_used", data.get("model_used", "unknown"))
+            else:
+                answer = answer_raw
+                model = data.get("model_used", "unknown")
+
             source = data.get("source", "unknown")
-            model = data.get("model_used", "unknown")
             
             status = "SUCCESS"
             if "don't have" in answer.lower() or "not available" in answer.lower():
