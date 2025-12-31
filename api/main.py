@@ -317,8 +317,30 @@ async def chat_endpoint(request: ChatRequest):
                     txt += "**Venue:** Not assigned yet.\n"
                     
                 txt += f"\n**👤 Coach/Incharge:**\n"
-                txt += f"**Name:** {rec.get('cluster_incharge', 'N/A')}\n"
-                txt += f"**Contact:** {rec.get('incharge_mobile', 'N/A')}\n"
+                
+                # HYBRID LOGIC: If SQL returns None for Incharge, ask RAG
+                incharge_name = rec.get('cluster_incharge')
+                incharge_contact = rec.get('incharge_mobile')
+                
+                if not incharge_name and rec.get('mandalname'):
+                    print("⚠️ Hybrid Trigger: SQL missing Incharge. Asking RAG...")
+                    try:
+                        rag_bot = get_or_init_rag_chain()
+                        sport_detail = rec.get('sport_name') or rec.get('event_name') or "sports"
+                        rag_query = f"Who is the {sport_detail} incharge for {rec.get('clustername')} cluster (Mandal: {rec.get('mandalname')}, District: {rec.get('districtname')})?"
+                        rag_resp = rag_bot.invoke({"question": rag_query})
+                        
+                        # Extract simple text from chain response
+                        # The chain usually returns {'result': '...'} or just str
+                        rag_text = rag_resp.get('result', str(rag_resp)) if isinstance(rag_resp, dict) else str(rag_resp)
+                        
+                        txt += f"*(Retrieved via AI)*: {rag_text}\n"
+                    except Exception as e:
+                        print(f"Hybrid RAG Failed: {e}")
+                        txt += "**Status:** Information not available in database.\n"
+                else:
+                    txt += f"**Name:** {incharge_name or 'N/A'}\n"
+                    txt += f"**Contact:** {incharge_contact or 'N/A'}\n"
                 
                 return {"response": txt, "source": "sql_database"}
              else:
