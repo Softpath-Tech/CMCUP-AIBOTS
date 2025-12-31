@@ -326,19 +326,37 @@ def get_player_venue_by_ack(ack_no):
     
     query = """
     SELECT 
+        p.player_nm,
+        p.player_reg_id,
+        p.gender,
         d.dist_game_nm as sport_name,
         e.event_name,
-        p.player_reg_id,
+        
+        -- Location Hierarchy
+        v.villagename,
+        m.mandalname,
+        dist.districtname,
+        c.clustername,
+        
+        -- Selection Level
+        sp.is_mandal_level,
+        sp.is_district_level,
+        sp.is_state_level,
+
+        -- Venue & Incharge
         f.venue,
         f.match_date,
-        c.clustername,
         c.incharge_name as cluster_incharge,
         c.mobile_no as incharge_mobile
+
     FROM player_details p
     LEFT JOIN villagemaster v ON p.village_id = v.id
+    LEFT JOIN mandalmaster m ON p.mandal_id = m.id
+    LEFT JOIN districtmaster dist ON p.district_id = dist.districtno
     LEFT JOIN clustermaster c ON v.cluster_id = c.cluster_id
     LEFT JOIN tb_discipline d ON p.game_id = d.game_id
     LEFT JOIN tb_events e ON p.event_id = e.id
+    LEFT JOIN tb_selected_players sp ON p.id = sp.player_id
     LEFT JOIN tb_fixtures f ON 
         p.game_id = f.disc_id 
         AND p.gender = f.gender

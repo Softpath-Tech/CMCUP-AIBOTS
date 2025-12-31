@@ -295,16 +295,30 @@ async def chat_endpoint(request: ChatRequest):
                 venue = rec.get('venue')
                 sport = rec.get('sport_name') or rec.get('event_name')
                 
-                txt = f"### 🏟️ Venue Details (Ack: {ack_no})\n"
+                # Parse Level
+                level_str = "Cluster/Village Level"
+                if rec.get('is_state_level') == '1': level_str = "Selected for State Level 🏆"
+                elif rec.get('is_district_level') == '1': level_str = "Selected for District Level 🥇"
+                elif rec.get('is_mandal_level') == '1': level_str = "Selected for Mandal Level 🥈"
+                
+                txt = f"### 👤 Player Details Found\n"
+                txt += f"**Name:** {rec.get('player_nm', 'N/A')}\n"
+                txt += f"**Reg ID:** {rec.get('player_reg_id', ack_no)}\n\n"
+                
+                txt += f"**📍 Location:** {rec.get('villagename', 'N/A')}, {rec.get('mandalname', 'N/A')}, {rec.get('districtname', 'N/A')}\n"
+                txt += f"**🏅 Status:** {level_str}\n\n"
+                
+                txt += f"**🏟️ Venue Details:**\n"
                 txt += f"**Sport:** {sport}\n"
                 if venue:
                     txt += f"**Venue:** {venue}\n"
                     txt += f"**Date:** {rec.get('match_date') or 'Check Schedule'}\n"
                 else:
-                    txt += "**Status:** There are no Venue Details available yet.\n"
-                    txt += f"You can contact your cluster Incharge:\n"
-                    txt += f"👤 **{rec.get('cluster_incharge', 'N/A')}**\n"
-                    txt += f"📞 **{rec.get('incharge_mobile', 'N/A')}**\n"
+                    txt += "**Venue:** Not assigned yet.\n"
+                    
+                txt += f"\n**👤 Coach/Incharge:**\n"
+                txt += f"**Name:** {rec.get('cluster_incharge', 'N/A')}\n"
+                txt += f"**Contact:** {rec.get('incharge_mobile', 'N/A')}\n"
                 
                 return {"response": txt, "source": "sql_database"}
              else:
