@@ -10,7 +10,9 @@ This project is configured for easy deployment on Render.
 4. Connect your GitHub account and select this repository (**rag-chatbot**).
 5. Render will detect the `render.yaml` file.
 6. Click **Apply**.
-7. **Important**: You will be prompted to enter your Environment Variables (`OPENAI_API_KEY`, etc.). Enter them here.
+7. **Important**: You will be prompted to enter your Environment Variables:
+   - `GOOGLE_API_KEY`: [Required for Gemini Config]
+   - `OPENAI_API_KEY`: [Optional Fallback]
 8. Click **Create Web Service**.
 
 Render will automatically:
