@@ -275,7 +275,10 @@ async def chat_endpoint(request: ChatRequest):
     # Heuristic: If query is short OR has "my/check", prompt.
     if venue_intent:
         words = user_query.split()
-        if len(words) < 8 or "my" in user_query or "check" in user_query or "know" in user_query:
+        # Exclude general queries about levels, dates, or schedule
+        is_general_query = any(k in user_query for k in ["level", "date", "when", "schedule", "time"])
+        
+        if (len(words) < 8 or "my" in user_query or "check" in user_query or "know" in user_query) and not is_general_query:
              return {
                  "response": "To check your **Venue** or **Game Status**, please provide your registered **Phone Number**.\n\nExample: *Venue details for 9848012345*",
                  "source": "logic_interceptor"

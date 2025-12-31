@@ -18,6 +18,7 @@ def test_query(query):
 
 if __name__ == "__main__":
     # Test cases reported by user
+    test_query("Mandal Level Game Dates")
     test_query("GP Level cluster details")
     test_query("Football starts from which Level")
     
