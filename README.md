@@ -86,13 +86,13 @@ We have detailed guides for every operating system:
 2.  **Configure Secrets:**
     Create a `.env` file with your keys:
     ```env
-    OPENAI_API_KEY=sk-...
-    GOOGLE_API_KEY=AI...
+    GOOGLE_API_KEY=AI...      # Required (Gemini Embeddings)
+    OPENAI_API_KEY=sk-...     # Optional (Fallback LLM)
     ```
 3.  **Build Knowledge Base** (Critical Step):
     ```bash
-    python process_sql_data.py          # Convert Data
-    python -m ingestion.run_ingestion   # Build Vector DB
+    # Ingest data (Text + Excel) using Gemini Embeddings
+    python ingest_full_gemini.py
     ```
 4.  **Run API:**
     ```bash
