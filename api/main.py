@@ -285,7 +285,7 @@ async def chat_endpoint(request: ChatRequest):
              }
 
     # 2. Registration ID / Ack No -> Venue Lookup
-    ack_match = re.search(r'\b(SATGCMC-\d+)\b', original_query, re.IGNORECASE)
+    ack_match = re.search(r'\b(SATGCMC(?:\d+)?-\d+)\b', original_query, re.IGNORECASE)
     if ack_match:
         ack_no = ack_match.group(1).upper()
         if venue_intent or True: # Always treat Ack No as a lookup request now? Or only if venue intent? User said "Venue Details - Based on Acknowledgement Details". Let's assume lookup.
