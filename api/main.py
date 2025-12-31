@@ -390,6 +390,45 @@ async def chat_endpoint(request: ChatRequest):
             except Exception as e:
                 print(f"SQL Error: {e}")
 
+
+    # 5.4 Level Schedule Lookup (Deterministic)
+    schedule_pattern = r"(cluster|gp|gram\s*panchayat|mandal|ulb|district|state|assembly).*?(start|end|date|schedule|when|time)"
+    schedule_match = re.search(schedule_pattern, original_query, re.IGNORECASE)
+    if schedule_match:
+        level_keyword = schedule_match.group(1).lower()
+        print(f"⚡ Intent: Level Schedule Lookup (Level: {level_keyword})")
+        
+        # Hardcoded Schedule from 'CM_Cup_2025_RAG_Knowledge.txt'
+        # This ensures 100% accuracy vs RAG hallucinations
+        schedule_data = {
+            "gram": "🗓️ **Grampanchayat Level:** 17 January to 22 January 2026 (6 days)",
+            "gp": "🗓️ **Grampanchayat Level:** 17 January to 22 January 2026 (6 days)",
+            "cluster": "🗓️ **Grampanchayat/Cluster Level:** 17 January to 22 January 2026 (6 days)",
+            "mandal": "🗓️ **Mandal / ULB Level:** 28 January to 31 January 2026 (4 days)",
+            "ulb": "🗓️ **Mandal / ULB Level:** 28 January to 31 January 2026 (4 days)",
+            "assembly": "🗓️ **Assembly Constituency Level:** 03 February to 07 February 2026 (5 days)",
+            "district": "🗓️ **District Level:** 10 February to 14 February 2026 (5 days)",
+            "state": "🗓️ **State Level:** 19 February to 26 February 2026 (8 days)"
+        }
+        
+        # Find best match
+        response_txt = ""
+        for key, val in schedule_data.items():
+            if key in level_keyword:
+                response_txt = val
+                break
+        
+        if not response_txt:
+            # Fallback for 'cluster' mapping if not caught above logic simple match
+            if "cluster" in level_keyword: response_txt = schedule_data["cluster"]
+            if "gram" in level_keyword: response_txt = schedule_data["gram"]
+            if "mandal" in level_keyword: response_txt = schedule_data["mandal"]
+            if "district" in level_keyword: response_txt = schedule_data["district"]
+            if "state" in level_keyword: response_txt = schedule_data["state"]
+
+        if response_txt:
+             return {"response": f"{response_txt}\n\n*Note: Dates are subject to official guidelines.*", "source": "static_rule_engine"}
+
     # 5.5 Discipline/Level Lookup
     level_pattern = r"(disciplines?|sports?|games?|events?).*?\b(cluster|mandal|district|state)\b\s*(?:level)?"
     level_match = re.search(level_pattern, original_query, re.IGNORECASE)
