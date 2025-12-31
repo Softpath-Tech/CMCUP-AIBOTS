@@ -221,7 +221,7 @@ async def chat_endpoint(request: ChatRequest):
     phone_match = re.search(r'\b[6-9]\d{9}\b', original_query)
     
     # 1A. Venue/Status Flow (Exception to Filter)
-    venue_intent = re.search(r'(venue|status|details|game|match)', user_query)
+    venue_intent = re.search(r'(venue|status|game|match|fixture)', user_query)
     
     if phone_match and venue_intent:
         phone = phone_match.group(0)
@@ -244,8 +244,8 @@ async def chat_endpoint(request: ChatRequest):
                 txt += f"**Venue:** {venue}\n"
                 txt += f"**Date:** {rec.get('match_date') or 'Check Schedule'}\n"
             else:
-                txt += "**Status:** Venue not yet assigned.\n"
-                txt += f"Please contact your Cluster Incharge:\n"
+                txt += "**Status:** There are no Venue Details available yet.\n"
+                txt += f"You can contact your cluster Incharge:\n"
                 txt += f"👤 **{rec.get('cluster_incharge', 'N/A')}**\n"
                 txt += f"📞 **{rec.get('incharge_mobile', 'N/A')}**\n"
             
@@ -298,8 +298,8 @@ async def chat_endpoint(request: ChatRequest):
                     txt += f"**Venue:** {venue}\n"
                     txt += f"**Date:** {rec.get('match_date') or 'Check Schedule'}\n"
                 else:
-                    txt += "**Status:** Venue not yet assigned.\n"
-                    txt += f"Please contact your Cluster Incharge:\n"
+                    txt += "**Status:** There are no Venue Details available yet.\n"
+                    txt += f"You can contact your cluster Incharge:\n"
                     txt += f"👤 **{rec.get('cluster_incharge', 'N/A')}**\n"
                     txt += f"📞 **{rec.get('incharge_mobile', 'N/A')}**\n"
                 
