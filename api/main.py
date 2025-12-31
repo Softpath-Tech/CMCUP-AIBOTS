@@ -276,7 +276,7 @@ async def chat_endpoint(request: ChatRequest):
     if venue_intent:
         words = user_query.split()
         # Exclude general queries about levels, dates, or schedule
-        is_general_query = any(k in user_query for k in ["level", "date", "when", "schedule", "time"])
+        is_general_query = any(k in user_query for k in ["level", "date", "when", "schedule", "time", "mandal", "district", "cluster", "state", "village", "gram", "panchayat"])
         
         if (len(words) < 8 or "my" in user_query or "check" in user_query or "know" in user_query) and not is_general_query:
              return {
