@@ -5,8 +5,8 @@ Follow these steps to set up and run the RAG Chatbot on a MacBook.
 ## 1. Prerequisites
 - **Python 3.10+** (Install via Homebrew: `brew install python`)
 - **Git**
-- **OpenAI API Key** (Required for RAG)
-- **Google API Key** (Optional, if using Gemini)
+- **Google API Key** (Required for Gemini Embeddings)
+- **OpenAI API Key** (Optional, for fallback LLM)
 
 ## 2. Clone and Install
 
@@ -23,7 +23,7 @@ python3 -m venv venv
 # Activate the virtual environment
 source venv/bin/activate
 
-# Install dependencies
+# Install dependencies (ensure you have openpyxl installed for Excel processing)
 pip install -r requirements.txt
 ```
 
@@ -41,23 +41,20 @@ open .env
 **Paste the following inside .env:**
 
 ```env
-OPENAI_API_KEY=your_openai_api_key_here
 GOOGLE_API_KEY=your_google_api_key_here
+OPENAI_API_KEY=your_openai_api_key_here
 ```
 
-> **Note:** Get these keys from your friend if you don't have them, or use your own.
+> **Note:** The system now defaults to **Gemini Embeddings**, so `GOOGLE_API_KEY` is critical.
 
 ## 4. Initialize Data (Important!)
 
-The vector database is not shared via Git, so you must build it locally using the provided data.
+The vector database includes recent Excel data ingestion. You must run the specialized script:
 
 ```bash
-# 1. Convert CSV data to Markdown
-python process_sql_data.py
-
-# 2. Ingest data into Vector Database (Qdrant)
+# 1. Ingest all data (Text + Excel) into Qdrant using Gemini Embeddings
 # Make sure you are in the root folder 'rag-chatbot'
-python -m ingestion.run_ingestion
+python ingest_full_gemini.py
 ```
 
 You should see a success message indicating `data/qdrant_db` has been created.
