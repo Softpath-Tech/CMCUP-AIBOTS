@@ -9,8 +9,8 @@ Follow these steps to set up and run the RAG Chatbot on a Linux machine (Ubuntu/
   sudo apt install python3 python3-venv python3-pip git
   ```
 - **Git**
-- **OpenAI API Key** (Required for RAG)
-- **Google API Key** (Optional, if using Gemini)
+- **Google API Key** (Required for Gemini Embeddings)
+- **OpenAI API Key** (Optional, for fallback LLM)
 
 ## 2. Clone and Install
 
@@ -45,8 +45,8 @@ nano .env
 **Paste the following inside .env:**
 
 ```env
-OPENAI_API_KEY=your_openai_api_key_here
 GOOGLE_API_KEY=your_google_api_key_here
+OPENAI_API_KEY=your_openai_api_key_here
 ```
 
 Press `Ctrl+X`, then `Y`, then `Enter` to save if using nano.
@@ -56,12 +56,9 @@ Press `Ctrl+X`, then `Y`, then `Enter` to save if using nano.
 The vector database is not shared via Git, so you must build it locally using the provided data.
 
 ```bash
-# 1. Convert CSV data to Markdown
-python process_sql_data.py
-
-# 2. Ingest data into Vector Database (Qdrant)
+# 1. Ingest all data (Text + Excel) into Qdrant using Gemini Embeddings
 # Make sure you are in the root folder 'rag-chatbot'
-python -m ingestion.run_ingestion
+python ingest_full_gemini.py
 ```
 
 You should see a success message indicating `data/qdrant_db` has been created.

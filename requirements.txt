@@ -13,3 +13,5 @@ langdetect
 langchain-openai
 pandas
 requests
+openpyxl
+unstructured

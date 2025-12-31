@@ -5,6 +5,8 @@ Follow these steps to set up and run the RAG Chatbot on Windows 11.
 ## 1. Prerequisites
 - **Python 3.10+**: Download and install from [python.org](https://www.python.org/downloads/). **Make sure to check "Add Python to PATH" during installation.**
 - **Git**: Download and install from [git-scm.com](https://git-scm.com/download/win).
+- **Google API Key**: (Required for Gemini Embeddings)
+- **OpenAI API Key**: (Optional, for fallback LLM)
 - **VS Code** (Recommended) or PowerShell.
 
 ## 2. Clone and Install
@@ -39,8 +41,8 @@ Create a file named `.env` in the root folder (`rag-chatbot\.env`).
 **Paste the following inside .env:**
 
 ```env
-OPENAI_API_KEY=your_openai_api_key_here
 GOOGLE_API_KEY=your_google_api_key_here
+OPENAI_API_KEY=your_openai_api_key_here
 ```
 
 ## 4. Initialize Data (Important!)
@@ -50,11 +52,8 @@ The vector database for the RAG system must be built locally.
 ```powershell
 # Ensure your virtual environment is active (you should see (venv) in the prompt)
 
-# 1. Convert CSV data to Markdown
-python process_sql_data.py
-
-# 2. Ingest data into Vector Database (Qdrant)
-python -m ingestion.run_ingestion
+# 1. Ingest all data (Text + Excel) into Qdrant using Gemini Embeddings
+python ingest_full_gemini.py
 ```
 
 Wait for the success message.
