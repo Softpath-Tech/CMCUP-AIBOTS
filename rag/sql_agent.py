@@ -66,17 +66,30 @@ def run_sql_agent(user_query: str):
     - event_name (Text)
     - venue (Text)
     - match_date (Text)
+    
+    Table: view_sport_rules
+    Columns:
+    - sport_name (Text): e.g. Hockey, Cricket
+    - min_age (Integer): Minimum age allowed
+    - max_age (Integer): Maximum age allowed
+    - team_size (Integer)
+    - is_para (Integer): 1 if para sport
     """
     
     # 2. LLM Setup
     llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
     
+    import datetime
+    current_year = datetime.datetime.now().year
+    
     # 3. Prompt
-    template = """You are a specialized SQL expert for a Sports Chatbot.
+    template = f"""You are a specialized SQL expert for a Sports Chatbot.
     Your job is to answer the user's question by generating and executing a SQL query against the database.
     
+    Current Year: {current_year}
+    
     Database Schema:
-    {schema}
+    {{schema}}
     
     Security Rules:
     1. NEVER output a list of mobile numbers. If asked, refuse or summarize.
@@ -84,13 +97,18 @@ def run_sql_agent(user_query: str):
     3. Use 'LIKE' for text matching (case-insensitive usually).
     4. Return the Final Answer based on the query result.
     
+    Query Logic Guidelines:
+    1. If the user provides a "Birth Year", calculate the Age (Current Year - Birth Year) implicitly.
+       - Example: "Born in 2008" -> Age = {current_year} - 2008 = <age>.
+       - Then query: SELECT ... WHERE <age> BETWEEN min_age AND max_age
+    
     Output Formatting Rules:
     1. If the result is a LIST of items (e.g., players, matches), verify if it has > 1 row.
     2. If > 1 row, ALWAYS format the final answer as a Markdown Table.
     3. Make the table headers bold.
     4. If the result is a single number, just state it clearly in bold.
     
-    Question: {question}
+    Question: {{question}}
     
     First, generate the SQL query (starts with SELECT). 
     Then, I will execute it.
@@ -107,13 +125,21 @@ def run_sql_agent(user_query: str):
     response_1 = chain_1.invoke({"schema": schema_info, "question": user_query})
     
     # Extract SQL
-    sql_query = ""
+    raw_sql = response_1
     if "SQL:" in response_1:
-        sql_query = response_1.split("SQL:")[1].strip().split("\n")[0]
-    else:
-        # Fallback cleanup
-        sql_query = response_1.strip().replace("```sql", "").replace("```", "")
+        raw_sql = response_1.split("SQL:")[1]
+    
+    # Clean up markdown code blocks
+    raw_sql = raw_sql.strip()
+    if raw_sql.startswith("```sql"):
+        raw_sql = raw_sql.replace("```sql", "", 1)
+    if raw_sql.startswith("```"):
+        raw_sql = raw_sql.replace("```", "", 1)
+    if raw_sql.endswith("```"):
+        raw_sql = raw_sql.replace("```", "", 1)
         
+    sql_query = raw_sql.strip()
+    
     print(f"🤖 AI Generated SQL: {sql_query}")
     
     # 5. Execute SQL

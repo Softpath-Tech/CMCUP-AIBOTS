@@ -111,6 +111,25 @@ class DataStore:
         except Exception as e:
             print(f"   ❌ Error creating view: {e}")
 
+        # 2. view_sport_rules
+        # Simple lookup for rules
+        view_rules_query = """
+        CREATE VIEW IF NOT EXISTS view_sport_rules AS
+        SELECT 
+            dist_game_nm as sport_name,
+            from_age as min_age,
+            to_age as max_age,
+            team_size,
+            is_team,
+            is_para
+        FROM tb_discipline
+        """
+        try:
+            self.conn.execute(view_rules_query)
+            print("   -> Created View: view_sport_rules")
+        except Exception as e:
+            print(f"   ❌ Error creating view_sport_rules: {e}")
+
 
     def query(self, query, params=()):
         return pd.read_sql_query(query, self.conn, params=params)
