@@ -18,9 +18,9 @@ if PROJECT_ROOT not in sys.path:
 # 2. Imports
 # --------------------------------------------------
 from rag.chain import get_rag_chain
-from rag.sql_queries import get_fixture_details, get_geo_details, get_sport_schedule
+from rag.sql_queries import get_fixture_details, get_geo_details, get_sport_schedule, get_player_venues_by_phone, get_player_venue_by_ack
 # Also importing get_player_by_phone from lookup (which uses SQL now)
-from rag.lookup import get_player_by_phone, get_player_by_reg_id
+# rag.lookup imports removed as per privacy policy
 from rag.sql_agent import run_sql_agent
 
 # --------------------------------------------------
@@ -206,29 +206,113 @@ async def chat_endpoint(request: ChatRequest):
             "model_used": "sql_database"
         }
 
-    # 1. Phone Number match
-    original_query = request.query.strip() # Keep casing for Reg IDs if needed
-    phone_match = re.search(r'\b\d{10}\b', original_query)
-    if phone_match:
-        phone_number = phone_match.group(0)
-        print(f"⚡ Intent: Player Lookup (Phone: {phone_number})")
-        try:
-            answer = get_player_by_phone(phone_number)
-            return {"response": answer, "source": "sql_database"}
-        except Exception as e:
-             raise HTTPException(status_code=500, detail=f"Database Error: {str(e)}")
+    # 1. Phone Number match - PRIVACY WARNING
 
-    # 2. Registration ID
-    reg_id_match = re.search(r'\b[A-Za-z0-9-]*\d[A-Za-z0-9-]*\b', original_query)
-    if reg_id_match:
-        potential_id = reg_id_match.group(0)
-        if 5 <= len(potential_id) <= 25 and not "match" in potential_id.lower():
-             try:
-                lookup_res = get_player_by_reg_id(potential_id)
-                if "Record(s)" in lookup_res:
-                     print(f"⚡ Intent: Reg ID Lookup ({potential_id})")
-                     return {"response": lookup_res, "source": "sql_database"}
-             except: pass
+    # 0.6 Registration/Ack Number Link
+    if "acknowledgment number" in user_query or "acknowledgement number" in user_query or "ack number" in user_query or "ack no" in user_query:
+        if "what is" in user_query or "download" in user_query or "get" in user_query:
+            return {
+                "response": "📥 **Download Acknowledgment:**\n\nYou can find and download your Acknowledgment Number from the official website:\n\n👉 [Download Enrollment Acknowledgment](https://satg.telangana.gov.in/cmcup/downloadack)",
+                "source": "static_rule"
+            }
+
+    # 1. Phone Number match - PRIVACY GUARD & VENUE FLOW
+    original_query = request.query.strip() # Keep casing for Reg IDs if needed
+    phone_match = re.search(r'\b[6-9]\d{9}\b', original_query)
+    
+    # 1A. Venue/Status Flow (Exception to Filter)
+    venue_intent = re.search(r'(venue|status|details|game|match)', user_query)
+    
+    if phone_match and venue_intent:
+        phone = phone_match.group(0)
+        print(f"⚡ Intent: Venue Lookup via Phone ({phone})")
+        
+        # SQL Lookup
+        registrations = get_player_venues_by_phone(phone)
+        
+        if not registrations:
+             return {"response": f"ℹ️ No registrations found for **{phone}**. Please check the number or register at the official site.", "source": "sql_database"}
+        
+        # Logic: 1 Record vs Multi
+        if len(registrations) == 1:
+            rec = registrations[0]
+            venue = rec.get('venue')
+            sport = rec.get('sport_name') or rec.get('event_name')
+            
+            txt = f"### 🏟️ Venue Details for {sport}\n"
+            if venue:
+                txt += f"**Venue:** {venue}\n"
+                txt += f"**Date:** {rec.get('match_date') or 'Check Schedule'}\n"
+            else:
+                txt += "**Status:** Venue not yet assigned.\n"
+                txt += f"Please contact your Cluster Incharge:\n"
+                txt += f"👤 **{rec.get('cluster_incharge', 'N/A')}**\n"
+                txt += f"📞 **{rec.get('incharge_mobile', 'N/A')}**\n"
+            
+            return {"response": txt, "source": "sql_database"}
+            
+        else:
+            # Multiple Records
+            txt = f"found **{len(registrations)} registrations** for this number:\n"
+            for r in registrations:
+                s = r.get('sport_name') or r.get('event_name')
+                txt += f"- {s}\n"
+            
+            txt += "\nSince you have multiple events, please provide your **Acknowledgment Number** (e.g., SATGCMC-...) to get specific venue details."
+            return {"response": txt, "source": "sql_database"}
+
+    # 1B. General Privacy Block
+    if phone_match:
+        print(f"⚡ Intent: Phone Number detected. Triggering Privacy Warning.")
+        return {
+             "response": "⚠️ **Privacy Notice:**\n\nFor your security, please **do not share personal phone numbers** or sensitive information in this chat. I cannot look up individual player records using phone numbers.\n\nHowever, if you are looking for your **venue details**, please ask 'Venue details for 9876543210'.",
+             "source": "privacy_guardrail"
+        }
+    
+    # 1C. Venue Intent BUT NO Phone -> Prompt
+    # If user mentions venue/status/game but didn't provide phone, prompt them.
+    # We use a broad check but ensure it's not a general question like "Where is the venue for Cricket?" (which might be generic).
+    # Heuristic: If query is short OR has "my/check", prompt.
+    if venue_intent:
+        words = user_query.split()
+        if len(words) < 8 or "my" in user_query or "check" in user_query or "know" in user_query:
+             return {
+                 "response": "To check your **Venue** or **Game Status**, please provide your registered **Phone Number**.\n\nExample: *Venue details for 9848012345*",
+                 "source": "logic_interceptor"
+             }
+
+    # 2. Registration ID / Ack No -> Venue Lookup
+    ack_match = re.search(r'\b(SATGCMC-\d+)\b', original_query, re.IGNORECASE)
+    if ack_match:
+        ack_no = ack_match.group(1).upper()
+        if venue_intent or True: # Always treat Ack No as a lookup request now? Or only if venue intent? User said "Venue Details - Based on Acknowledgement Details". Let's assume lookup.
+             print(f"⚡ Intent: Ack No Lookup ({ack_no})")
+             rec = get_player_venue_by_ack(ack_no)
+             if rec:
+                venue = rec.get('venue')
+                sport = rec.get('sport_name') or rec.get('event_name')
+                
+                txt = f"### 🏟️ Venue Details (Ack: {ack_no})\n"
+                txt += f"**Sport:** {sport}\n"
+                if venue:
+                    txt += f"**Venue:** {venue}\n"
+                    txt += f"**Date:** {rec.get('match_date') or 'Check Schedule'}\n"
+                else:
+                    txt += "**Status:** Venue not yet assigned.\n"
+                    txt += f"Please contact your Cluster Incharge:\n"
+                    txt += f"👤 **{rec.get('cluster_incharge', 'N/A')}**\n"
+                    txt += f"📞 **{rec.get('incharge_mobile', 'N/A')}**\n"
+                
+                return {"response": txt, "source": "sql_database"}
+             else:
+                 # Fallthrough to RAG if not found? Or explicit error?
+                 pass 
+
+
+    # 2. Registration ID - REMOVED
+    # Player lookup by Reg ID is disabled for privacy reasons.
+    # Fallthrough to RAG/General Logic.
+
 
     # 3. Match/Fixture ID
     match_match = re.search(r'(?:match|fixture)\s*(?:id|no)?\s*[:#-]?\s*(\d+)', original_query, re.IGNORECASE)

@@ -5,16 +5,42 @@ import random
 
 DATA_DIR = "data/mdFiles"
 OUTPUT_FILE = "data/dataset_5000_multilingual.json"
+EXCLUSION_FILES = [
+    "data/rag qna.txt", 
+    "data/training_questions_500.txt"
+]
 TARGET_COUNT = 5000
 
 questions = []
 seen = set()  # Track uniqueness
 
+def normalize_text(text):
+    """Normalize text for comparison (lowercase, strip non-alphanumeric)."""
+    return re.sub(r'[^a-z0-9]', '', text.lower())
+
+def load_exclusions():
+    """Load existing questions to exclude."""
+    count = 0
+    for file_path in EXCLUSION_FILES:
+        if os.path.exists(file_path):
+            try:
+                with open(file_path, "r", encoding="utf-8") as f:
+                    content = f.read()
+                    # Extract lines starting with numbers like "1. Question?"
+                    # Adjust regex to catch more formats if needed
+                    matches = re.findall(r'^\d+\.\s+(.*)$', content, re.MULTILINE)
+                    for m in matches:
+                        seen.add(normalize_text(m))
+                        count += 1
+            except Exception as e:
+                print(f"⚠️ Error reading {file_path}: {e}")
+    print(f"🚫 Loaded {count} existing questions to exclude.")
+
 def add_unique_q(topic, text, language):
     """Add question only if unique."""
-    key = f"{language}:{text.lower()}"
-    if key not in seen:
-        seen.add(key)
+    norm_text = normalize_text(text)
+    if norm_text not in seen:
+        seen.add(norm_text)
         questions.append({
             "id": len(questions) + 1,
             "topic": topic,
@@ -26,7 +52,7 @@ def add_unique_q(topic, text, language):
 
 print("📂 Loading Data Files...")
 
-# Load Entities
+# Load Entities - REMOVED SLICING LIMITS to ensure we have enough data
 districts = []
 mandals = []
 villages = []
@@ -49,7 +75,7 @@ if os.path.exists(os.path.join(DATA_DIR, "rag_mandals.md")):
 if os.path.exists(os.path.join(DATA_DIR, "rag_villages.md")):
     with open(os.path.join(DATA_DIR, "rag_villages.md"), "r", encoding="utf-8") as f:
         content = f.read()
-        villages = re.findall(r'\*\*(.*?)\*\*', content)[:500]
+        villages = re.findall(r'\*\*(.*?)\*\*', content) # Removed [:500] limit
 
 # Read Fixtures
 if os.path.exists(os.path.join(DATA_DIR, "rag_fixtures.md")):
@@ -61,7 +87,7 @@ if os.path.exists(os.path.join(DATA_DIR, "rag_fixtures.md")):
 if os.path.exists(os.path.join(DATA_DIR, "rag_disciplines.md")):
     with open(os.path.join(DATA_DIR, "rag_disciplines.md"), "r", encoding="utf-8") as f:
         content = f.read()
-        events = re.findall(r'\*\*(.*?)\*\*', content)[:20]
+        events = re.findall(r'\*\*(.*?)\*\*', content) # Removed [:20] limit
 
 # Fallback disciplines
 if not events:
@@ -70,6 +96,8 @@ if not events:
 
 print(f"   Loaded: {len(districts)} districts, {len(mandals)} mandals, "
       f"{len(villages)} villages, {len(fixtures)} fixtures, {len(events)} events")
+
+load_exclusions()
 
 # Question Templates
 # Format: (topic, templates_dict_by_language)
@@ -84,7 +112,10 @@ templates = [
             "Information on {entity} district.",
             "Is {entity} part of the CM Cup?",
             "Where is {entity} located?",
-            "Give me info on {entity}."
+            "Give me info on {entity}.",
+            "Can you find {entity}?",
+            "What do you know about {entity}?",
+            "Does {entity} participate in sports?"
         ],
         "Hindi": [
             "{entity} ek registered district hai kya?",
@@ -93,7 +124,10 @@ templates = [
             "{entity} ke baare mein jankari do.",
             "{entity} district ki details dikhao.",
             "Kya {entity} CM Cup ka hissa hai?",
-            "{entity} kahan hai?"
+            "{entity} kahan hai?",
+            "{entity} ki location batao.",
+            "{entity} ke baare mein kya jante ho?",
+            "Kya {entity} sports mein hai?"
         ],
         "Telugu": [
             "{entity} registered district aa?",
@@ -101,14 +135,19 @@ templates = [
             "{entity} e district lo undi?",
             "{entity} vishayam cheppandi.",
             "{entity} details ivvandi.",
-            "{entity} ekkada undi?"
+            "{entity} ekkada undi?",
+            "{entity} gurinchi em telusu?",
+            "{entity} sports lo undo ledo?"
         ],
         "Hinglish": [
             "{entity} registered district hai kya?",
             "Mujhe {entity} ke details chahiye.",
             "{entity} kis district ka part hai?",
             "{entity} ke bare me info do.",
-            "Tell me about {entity} na."
+            "Tell me about {entity} na.",
+            "{entity} kahan located hai?",
+            "{entity} ki jankari de do bhai.",
+            "Kya {entity} CM Cup mein hai?"
         ]
     }),
     # Fixtures
@@ -119,26 +158,30 @@ templates = [
             "Details for Fixture {entity}.",
             "Show me Match {entity} info.",
             "What time is Fixture {entity}?",
-            "Where is Match {entity} being played?"
+            "Where is Match {entity} being played?",
+            "Is Fixture {entity} cancelled?"
         ],
         "Hindi": [
             "Fixture ID {entity} mein kaun khel raha hai?",
             "Match ID {entity} kab scheduled hai?",
             "Fixture {entity} ki details do.",
             "Match {entity} ki jankari dikhao.",
-            "Fixture {entity} ka time kya hai?"
+            "Fixture {entity} ka time kya hai?",
+            "Kya Match {entity} cancel ho gaya?"
         ],
         "Telugu": [
             "Fixture ID {entity} lo evaru aadutunnaru?",
             "Match ID {entity} eppudu schedule ayyindi?",
             "Fixture {entity} details ivvandi.",
-            "Match {entity} gurinchi cheppandi."
+            "Match {entity} gurinchi cheppandi.",
+            "Fixture {entity} time enti?"
         ],
         "Hinglish": [
             "Fixture ID {entity} me kaun play kar raha hai?",
             "Match {entity} kab hai?",
             "Fixture {entity} ke details dikhao.",
-            "Match {entity} ka info chahiye."
+            "Match {entity} ka info chahiye.",
+            "Fixture {entity} kitne baje hai?"
         ]
     }),
     # Events/Sports
@@ -150,7 +193,9 @@ templates = [
             "Venue for {entity} matches?",
             "When does {entity} start?",
             "Show me {entity} fixtures.",
-            "Tell me about {entity} competitions."
+            "Tell me about {entity} competitions.",
+            "Is {entity} included in CM Cup?",
+            "How to register for {entity}?"
         ],
         "Hindi": [
             "{entity} ke liye sabhi events list karo.",
@@ -158,26 +203,30 @@ templates = [
             "Kya aaj {entity} ke matches hain?",
             "{entity} matches ka venue kya hai?",
             "{entity} kab shuru hoga?",
-            "{entity} fixtures dikhao."
+            "{entity} fixtures dikhao.",
+            "{entity} ke register kaise karein?"
         ],
         "Telugu": [
             "{entity} kosam anni events list cheyandi.",
             "{entity} schedule enti?",
             "Ee roju {entity} matches unnaya?",
             "{entity} matches venue enti?",
-            "{entity} eppudu modalaavutundi?"
+            "{entity} eppudu modalaavutundi?",
+            "{entity} fixtures chupinchandi."
         ],
         "Hinglish": [
             "{entity} ke liye all events batao.",
             "{entity} ka schedule kya hai?",
             "Aaj {entity} matches hai kya?",
             "{entity} matches kahan hain?",
-            "{entity} kab start hoga?"
+            "{entity} kab start hoga?",
+            "{entity} me register kaise karte hain?"
         ]
     })
 ]
 
 # General/Policy questions (no entity substitution)
+# These will be mutated with iteration numbers if needed, but we have enough entities now.
 general_qs = [
     ("Policy", {
         "English": [
@@ -229,21 +278,30 @@ print("🔄 Generating Questions...")
 # Generate entity-based questions
 for topic, lang_templates in templates:
     if topic == "Locations":
-        entities = districts + mandals[:200] + villages[:200]
+        # Combine all location entities
+        entities = districts + mandals + villages
+        random.shuffle(entities) # Shuffle to get variety
     elif topic == "Fixtures":
-        entities = fixtures[:300]
+        entities = fixtures
+        random.shuffle(entities)
     elif topic == "Events":
         entities = events
+        random.shuffle(entities)
     else:
         entities = []
     
-    for lang in ["English", "Hindi", "Telugu", "Hinglish"]:
-        for entity in entities:
-            for template in lang_templates[lang]:
-                q_text = template.replace("{entity}", str(entity))
-                add_unique_q(topic, q_text, lang)
-                if len(questions) >= TARGET_COUNT:
-                    break
+    # We want to distribute questions across languages and entities
+    for entity in entities:
+        # Pick 2 random languages per entity to avoid exhaustion
+        langs = ["English", "Hindi", "Telugu", "Hinglish"]
+        selected_langs = random.sample(langs, k=2) 
+        
+        for lang in selected_langs:
+            # Pick a random template
+            template = random.choice(lang_templates[lang])
+            q_text = template.replace("{entity}", str(entity))
+            add_unique_q(topic, q_text, lang)
+            
             if len(questions) >= TARGET_COUNT:
                 break
         if len(questions) >= TARGET_COUNT:
@@ -251,28 +309,31 @@ for topic, lang_templates in templates:
     if len(questions) >= TARGET_COUNT:
         break
 
-# Add general questions (repeat to fill up)
-iteration = 0
-while len(questions) < TARGET_COUNT:
-    iteration += 1
-    for topic, lang_qs in general_qs:
-        for lang in ["English", "Hindi", "Telugu", "Hinglish"]:
-            for q_base in lang_qs[lang]:
-                # Add variations to avoid duplicates
-                q_text = q_base
-                if iteration > 1:
-                    q_text = f"{q_base} ({iteration})"
-                add_unique_q(topic, q_text, lang)
+# Fill remaining with General questions if needed
+if len(questions) < TARGET_COUNT:
+    print(f"   Note: Entity questions exhausted at {len(questions)}. Filling with General questions...")
+    iteration = 0
+    while len(questions) < TARGET_COUNT:
+        iteration += 1
+        for topic, lang_qs in general_qs:
+            for lang in ["English", "Hindi", "Telugu", "Hinglish"]:
+                for q_base in lang_qs[lang]:
+                    q_text = q_base
+                    if iteration > 1:
+                        # Add a minimal variation to make it unique string-wise
+                        # e.g., append spaces or punctuation variants, but here just suffix is safer
+                        q_text = f"{q_base} " + ("?" * (iteration % 3)) 
+                    add_unique_q(topic, q_text, lang)
+                    if len(questions) >= TARGET_COUNT:
+                        break
                 if len(questions) >= TARGET_COUNT:
                     break
             if len(questions) >= TARGET_COUNT:
                 break
         if len(questions) >= TARGET_COUNT:
             break
-    if len(questions) >= TARGET_COUNT:
-        break
 
-# Shuffle
+# Shuffle final dataset
 random.shuffle(questions)
 questions = questions[:TARGET_COUNT]
 
@@ -281,17 +342,17 @@ for i, q in enumerate(questions):
     q["id"] = i + 1
 
 print(f"✅ Generated {len(questions)} unique questions.")
-print(f"   Unique count: {len(seen)}")
+print(f"   Unique count (including exclusions): {len(seen)}")
 
 # Language distribution
 lang_counts = {}
 for q in questions:
-    lang = q["language"]
-    lang_counts[lang] = lang_counts.get(lang, 0) + 1
+    lang_ = q["language"]
+    lang_counts[lang_] = lang_counts.get(lang_, 0) + 1
 
 print("   Language Distribution:")
-for lang, count in sorted(lang_counts.items()):
-    print(f"      {lang}: {count} ({count/len(questions)*100:.1f}%)")
+for lang_, count in sorted(lang_counts.items()):
+    print(f"      {lang_}: {count} ({count/len(questions)*100:.1f}%)")
 
 with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
     json.dump(questions, f, indent=2, ensure_ascii=False)

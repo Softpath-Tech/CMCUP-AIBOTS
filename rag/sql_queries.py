@@ -265,4 +265,91 @@ def get_disciplines_by_level(level_name):
     if df.empty:
         return []
         
-    return df['dist_game_nm'].tolist()
+
+def get_player_venues_by_phone(phone):
+    """
+    Get venue and incharge details for a player by phone number.
+    Returns list of dicts with: sport_name, venue, cluster_incharge, incharge_mobile, player_reg_id.
+    """
+    ds = get_datastore()
+    if not ds.initialized: ds.init_db()
+    
+    # Reusing the logic from search_players_sql but optimized for venue/contact info
+    query = """
+    SELECT 
+        d.dist_game_nm as sport_name,
+        e.event_name,
+        p.player_reg_id,
+        
+        -- Venue Info (from Fixtures)
+        f.venue,
+        f.match_date,
+        
+        -- Cluster Incharge Info
+        c.clustername,
+        c.incharge_name as cluster_incharge,
+        c.mobile_no as incharge_mobile
+
+    FROM player_details p
+    
+    -- Link Village -> Cluster
+    LEFT JOIN villagemaster v ON p.village_id = v.id
+    LEFT JOIN clustermaster c ON v.cluster_id = c.cluster_id
+    
+    -- Link Game/Event
+    LEFT JOIN tb_discipline d ON p.game_id = d.game_id
+    LEFT JOIN tb_events e ON p.event_id = e.id
+
+    -- Link Fixtures (Try to find a match for this player's gender/district/game)
+    -- Note: This is best-effort mapping since checking individual participation in a team fixture is complex.
+    LEFT JOIN tb_fixtures f ON 
+        p.game_id = f.disc_id 
+        AND p.gender = f.gender
+        AND (p.district_id = f.team1_dist_id OR p.district_id = f.team2_dist_id)
+
+    WHERE p.mobile_no = ?
+    """
+    
+    df = ds.query(query, (str(phone),))
+    
+    if df.empty:
+        return []
+        
+    return df.to_dict(orient="records")
+
+def get_player_venue_by_ack(ack_no):
+    """
+    Get venue and incharge details for a player by Ack No (Reg ID).
+    """
+    ds = get_datastore()
+    if not ds.initialized: ds.init_db()
+    
+    query = """
+    SELECT 
+        d.dist_game_nm as sport_name,
+        e.event_name,
+        p.player_reg_id,
+        f.venue,
+        f.match_date,
+        c.clustername,
+        c.incharge_name as cluster_incharge,
+        c.mobile_no as incharge_mobile
+    FROM player_details p
+    LEFT JOIN villagemaster v ON p.village_id = v.id
+    LEFT JOIN clustermaster c ON v.cluster_id = c.cluster_id
+    LEFT JOIN tb_discipline d ON p.game_id = d.game_id
+    LEFT JOIN tb_events e ON p.event_id = e.id
+    LEFT JOIN tb_fixtures f ON 
+        p.game_id = f.disc_id 
+        AND p.gender = f.gender
+        AND (p.district_id = f.team1_dist_id OR p.district_id = f.team2_dist_id)
+    WHERE p.player_reg_id = ?
+    """
+    
+    df = ds.query(query, (str(ack_no),))
+    
+    if df.empty:
+        return None
+        
+    return df.to_dict(orient="records")[0]
+
