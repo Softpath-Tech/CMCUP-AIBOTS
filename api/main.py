@@ -410,8 +410,19 @@ async def chat_endpoint(request: ChatRequest):
             print(f"SQL Error: {e}")
 
     # 6. Complex SQL Queries (Agentic)
-    # Detects questions about counts, lists, specific aggregations
-    sql_intent_pattern = r"(how many|count|total|list|show|who is|what is|find).*(player|registration|venue|match|game|sport|cluster|incharge)"
+    # Detects questions about counts, lists, specific aggregations (Agentic)
+    # 1. Strong Rule Keywords (Age, Born, Criteria) - Trigger SQL immediately (handles typos like 'hokey')
+    if re.search(r"\b(age|born|birth|criteria|rules|limit|eligible|eligibility)\b", original_query, re.IGNORECASE):
+        print(f"🤖 Intent: Rule/Age Query (Triggering SQL Agent)")
+        try:
+             sql_response = run_sql_agent(original_query)
+             if "I try to query" not in sql_response and "error" not in sql_response.lower():
+                 return {"response": sql_response, "source": "sql_agent"}
+        except Exception as e:
+             print(f"SQL Agent Failed: {e}")
+
+    # 2. General SQL Intents (Count, List, Who is) - Require a target object (player, sport, etc.)
+    sql_intent_pattern = r"(how many|count|total|list|show|who is|what is|find).*(player|registration|venue|match|game|sport|cluster|incharge|hockey|cricket|kabaddi|kho|athletics|volleyball|ball|tennis|cycling|wrestling|karate|taekwondo|gymnastics|swimming|yoga|particip)"
     if re.search(sql_intent_pattern, original_query, re.IGNORECASE):
         print(f"🤖 Intent: Complex/Agentic SQL Query")
         try:
