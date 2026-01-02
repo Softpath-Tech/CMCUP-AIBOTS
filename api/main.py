@@ -740,9 +740,12 @@ async def process_user_query(raw_query: str, session_id: str = None):
                     txt += f"- {g}\n"
                 return {"response": txt, "source": "sql_database"}
             else:
-                 return {"response": f"ℹ️ No specific disciplines found listed for **{level_name}** level.", "source": "sql_database"}
+                 # If SQL doesn't have data (e.g. new disciplines not in DB), Fallback to RAG
+                 print(f"ℹ️ SQL found no disciplines for {level_name}. Falling back to RAG.")
+                 pass 
         except Exception as e:
             print(f"SQL Error: {e}")
+            pass
 
     # 6. Complex SQL Queries (Agentic)
     # Detects questions about counts, lists, specific aggregations (Agentic)
@@ -781,7 +784,7 @@ async def process_user_query(raw_query: str, session_id: str = None):
              return {"response": "The AI Brain is initializing. Please try again in 10 seconds.", "source": "system"}
         
         # Memory Management
-        session_id = request.session_id
+        # session_id passed in args
         chat_history = []
         if session_id:
             chat_history = CHAT_SESSIONS.get(session_id, [])

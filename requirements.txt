@@ -17,3 +17,4 @@ openpyxl
 unstructured
 tabulate
 networkx
+openpyxl
