@@ -294,13 +294,12 @@ def read_root():
 # --------------------------------------------------
 # 8. Main Chat Endpoint (Hybrid Router)
 # --------------------------------------------------
-@app.post("/chat")
-async def chat_endpoint(request: ChatRequest):
+async def process_user_query(raw_query: str, session_id: str = None):
     """
-    The Hybrid Intent Router 2.1 with Menu State Machine
+    Unified Logic Handler: Menu -> SQL -> RAG
     """
-    user_query = request.query.strip().lower()
-    session_id = request.session_id
+    user_query = raw_query.strip().lower()
+    # session_id passed as argument
     
     # ------------------------------------------------
     # 0. MENU STATE MACHINE
@@ -456,7 +455,7 @@ async def chat_endpoint(request: ChatRequest):
             }
 
     # 1. Phone Number match - PRIVACY GUARD & VENUE FLOW
-    original_query = request.query.strip() # Keep casing for Reg IDs if needed
+    original_query = raw_query.strip() # Keep casing for Reg IDs if needed
     phone_match = re.search(r'\b[6-9]\d{9}\b', original_query)
     
     # 1A. Venue/Status Flow (Exception to Filter)
@@ -814,9 +813,13 @@ async def chat_endpoint(request: ChatRequest):
         print(f"RAG Crash: {e}")
         return {"response": f"I encountered an error accessing the knowledge base. Error: {str(e)}", "source": "error_handler"}
 
+@app.post("/chat")
+async def chat_endpoint(request: ChatRequest):
+    return await process_user_query(request.query, request.session_id)
+
 @app.post("/ask")
 async def ask_endpoint(request: ChatRequest):
-    return await chat_endpoint(request)
+    return await process_user_query(request.query, request.session_id)
 
 # --------------------------------------------------
 # 9. WhatsApp Endpoint
@@ -824,20 +827,19 @@ async def ask_endpoint(request: ChatRequest):
 @app.post("/whatsappchat")
 async def whatsapp_chat_endpoint(request: WhatsAppChatRequest):
     """
-    WhatsApp specialized endpoint: accepts JSON with user_message.
+    WhatsApp specialized endpoint.
+    Uses 'phone_number' as session_id for continuity.
     """
     user_message = (request.user_message or "").strip()
+    session_id = request.phone_number  # Use phone number as persistent session ID
 
     if not user_message:
         raise HTTPException(status_code=400, detail="user_message cannot be empty")
 
     try:
-        rag = get_or_init_rag_chain()
-        response_text = rag.invoke(user_message)
-        plain = extract_plain_text(response_text)
-        # Return as JSON so WhatsApp integrations receive a JSON payload
-        return {"response": plain, "source": "rag_knowledge_base"}
+        # Call the unified logic
+        return await process_user_query(user_message, session_id)
     except Exception as e:
         import traceback
         traceback.print_exc()
-        raise HTTPException(status_code=500, detail=f"RAG Error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Processing Error: {str(e)}")
