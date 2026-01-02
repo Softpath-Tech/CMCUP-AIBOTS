@@ -80,7 +80,11 @@ MENU_LANGUAGE = "MENU_LANGUAGE"
 # SUB-INTERACTION STATES (Waiting for input)
 STATE_WAIT_PHONE = "STATE_WAIT_PHONE"
 STATE_WAIT_ACK = "STATE_WAIT_ACK"
+STATE_WAIT_PHONE = "STATE_WAIT_PHONE"
+STATE_WAIT_ACK = "STATE_WAIT_ACK"
 STATE_WAIT_LOCATION = "STATE_WAIT_LOCATION"
+STATE_WAIT_SPORT_SCHEDULE = "STATE_WAIT_SPORT_SCHEDULE"
+STATE_WAIT_SPORT_RULES = "STATE_WAIT_SPORT_RULES"
 
 PARENT_MAP = {
     MENU_REGISTRATION: MENU_MAIN,
@@ -94,7 +98,11 @@ PARENT_MAP = {
     MENU_LANGUAGE: MENU_MAIN,
     STATE_WAIT_PHONE: MENU_REGISTRATION,
     STATE_WAIT_ACK: MENU_REGISTRATION,
+    STATE_WAIT_PHONE: MENU_REGISTRATION,
+    STATE_WAIT_ACK: MENU_REGISTRATION,
     STATE_WAIT_LOCATION: MENU_LOCATION,
+    STATE_WAIT_SPORT_SCHEDULE: MENU_SCHEDULE,
+    STATE_WAIT_SPORT_RULES: MENU_RULES,
 }
 
 
@@ -374,6 +382,47 @@ async def process_user_query(raw_query: str, session_id: str = None):
         else:
              return {"response": "❌ Invalid Phone Number. Please enter a 10-digit mobile number starting with 6-9.\n\nType 'Back' to cancel.", "source": "validation_error"}
 
+    # State: WAITING FOR SPORT (SCHEDULE)
+    if current_state == STATE_WAIT_SPORT_SCHEDULE:
+        sport_name = user_query
+        print(f"⚡ Intent: Menu Sport Schedule ({sport_name})")
+        # Reset state to parent so next query works normally or they can ask again? 
+        # Better to keep them in 'Schedule' menu or let them ask another sport?
+        # Let's reset to MENU_SCHEDULE after answer.
+        if session_id: SESSION_STATE[session_id] = MENU_SCHEDULE
+        
+        try:
+             schedules = get_sport_schedule(sport_name)
+             if schedules:
+                 txt = f"### 📅 {sport_name.title()} Schedule (Next 5)\n"
+                 for m in schedules[:5]:
+                     txt += f"- **{m.get('event_name')}**: {m.get('team1_name')} vs {m.get('team2_name')} @ {m.get('venue')}\n"
+                 return {"response": txt, "source": "sql_database"}
+             else:
+                 return {"response": f"ℹ️ No specific schedule found for **{sport_name}**. It might not be scheduled yet or check spelling.\n\nType another sport or 'Back'.", "source": "sql_database"}
+        except Exception as e:
+             return {"response": f"Error retrieving schedule: {str(e)}", "source": "error"}
+
+    # State: WAITING FOR SPORT (RULES)
+    if current_state == STATE_WAIT_SPORT_RULES:
+        sport_name = user_query
+        print(f"⚡ Intent: Menu Sport Rules ({sport_name})")
+        if session_id: SESSION_STATE[session_id] = MENU_RULES
+        
+        # Construct RAG query for rules
+        rag_query = f"What are the age limits, eligibility and team rules for {sport_name} in CM Cup 2025?"
+        return await process_user_query(rag_query) # Recursive call treating it as a fresh query but with specific intent? 
+        # recursion might be risky if it hits menu logic again. 
+        # Better: Invoke RAG directly.
+        
+        try:
+            rag_bot = get_or_init_rag_chain()
+            rag_resp = rag_bot.invoke({"question": rag_query})
+            rag_text = extract_plain_text(rag_resp.get('result', rag_resp))
+            return {"response": f"📜 **Rules for {sport_name}:**\n\n{rag_text}", "source": "rag_chain"}
+        except Exception as e:
+             return {"response": f"Error retrieving rules: {str(e)}", "source": "error"}
+
     # State Handling Logic
     if user_query.isdigit():
         choice = int(user_query)
@@ -424,9 +473,24 @@ async def process_user_query(raw_query: str, session_id: str = None):
             elif choice == 4:
                  return {"response": "👤 To find your Coach/Incharge, please tell me your **Mandal** or **District** name.", "source": "menu_system"}
         
+        # --- SUB MENU: RULES ---
+        if current_state == MENU_RULES:
+            if choice == 1:
+                if session_id: SESSION_STATE[session_id] = STATE_WAIT_SPORT_RULES
+                return {"response": "🧒 **Age Limit & Eligibility** depends on the sport.\n\nWhich **Sport** are you asking about? (e.g. Judo, Boxing, Athletics)", "source": "menu_system"}
+            elif choice == 2:
+                return {"response": "👥 **Team Size & Format** varies by discipline.\n\nPlease type the name of the **Sport** you are interested in.", "source": "menu_system"}
+            elif choice == 3:
+                return {"response": "📄 **Required Documents:**\n\n1. Aadhaar Card (Mandatory)\n2. Date of Birth Certificate\n3. Bonafide Certificate / Study Certificate\n4. Bank Passbook (for specific schemes)\n\nType a **Sport Name** for specific rules.", "source": "static_data"}
+            elif choice == 4:
+                return {"response": "🏠 **Facilities Provided:**\n\n- **Food & Accommodation:** Provided for all State-level participants.\n- **Transport:** Allowances provided for travel to State venue.\n- **Jersey/Kit:** Provided for finalists.\n\nDo you have a specific question?", "source": "static_data"}
+            elif choice == 5:
+                return {"response": "❓ **General FAQs:**\n\n- *Can I participate in multiple sports?* Yes, if schedules don't clash.\n- *Is registration free?* Yes, completely free.\n\nType your specific question below.", "source": "static_data"}
+
         # --- SUB MENU: SCHEDULE ---
         elif current_state == MENU_SCHEDULE:
             if choice == 1:
+                if session_id: SESSION_STATE[session_id] = STATE_WAIT_SPORT_SCHEDULE
                 return {"response": "🏅 Which sport's schedule do you want to see? (e.g. Cricket, Kabaddi)", "source": "menu_system"}
             elif choice == 2:
                 return {"response": "🗓️ **Mandal Level Schedule:** 28 Jan - 31 Jan 2026.", "source": "static_data"}
