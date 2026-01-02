@@ -47,9 +47,6 @@ app.add_middleware(
 # --------------------------------------------------
 # 5. Models and Globals
 # --------------------------------------------------
-# --------------------------------------------------
-# 5. Models and Globals
-# --------------------------------------------------
 class ChatRequest(BaseModel):
     query: str
     session_id: Optional[str] = None  # Added for memory
@@ -65,6 +62,42 @@ rag_chain = None
 # In-Memory Chat History: {session_id: [(user, bot), ...]}
 CHAT_SESSIONS = {}
 
+# MENU STATE MANAGEMENT
+SESSION_STATE = {} # {session_id: current_state_str}
+
+# MENU CONSTANTS
+MENU_MAIN = "MAIN_MENU"
+MENU_REGISTRATION = "MENU_REGISTRATION"
+MENU_SCHEDULE = "MENU_SCHEDULE"
+MENU_SELECTION = "MENU_SELECTION"
+MENU_RULES = "MENU_RULES"
+MENU_STATS = "MENU_STATS"
+MENU_DOWNLOADS = "MENU_DOWNLOADS"
+MENU_LOCATION = "MENU_LOCATION"
+MENU_HELPDESK = "MENU_HELPDESK"
+MENU_LANGUAGE = "MENU_LANGUAGE"
+
+# SUB-INTERACTION STATES (Waiting for input)
+STATE_WAIT_PHONE = "STATE_WAIT_PHONE"
+STATE_WAIT_ACK = "STATE_WAIT_ACK"
+STATE_WAIT_LOCATION = "STATE_WAIT_LOCATION"
+
+PARENT_MAP = {
+    MENU_REGISTRATION: MENU_MAIN,
+    MENU_SCHEDULE: MENU_MAIN,
+    MENU_SELECTION: MENU_MAIN,
+    MENU_RULES: MENU_MAIN,
+    MENU_STATS: MENU_MAIN,
+    MENU_DOWNLOADS: MENU_MAIN,
+    MENU_LOCATION: MENU_MAIN,
+    MENU_HELPDESK: MENU_MAIN,
+    MENU_LANGUAGE: MENU_MAIN,
+    STATE_WAIT_PHONE: MENU_REGISTRATION,
+    STATE_WAIT_ACK: MENU_REGISTRATION,
+    STATE_WAIT_LOCATION: MENU_LOCATION,
+}
+
+
 def get_or_init_rag_chain():
     """
     Lazy-load RAG chain.
@@ -78,8 +111,106 @@ def get_or_init_rag_chain():
     return rag_chain
 
 # --------------------------------------------------
-# 6. Helpers
+# 6. Helpers & Menu Content
 # --------------------------------------------------
+def get_menu_text(menu_name):
+    if menu_name == MENU_MAIN:
+        return (
+            "🏆 **Welcome to Telangana Sports Authority – CM Cup 2025 Chatbot** 👋\n\n"
+            "I can help players, parents, coaches, and officials.\n\n"
+            "1️⃣ Player Registration & Venue Details 🏟️\n"
+            "2️⃣ Match Schedules & Fixtures 📅\n"
+            "3️⃣ Selection Status & Results 🏆\n"
+            "4️⃣ Sports Rules, Eligibility & FAQs 📜\n"
+            "5️⃣ Statistics & Participation Data 📊\n"
+            "6️⃣ Downloads & Official Links 📥\n"
+            "7️⃣ Location Verification 📍\n"
+            "8️⃣ Helpdesk / Contact Support 📞\n"
+            "9️⃣ Language Change 🌐\n"
+            "0️⃣ Exit Chat ❌\n\n"
+            "💡 *Type a number (0–9) to proceed*"
+        )
+    elif menu_name == MENU_REGISTRATION:
+        return (
+            "🏟️ **Player Registration & Venue Details**\n\n"
+            "1️⃣ Search by Phone Number\n"
+            "2️⃣ Search by Acknowledgment Number\n"
+            "3️⃣ View Assigned Venue & Date\n"
+            "4️⃣ Coach / Cluster Incharge Contact\n\n"
+            "🔙 *Type 'Back' for Main Menu*"
+        )
+    elif menu_name == MENU_SCHEDULE:
+        return (
+            "📅 **Match Schedules & Fixtures**\n\n"
+            "1️⃣ Schedule by Sport\n"
+            "2️⃣ Mandal Level Schedule\n"
+            "3️⃣ District Level Schedule\n"
+            "4️⃣ State Level Schedule\n"
+            "5️⃣ Search by Match ID\n\n"
+            "🔙 *Type 'Back' for Main Menu*"
+        )
+    elif menu_name == MENU_SELECTION:
+        return (
+            "🏆 **Selection Status & Results**\n\n"
+            "1️⃣ Check Selection Status by Ack No\n"
+            "2️⃣ District Qualified Players (List)\n"
+            "3️⃣ State Level Qualified Players (List)\n"
+            "4️⃣ Coach/Venue for Selected Players\n\n"
+            "🔙 *Type 'Back' for Main Menu*"
+        )
+    elif menu_name == MENU_RULES:
+        return (
+            "📜 **Sports Rules & Eligibility**\n\n"
+            "1️⃣ Age Limit & Eligibility\n"
+            "2️⃣ Team Size & Format\n"
+            "3️⃣ Required Documents\n"
+            "4️⃣ Facilities (Food, Stay, Kit)\n"
+            "5️⃣ General FAQs\n\n"
+            "🔙 *Type 'Back' for Main Menu*"
+        )
+    elif menu_name == MENU_STATS:
+        return (
+            "📊 **Statistics & Participation**\n\n"
+            "1️⃣ Total Player Registrations\n"
+            "2️⃣ Sport-wise Participation\n"
+            "3️⃣ Mandal/District-wise Stats\n"
+            "4️⃣ Sports Available per Level\n\n"
+            "🔙 *Type 'Back' for Main Menu*"
+        )
+    elif menu_name == MENU_DOWNLOADS:
+        return (
+            "📥 **Downloads & Official Links**\n\n"
+            "1️⃣ Download Acknowledgment Slip\n"
+            "2️⃣ Registration Portal\n"
+            "3️⃣ Notifications & Circulars\n"
+            "4️⃣ Rule Books\n\n"
+            "🔙 *Type 'Back' for Main Menu*"
+        )
+    elif menu_name == MENU_LOCATION:
+        return (
+            "📍 **Location Verification**\n\n"
+            "Please type your Village, Mandal, or District name to check details.\n"
+            "Example: *'Mancherial'*, *'Medipally'* \n\n"
+            "🔙 *Type 'Back' for Main Menu*"
+        )
+    elif menu_name == MENU_HELPDESK:
+         return (
+             "📞 **Helpdesk & Support**\n\n"
+             "1️⃣ State Helpline Numbers\n"
+             "2️⃣ District Sports Officers\n"
+             "3️⃣ Email Support\n\n"
+             "🔙 *Type 'Back' for Main Menu*"
+         )
+    elif menu_name == MENU_LANGUAGE:
+         return (
+             "🌐 **Select Language**\n\n"
+             "1️⃣ English\n"
+             "2️⃣ తెలుగు (Telugu)\n"
+             "3️⃣ हिन्दी (Hindi)\n\n"
+             "🔙 *Type 'Back' for Main Menu*"
+         )
+    return "Menu not found."
+
 def extract_plain_text(resp) -> str:
     """Try to extract a single answer string from various response shapes."""
     if resp is None:
@@ -166,17 +297,125 @@ def read_root():
 @app.post("/chat")
 async def chat_endpoint(request: ChatRequest):
     """
-    The Hybrid Intent Router 2.1:
-    1. Static Data (CM, Helpdesk) -> Instant
-    2. Phone -> SQL
-    3. Reg ID -> SQL
-    4. Match ID -> SQL 
-    5. Geo Query -> SQL 
-    6. Sport Schedule -> SQL (New)
-    7. RAG Fallback
+    The Hybrid Intent Router 2.1 with Menu State Machine
     """
-    user_query = request.query.strip().lower() # Normalize Lower
+    user_query = request.query.strip().lower()
+    session_id = request.session_id
     
+    # ------------------------------------------------
+    # 0. MENU STATE MACHINE
+    # ------------------------------------------------
+    
+    # Global Reset Commands
+    if user_query in ["hi", "hello", "menu", "start", "restart", "home"]:
+        if session_id:
+            SESSION_STATE[session_id] = MENU_MAIN
+        return {"response": get_menu_text(MENU_MAIN), "source": "menu_system"}
+        
+    # Get Current State
+    current_state = SESSION_STATE.get(session_id, MENU_MAIN) if session_id else MENU_MAIN
+    
+    # Global Back Command
+    if user_query in ["back", "previous", "return", "exit"]:
+        # Logic to return to parent
+        if current_state == MENU_MAIN:
+            return {"response": "You are already at the Main Menu.", "source": "menu_system"}
+        else:
+            # Look up parent
+            parent = PARENT_MAP.get(current_state, MENU_MAIN)
+            if session_id:
+                SESSION_STATE[session_id] = parent
+            return {"response": get_menu_text(parent), "source": "menu_system"}
+
+    # State: WAITING FOR INPUT (Phone, Ack, Location)
+    # If we are in a 'waiting' state, we treat the query as the input value
+    if current_state == STATE_WAIT_PHONE:
+        # Check if it looks like a phone number
+        if re.search(r'\b[6-9]\d{9}\b', user_query):
+            # Proceed to phone lookup logic (handled by normal flow below)
+            # Reset state for next interaction? Or keep?
+            # Let's clean state to Reg Menu so they can do other things
+            if session_id: SESSION_STATE[session_id] = MENU_REGISTRATION
+            # Let fallthrough to Logic Section 1 (Phone Match)
+            pass 
+        else:
+             return {"response": "❌ Invalid Phone Number. Please enter a 10-digit mobile number starting with 6-9.\n\nType 'Back' to cancel.", "source": "validation_error"}
+
+    # State Handling Logic
+    if user_query.isdigit():
+        choice = int(user_query)
+        
+        # --- MAIN MENU LOGIC ---
+        if current_state == MENU_MAIN:
+            if choice == 1:
+                if session_id: SESSION_STATE[session_id] = MENU_REGISTRATION
+                return {"response": get_menu_text(MENU_REGISTRATION), "source": "menu_system"}
+            elif choice == 2:
+                if session_id: SESSION_STATE[session_id] = MENU_SCHEDULE
+                return {"response": get_menu_text(MENU_SCHEDULE), "source": "menu_system"}
+            elif choice == 3:
+                if session_id: SESSION_STATE[session_id] = MENU_SELECTION
+                return {"response": get_menu_text(MENU_SELECTION), "source": "menu_system"}
+            elif choice == 4:
+                if session_id: SESSION_STATE[session_id] = MENU_RULES
+                return {"response": get_menu_text(MENU_RULES), "source": "menu_system"}
+            elif choice == 5:
+                if session_id: SESSION_STATE[session_id] = MENU_STATS
+                return {"response": get_menu_text(MENU_STATS), "source": "menu_system"}
+            elif choice == 6:
+                if session_id: SESSION_STATE[session_id] = MENU_DOWNLOADS
+                return {"response": get_menu_text(MENU_DOWNLOADS), "source": "menu_system"}
+            elif choice == 7:
+                if session_id: SESSION_STATE[session_id] = MENU_LOCATION
+                return {"response": get_menu_text(MENU_LOCATION), "source": "menu_system"}
+            elif choice == 8:
+                if session_id: SESSION_STATE[session_id] = MENU_HELPDESK
+                return {"response": get_menu_text(MENU_HELPDESK), "source": "menu_system"}
+            elif choice == 9:
+                if session_id: SESSION_STATE[session_id] = MENU_LANGUAGE
+                return {"response": get_menu_text(MENU_LANGUAGE), "source": "menu_system"}
+            elif choice == 0:
+                SESSION_STATE.pop(session_id, None)
+                return {"response": "👋 precise. Chat Session Ended. Type 'Hi' to start again.", "source": "menu_system"}
+        
+        # --- SUB MENU: REGISTRATION ---
+        elif current_state == MENU_REGISTRATION:
+            if choice == 1:
+                if session_id: SESSION_STATE[session_id] = STATE_WAIT_PHONE
+                return {"response": "📱 Please enter your registered **Phone Number**:", "source": "menu_system"}
+            elif choice == 2:
+                # Prompt for Ack No - We can define a STATE_WAIT_ACK later if strict, or just prompt
+                return {"response": "📄 Please enter your **Acknowledgment Number** (e.g., SATGCMC-12345):", "source": "menu_system"}
+            elif choice == 3:
+                 return {"response": "🏟️ To view venue, please enter your **Phone Number** or **Acknowledgment Number**.", "source": "menu_system"}
+            elif choice == 4:
+                 return {"response": "👤 To find your Coach/Incharge, please tell me your **Mandal** or **District** name.", "source": "menu_system"}
+        
+        # --- SUB MENU: SCHEDULE ---
+        elif current_state == MENU_SCHEDULE:
+            if choice == 1:
+                return {"response": "🏅 Which sport's schedule do you want to see? (e.g. Cricket, Kabaddi)", "source": "menu_system"}
+            elif choice == 2:
+                return {"response": "🗓️ **Mandal Level Schedule:** 28 Jan - 31 Jan 2026.", "source": "static_data"}
+            elif choice == 3:
+                return {"response": "🗓️ **District Level Schedule:** 10 Feb - 14 Feb 2026.", "source": "static_data"}
+            elif choice == 4:
+                return {"response": "🗓️ **State Level Schedule:** 19 Feb - 26 Feb 2026.", "source": "static_data"}
+
+        # --- SUB MENU: STATS ---
+        elif current_state == MENU_STATS:
+            if choice == 1:
+                 # Call function directly
+                from rag.sql_queries import get_participation_stats
+                count = get_participation_stats()
+                return {"response": f"📊 **Total Registrations:** {count}", "source": "sql"}
+            
+        # ... Add other handlers as needed ...
+    
+    # ------------------------------------------------
+    # END MENU MACHINE -> FALLTHROUGH TO LOGIC
+    # ------------------------------------------------
+
     # 0. Static Data Interceptor
     # 0.1 Year/Version Mismatch Interceptor (High Priority)
     # If user asks for past years (e.g. 2015, 2024), redirect to 2025.
@@ -305,7 +544,17 @@ async def chat_endpoint(request: ChatRequest):
                 txt += f"**Name:** {rec.get('player_nm', 'N/A')}\n"
                 txt += f"**Reg ID:** {rec.get('player_reg_id', ack_no)}\n\n"
                 
-                txt += f"**📍 Location:** {rec.get('villagename', 'N/A')}, {rec.get('mandalname', 'N/A')}, {rec.get('districtname', 'N/A')}\n"
+                # Format Location (Remove None/N/A)
+                loc_parts = [
+                    rec.get('villagename'),
+                    rec.get('mandalname'),
+                    rec.get('districtname')
+                ]
+                # Filter out None, 'None', 'N/A' and join
+                clean_locs = [l for l in loc_parts if l and l.lower() not in ['none', 'n/a', '']]
+                location_str = ", ".join(clean_locs) if clean_locs else "Location Pending"
+
+                txt += f"**📍 Location:** {location_str}\n"
                 txt += f"**🏅 Status:** {level_str}\n\n"
                 
                 txt += f"**🏟️ Venue Details:**\n"
@@ -322,27 +571,39 @@ async def chat_endpoint(request: ChatRequest):
                 incharge_name = rec.get('cluster_incharge')
                 incharge_contact = rec.get('incharge_mobile')
                 
-                if not incharge_name and rec.get('mandalname'):
+                if not incharge_name and rec.get('districtname'):
                     print("⚠️ Hybrid Trigger: SQL missing Incharge. Asking RAG...")
                     try:
                         rag_bot = get_or_init_rag_chain()
                         sport_detail = rec.get('sport_name') or rec.get('event_name') or "sports"
-                        rag_query = f"Who is the {sport_detail} incharge for {rec.get('clustername')} cluster (Mandal: {rec.get('mandalname')}, District: {rec.get('districtname')})?"
+                        
+                        # Use available hierarchy for RAG
+                        rag_query = f"Who is the {sport_detail} incharge for "
+                        if rec.get('mandalname'): rag_query += f"Mandal: {rec.get('mandalname')}, "
+                        if rec.get('districtname'): rag_query += f"District: {rec.get('districtname')}?"
+                        
                         rag_resp = rag_bot.invoke({"question": rag_query})
                         
                         # Extract simple text from chain response
-                        # The chain usually returns {'result': '...'} or just str
                         rag_text = rag_resp.get('result', str(rag_resp)) if isinstance(rag_resp, dict) else str(rag_resp)
                         
-                        txt += f"*(Retrieved via AI)*: {rag_text}\n"
+                        # Filter out generic 'not found' messages to keep UI clean
+                        if "couldn't find" in rag_text.lower() or "not available" in rag_text.lower():
+                             txt += "**Status:** To be assigned by District Sports Officer.\n"
+                        else:
+                             txt += f"*(Retrieved via AI)*: {rag_text}\n"
+
                     except Exception as e:
                         print(f"Hybrid RAG Failed: {e}")
-                        txt += "**Status:** Information not available in database.\n"
+                        txt += "**Status:** Contact District Helpdesk.\n"
                 else:
                     txt += f"**Name:** {incharge_name or 'N/A'}\n"
                     txt += f"**Contact:** {incharge_contact or 'N/A'}\n"
                 
-                return {"response": txt, "source": "sql_database"}
+                
+                final_response = {"response": txt, "source": "sql_database"}
+                print(f"DEBUG RESPONSE ({ack_no}):\n{txt}")
+                return final_response
              else:
                  # Fallthrough to RAG if not found? Or explicit error?
                  pass 
