@@ -381,15 +381,39 @@ async def process_user_query(raw_query: str, session_id: str = None):
                 return {"response": txt, "source": "sql_database"} 
         else:
              return {"response": "❌ Invalid Phone Number. Please enter a 10-digit mobile number starting with 6-9.\n\nType 'Back' to cancel.", "source": "validation_error"}
+    
+    # State: WAITING FOR LOCATION
+    if current_state == STATE_WAIT_LOCATION:
+        loc_name = user_query
+        print(f"⚡ Intent: Menu Location Lookup ({loc_name})")
+        # Keep state to allow checking another location
+        
+        try:
+            res = get_geo_details(loc_name)
+            if res:
+                t = res['type']
+                d = res['data']
+                txt = f"### 📍 Location Found: {d.get('vill_nm') or d.get('mandal_nm') or d.get('dist_nm')}\n"
+                txt += f"**Type:** {t}\n"
+                if t == 'Village':
+                    txt += f"**Mandal:** {d.get('parent_mandal')}\n"
+                    txt += f"**District:** {d.get('parent_district')}"
+                elif t == 'Mandal':
+                    txt += f"**District:** {d.get('parent_district')}"
+                
+                txt += "\n\nType another location to check, or 'Back'."
+                return {"response": txt, "source": "sql_database"}
+            else:
+                return {"response": f"🚫 **{loc_name}** could not be found in our database.\n\nType another name or 'Back'.", "source": "sql_database"}
+        except Exception as e:
+            return {"response": f"Error looking up location: {str(e)}", "source": "error"}
 
     # State: WAITING FOR SPORT (SCHEDULE)
     if current_state == STATE_WAIT_SPORT_SCHEDULE:
         sport_name = user_query
         print(f"⚡ Intent: Menu Sport Schedule ({sport_name})")
-        # Reset state to parent so next query works normally or they can ask again? 
-        # Better to keep them in 'Schedule' menu or let them ask another sport?
-        # Let's reset to MENU_SCHEDULE after answer.
-        if session_id: SESSION_STATE[session_id] = MENU_SCHEDULE
+        # REMOVED RESET: Allow continuous querying (e.g. Cricket then Kabaddi)
+        # if session_id: SESSION_STATE[session_id] = MENU_SCHEDULE
         
         try:
              schedules = get_sport_schedule(sport_name)
@@ -407,7 +431,8 @@ async def process_user_query(raw_query: str, session_id: str = None):
     if current_state == STATE_WAIT_SPORT_RULES:
         sport_name = user_query
         print(f"⚡ Intent: Menu Sport Rules ({sport_name})")
-        if session_id: SESSION_STATE[session_id] = MENU_RULES
+        # REMOVED RESET: Allow continuous querying
+        # if session_id: SESSION_STATE[session_id] = MENU_RULES
         
         # Construct RAG query for rules
         rag_query = f"What are the age limits, eligibility and team rules for {sport_name} in CM Cup 2025?"
@@ -448,7 +473,7 @@ async def process_user_query(raw_query: str, session_id: str = None):
                 if session_id: SESSION_STATE[session_id] = MENU_DOWNLOADS
                 return {"response": get_menu_text(MENU_DOWNLOADS), "source": "menu_system"}
             elif choice == 7:
-                if session_id: SESSION_STATE[session_id] = MENU_LOCATION
+                if session_id: SESSION_STATE[session_id] = STATE_WAIT_LOCATION
                 return {"response": get_menu_text(MENU_LOCATION), "source": "menu_system"}
             elif choice == 8:
                 if session_id: SESSION_STATE[session_id] = MENU_HELPDESK
