@@ -331,12 +331,46 @@ async def process_user_query(raw_query: str, session_id: str = None):
     if current_state == STATE_WAIT_PHONE:
         # Check if it looks like a phone number
         if re.search(r'\b[6-9]\d{9}\b', user_query):
-            # Proceed to phone lookup logic (handled by normal flow below)
-            # Reset state for next interaction? Or keep?
-            # Let's clean state to Reg Menu so they can do other things
+            # Direct Lookup Logic
+            phone = re.search(r'\b[6-9]\d{9}\b', user_query).group(0)
+            print(f"⚡ Intent: Menu Phone Lookup ({phone})")
+            
+            # Reset state
             if session_id: SESSION_STATE[session_id] = MENU_REGISTRATION
-            # Let fallthrough to Logic Section 1 (Phone Match)
-            pass 
+            
+            # SQL Lookup
+            registrations = get_player_venues_by_phone(phone)
+            
+            if not registrations:
+                 return {"response": f"ℹ️ No registrations found for **{phone}**. Please check the number or register at the official site.", "source": "sql_database"}
+            
+            # Logic: 1 Record vs Multi
+            if len(registrations) == 1:
+                rec = registrations[0]
+                venue = rec.get('venue')
+                sport = rec.get('sport_name') or rec.get('event_name')
+                
+                txt = f"### 🏟️ Venue Details for {sport}\n"
+                if venue:
+                    txt += f"**Venue:** {venue}\n"
+                    txt += f"**Date:** {rec.get('match_date') or 'Check Schedule'}\n"
+                else:
+                    txt += "**Status:** There are no Venue Details available yet.\n"
+                    txt += f"You can contact your cluster Incharge:\n"
+                    txt += f"👤 **{rec.get('cluster_incharge', 'N/A')}**\n"
+                    txt += f"📞 **{rec.get('incharge_mobile', 'N/A')}**\n"
+                
+                return {"response": txt, "source": "sql_database"}
+                
+            else:
+                # Multiple Records
+                txt = f"found **{len(registrations)} registrations** for this number:\n"
+                for r in registrations:
+                    s = r.get('sport_name') or r.get('event_name')
+                    txt += f"- {s}\n"
+                
+                txt += "\nSince you have multiple events, please provide your **Acknowledgment Number** (e.g., SATGCMC-...) to get specific venue details."
+                return {"response": txt, "source": "sql_database"} 
         else:
              return {"response": "❌ Invalid Phone Number. Please enter a 10-digit mobile number starting with 6-9.\n\nType 'Back' to cancel.", "source": "validation_error"}
 
