@@ -16,3 +16,4 @@ requests
 openpyxl
 unstructured
 tabulate
+networkx

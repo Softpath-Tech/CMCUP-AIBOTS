@@ -59,7 +59,10 @@ def ingest_all():
     
     # Manual Recreation
     print("   -> Recreating Collection...")
-    client.recreate_collection(
+    if client.collection_exists("rag_knowledge_base_gemini"):
+        client.delete_collection("rag_knowledge_base_gemini")
+        
+    client.create_collection(
         collection_name="rag_knowledge_base_gemini",
         vectors_config=VectorParams(size=768, distance=Distance.COSINE)
     )
