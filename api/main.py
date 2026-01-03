@@ -67,15 +67,15 @@ SESSION_STATE = {} # {session_id: current_state_str}
 
 # MENU CONSTANTS
 MENU_MAIN = "MAIN_MENU"
-MENU_REGISTRATION = "MENU_REGISTRATION"
-MENU_SCHEDULE = "MENU_SCHEDULE"
-MENU_SELECTION = "MENU_SELECTION"
-MENU_RULES = "MENU_RULES"
-MENU_STATS = "MENU_STATS"
-MENU_DOWNLOADS = "MENU_DOWNLOADS"
-MENU_LOCATION = "MENU_LOCATION"
-MENU_HELPDESK = "MENU_HELPDESK"
-MENU_LANGUAGE = "MENU_LANGUAGE"
+MENU_REG_FAQ = "MENU_REG_FAQ"           # 1. Registration FAQ
+MENU_DISCIPLINES = "MENU_DISCIPLINES"   # 2. Disciplines
+MENU_SCHEDULE = "MENU_SCHEDULE"         # 3. Schedules
+MENU_VENUES = "MENU_VENUES"             # 4. Venues
+MENU_OFFICERS = "MENU_OFFICERS"         # 5. Officers
+MENU_PLAYER_STATUS = "MENU_PLAYER_STATUS" # 6. Player Details
+MENU_MEDALS = "MENU_MEDALS"             # 7. Medal Tally
+MENU_HELPDESK = "MENU_HELPDESK"         # 8. Helpdesk
+MENU_LANGUAGE = "MENU_LANGUAGE"         # 9. Language
 
 # SUB-INTERACTION STATES (Waiting for input)
 STATE_WAIT_PHONE = "STATE_WAIT_PHONE"
@@ -83,18 +83,20 @@ STATE_WAIT_ACK = "STATE_WAIT_ACK"
 STATE_WAIT_LOCATION = "STATE_WAIT_LOCATION"
 
 PARENT_MAP = {
-    MENU_REGISTRATION: MENU_MAIN,
+    MENU_REG_FAQ: MENU_MAIN,
+    MENU_DISCIPLINES: MENU_MAIN,
     MENU_SCHEDULE: MENU_MAIN,
-    MENU_SELECTION: MENU_MAIN,
-    MENU_RULES: MENU_MAIN,
-    MENU_STATS: MENU_MAIN,
-    MENU_DOWNLOADS: MENU_MAIN,
-    MENU_LOCATION: MENU_MAIN,
+    MENU_VENUES: MENU_MAIN,
+    MENU_OFFICERS: MENU_MAIN,
+    MENU_PLAYER_STATUS: MENU_MAIN,
+    MENU_MEDALS: MENU_MAIN,
     MENU_HELPDESK: MENU_MAIN,
     MENU_LANGUAGE: MENU_MAIN,
-    STATE_WAIT_PHONE: MENU_REGISTRATION,
-    STATE_WAIT_ACK: MENU_REGISTRATION,
-    STATE_WAIT_LOCATION: MENU_LOCATION,
+    
+    # Sub-states
+    STATE_WAIT_PHONE: MENU_PLAYER_STATUS, # Back to player status menu
+    STATE_WAIT_ACK: MENU_PLAYER_STATUS,
+    STATE_WAIT_LOCATION: MENU_VENUES,     # Back to Venues menu
 }
 
 
@@ -113,85 +115,137 @@ def get_or_init_rag_chain():
 # --------------------------------------------------
 # 6. Helpers & Menu Content
 # --------------------------------------------------
+# --- HELPER: Cluster Search ---
+# --- HELPER: Cluster Search ---
+import difflib
+
+def search_cluster_incharge(user_query):
+    """
+    Searches for the cluster name using fuzzy matching.
+    """
+    try:
+        file_path = "data/new data/Mandal_Incharges_Cleaned.txt"
+        if not os.path.exists(file_path):
+            return "⚠️ Data file not found."
+            
+        target = user_query.strip().lower()
+        results = []
+        
+        # 1. Collect all valid clusters and their full lines
+        cluster_map = {} # {cluster_lower: [line1, line2]}
+        
+        with open(file_path, "r", encoding="utf-8") as f:
+            for line in f:
+                if "Cluster:" in line:
+                    # Parse: Mandal: ... | Cluster: XYZ | ...
+                    parts = line.split("|")
+                    if len(parts) >= 2:
+                        # Extract " Cluster: XYZ " -> "XYZ"
+                        c_raw = parts[1].split(":")[1].strip()
+                        c_lower = c_raw.lower()
+                        
+                        if c_lower not in cluster_map:
+                            cluster_map[c_lower] = []
+                        cluster_map[c_lower].append(line.strip())
+        
+        # 2. Exact Match Check
+        if target in cluster_map:
+            results = cluster_map[target]
+            found_name = target
+        else:
+            # 3. Partial/Substring Match (if target > 3 chars)
+            if len(target) > 3:
+                for c_name in cluster_map:
+                    if target in c_name: # target "Akine" in "Akinepalli"
+                        results = cluster_map[c_name]
+                        found_name = c_name
+                        break
+            
+            # 4. Fuzzy Match (if no exact or partial match)
+            if not results:
+                all_clusters = list(cluster_map.keys())
+                matches = difflib.get_close_matches(target, all_clusters, n=1, cutoff=0.55) # Lowered slightly to 0.55
+                
+                if matches:
+                    found_name = matches[0]
+                    results = cluster_map[found_name]
+                else:
+                    return None
+
+        # 5. Format Output
+        if results:
+            # Capitalize the found name for display
+            display_name = found_name.title() 
+            response = f"**Found In-Charge Details for '{display_name}':**\n\n"
+            for res in results[:5]: 
+                response += f"🔹 {res}\n"
+            return response
+            
+        return None
+
+    except Exception as e:
+        return f"Error searching data: {str(e)}"
+
+# --- MENU TEXT HELPERS ---
 def get_menu_text(menu_name):
     if menu_name == MENU_MAIN:
         return (
             "🏆 **Welcome to Telangana Sports Authority – CM Cup 2025 Chatbot** 👋\n\n"
             "I can help players, parents, coaches, and officials.\n\n"
-            "1️⃣ Player Registration & Venue Details 🏟️\n"
-            "2️⃣ Match Schedules & Fixtures 📅\n"
-            "3️⃣ Selection Status & Results 🏆\n"
-            "4️⃣ Sports Rules, Eligibility & FAQs 📜\n"
-            "5️⃣ Statistics & Participation Data 📊\n"
-            "6️⃣ Downloads & Official Links 📥\n"
-            "7️⃣ Location Verification 📍\n"
+            "1️⃣ Registration FAQ's 🏟️\n"
+            "2️⃣ Disciplines 📅\n"
+            "3️⃣ Schedules 🏆\n"
+            "4️⃣ Venues 📜\n"
+            "5️⃣ Special Officers / In-Charge Details  📊\n"
+            "6️⃣ Player Details  / Status  📥\n"
+            "7️⃣ Medal Tally 📍\n"
             "8️⃣ Helpdesk / Contact Support 📞\n"
-            "9️⃣ Language Change 🌐\n"
-            "0️⃣ Exit Chat ❌\n\n"
+            "9️⃣ Language Change 🌐\n\n"
             "💡 *Type a number (0–9) to proceed*"
         )
-    elif menu_name == MENU_REGISTRATION:
+    elif menu_name == MENU_REG_FAQ:
         return (
-            "🏟️ **Player Registration & Venue Details**\n\n"
-            "1️⃣ Search by Phone Number\n"
-            "2️⃣ Search by Acknowledgment Number\n"
-            "3️⃣ View Assigned Venue & Date\n"
-            "4️⃣ Coach / Cluster Incharge Contact\n\n"
-            "🔙 *Type 'Back' for Main Menu*"
+            "🏟️ **Registration FAQs**\n\n"
+            "1️⃣ How to register?\n"
+            "2️⃣ Age criteria?\n"
+            "3️⃣ Documents required?\n\n"
+            "🔙 *Type 'Back' to return to Main Menu*"
         )
+    elif menu_name == MENU_DISCIPLINES:
+        return "📅 Please enter the **Sport Name** (e.g., Cricket, Kabaddi) to see disciplines."
     elif menu_name == MENU_SCHEDULE:
         return (
-            "📅 **Match Schedules & Fixtures**\n\n"
-            "1️⃣ Schedule by Sport\n"
-            "2️⃣ Mandal Level Schedule\n"
-            "3️⃣ District Level Schedule\n"
-            "4️⃣ State Level Schedule\n"
-            "5️⃣ Search by Match ID\n\n"
-            "🔙 *Type 'Back' for Main Menu*"
+            "🏆 **Schedules**\n\n"
+            "1️⃣ Sports List\n"
+            "2️⃣ Mandal Level Dates\n"
+            "3️⃣ District Level Dates\n"
+            "4️⃣ State Level Dates\n\n"
+            "� *Type 'Back' to return to Main Menu*"
         )
-    elif menu_name == MENU_SELECTION:
+    elif menu_name == MENU_VENUES:
         return (
-            "🏆 **Selection Status & Results**\n\n"
-            "1️⃣ Check Selection Status by Ack No\n"
-            "2️⃣ District Qualified Players (List)\n"
-            "3️⃣ State Level Qualified Players (List)\n"
-            "4️⃣ Coach/Venue for Selected Players\n\n"
-            "🔙 *Type 'Back' for Main Menu*"
+            "📜 **Venues**\n\n"
+            "Please enter your **District** or **Mandal** name to find venues.\n"
+            "Example: *'Venues in Warangal'* or just *'Warangal'*"
         )
-    elif menu_name == MENU_RULES:
+    elif menu_name == MENU_OFFICERS:
         return (
-            "📜 **Sports Rules & Eligibility**\n\n"
-            "1️⃣ Age Limit & Eligibility\n"
-            "2️⃣ Team Size & Format\n"
-            "3️⃣ Required Documents\n"
-            "4️⃣ Facilities (Food, Stay, Kit)\n"
-            "5️⃣ General FAQs\n\n"
-            "🔙 *Type 'Back' for Main Menu*"
+            "📊 **Special Officers / In-Charge Details**\n\n"
+            "Please enter your **Cluster Name** to find the In-Charge details.\n"
+            "Example: *'Akinepalli', 'Dammapeta', 'Allipalli'*"
         )
-    elif menu_name == MENU_STATS:
+    elif menu_name == MENU_PLAYER_STATUS:
         return (
-            "📊 **Statistics & Participation**\n\n"
-            "1️⃣ Total Player Registrations\n"
-            "2️⃣ Sport-wise Participation\n"
-            "3️⃣ Mandal/District-wise Stats\n"
-            "4️⃣ Sports Available per Level\n\n"
-            "🔙 *Type 'Back' for Main Menu*"
+            "📥 **Player Details / Status**\n\n"
+            "1️⃣ Search by Phone Number\n"
+            "2️⃣ Search by Acknowledgment No\n\n"
+            "🔙 *Type 'Back' to return*"
         )
-    elif menu_name == MENU_DOWNLOADS:
+    elif menu_name == MENU_MEDALS:
         return (
-            "📥 **Downloads & Official Links**\n\n"
-            "1️⃣ Download Acknowledgment Slip\n"
-            "2️⃣ Registration Portal\n"
-            "3️⃣ Notifications & Circulars\n"
-            "4️⃣ Rule Books\n\n"
-            "🔙 *Type 'Back' for Main Menu*"
-        )
-    elif menu_name == MENU_LOCATION:
-        return (
-            "📍 **Location Verification**\n\n"
-            "Please type your Village, Mandal, or District name to check details.\n"
-            "Example: *'Mancherial'*, *'Medipally'* \n\n"
-            "🔙 *Type 'Back' for Main Menu*"
+            "📍 **Medal Tally**\n\n"
+            "🏆 District-wise Medal Tally will be available after the State Meet commences.\n"
+            "Stay tuned!"
         )
     elif menu_name == MENU_HELPDESK:
          return (
@@ -378,29 +432,28 @@ async def process_user_query(raw_query: str, session_id: str = None):
     if user_query.isdigit():
         choice = int(user_query)
         
-        # --- MAIN MENU LOGIC ---
         if current_state == MENU_MAIN:
             if choice == 1:
-                if session_id: SESSION_STATE[session_id] = MENU_REGISTRATION
-                return {"response": get_menu_text(MENU_REGISTRATION), "source": "menu_system"}
+                if session_id: SESSION_STATE[session_id] = MENU_REG_FAQ
+                return {"response": get_menu_text(MENU_REG_FAQ), "source": "menu_system"}
             elif choice == 2:
+                if session_id: SESSION_STATE[session_id] = MENU_DISCIPLINES
+                return {"response": get_menu_text(MENU_DISCIPLINES), "source": "menu_system"}
+            elif choice == 3:
                 if session_id: SESSION_STATE[session_id] = MENU_SCHEDULE
                 return {"response": get_menu_text(MENU_SCHEDULE), "source": "menu_system"}
-            elif choice == 3:
-                if session_id: SESSION_STATE[session_id] = MENU_SELECTION
-                return {"response": get_menu_text(MENU_SELECTION), "source": "menu_system"}
             elif choice == 4:
-                if session_id: SESSION_STATE[session_id] = MENU_RULES
-                return {"response": get_menu_text(MENU_RULES), "source": "menu_system"}
+                if session_id: SESSION_STATE[session_id] = MENU_VENUES
+                return {"response": get_menu_text(MENU_VENUES), "source": "menu_system"}
             elif choice == 5:
-                if session_id: SESSION_STATE[session_id] = MENU_STATS
-                return {"response": get_menu_text(MENU_STATS), "source": "menu_system"}
+                if session_id: SESSION_STATE[session_id] = MENU_OFFICERS
+                return {"response": get_menu_text(MENU_OFFICERS), "source": "menu_system"}
             elif choice == 6:
-                if session_id: SESSION_STATE[session_id] = MENU_DOWNLOADS
-                return {"response": get_menu_text(MENU_DOWNLOADS), "source": "menu_system"}
+                if session_id: SESSION_STATE[session_id] = MENU_PLAYER_STATUS
+                return {"response": get_menu_text(MENU_PLAYER_STATUS), "source": "menu_system"}
             elif choice == 7:
-                if session_id: SESSION_STATE[session_id] = MENU_LOCATION
-                return {"response": get_menu_text(MENU_LOCATION), "source": "menu_system"}
+                if session_id: SESSION_STATE[session_id] = MENU_MEDALS
+                return {"response": get_menu_text(MENU_MEDALS), "source": "menu_system"}
             elif choice == 8:
                 if session_id: SESSION_STATE[session_id] = MENU_HELPDESK
                 return {"response": get_menu_text(MENU_HELPDESK), "source": "menu_system"}
@@ -412,17 +465,22 @@ async def process_user_query(raw_query: str, session_id: str = None):
                 return {"response": "👋 precise. Chat Session Ended. Type 'Hi' to start again.", "source": "menu_system"}
         
         # --- SUB MENU: REGISTRATION ---
-        elif current_state == MENU_REGISTRATION:
+        # --- SUB MENU: REGISTRATION (PLAYER DETAILS) ---
+        elif current_state == MENU_PLAYER_STATUS:
             if choice == 1:
                 if session_id: SESSION_STATE[session_id] = STATE_WAIT_PHONE
                 return {"response": "📱 Please enter your registered **Phone Number**:", "source": "menu_system"}
             elif choice == 2:
-                # Prompt for Ack No - We can define a STATE_WAIT_ACK later if strict, or just prompt
-                return {"response": "📄 Please enter your **Acknowledgment Number** (e.g., SATGCMC-12345):", "source": "menu_system"}
+                 return {"response": "📄 Please enter your **Acknowledgment Number** (e.g., SATGCMC-12345):", "source": "menu_system"}
+        
+        # --- SUB MENU: REG FAQ ---
+        elif current_state == MENU_REG_FAQ:
+            if choice == 1:
+                return {"response": "**To Register:**\nVisit [https://satg.telangana.gov.in/cmcup](https://satg.telangana.gov.in/cmcup) and select 'New Registration'.", "source": "static"}
+            elif choice == 2:
+                return {"response": "**Age Criteria:**\n15-35 Years (Born between 01/01/1990 and 31/12/2010).", "source": "static"}
             elif choice == 3:
-                 return {"response": "🏟️ To view venue, please enter your **Phone Number** or **Acknowledgment Number**.", "source": "menu_system"}
-            elif choice == 4:
-                 return {"response": "👤 To find your Coach/Incharge, please tell me your **Mandal** or **District** name.", "source": "menu_system"}
+                return {"response": "**Documents:**\nAadhar Card, Photo, and Address Proof.", "source": "static"}
         
         # --- SUB MENU: SCHEDULE ---
         elif current_state == MENU_SCHEDULE:
@@ -435,13 +493,41 @@ async def process_user_query(raw_query: str, session_id: str = None):
             elif choice == 4:
                 return {"response": "🗓️ **State Level Schedule:** 19 Feb - 26 Feb 2026.", "source": "static_data"}
 
-        # --- SUB MENU: STATS ---
-        elif current_state == MENU_STATS:
-            if choice == 1:
-                 # Call function directly
-                from rag.sql_queries import get_participation_stats
-                count = get_participation_stats()
-                return {"response": f"📊 **Total Registrations:** {count}", "source": "sql"}
+        # --- SUB MENU: VENUES ---
+        elif current_state == MENU_VENUES:
+            # We wait for input, but if they type a district name, it should fall through to Geo Query
+            # So here we just handle 'Back' implicitly or specific options if we added them.
+            pass
+
+        # --- SUB MENU: OFFICERS ---
+        elif current_state == MENU_OFFICERS:
+            # Check for explicit "Back" or digits handled above (if digit was 0-9)
+            # But wait, digit handling is wrapped in if user_query.isdigit().
+            # If user types "Akinepalli" (text), it falls through to HERE or below?
+            # NO. The digit block is above.
+            # So here we need to handle TEXT inputs for this state.
+            pass # We handle this AFTER the digit block closes, OR we can't be in the digit block.
+
+    # ------------------------------------------------
+    # END MENU MACHINE (DIGIT HANDLING) -> FALLTHROUGH
+    # ------------------------------------------------
+
+    # --- TEXT INPUT HANDLING FOR MENUS ---
+    if current_state == MENU_OFFICERS and not user_query.isdigit():
+        # User entered cluster name?
+        result = search_cluster_incharge(user_query)
+        if result:
+            return {"response": result, "source": "local_data_file"}
+        else:
+            # If not found, maybe let it fall through to RAG or say not found?
+            # Better to be explicit if in this menu.
+            return {"response": f"❌ I couldn't find a cluster named '**{user_query}**'.\nPlease check the spelling or try another cluster name.", "source": "local_data_file"}
+
+    # --- SUB MENU: VENUES (Text Input) ---
+    if current_state == MENU_VENUES and not user_query.isdigit():
+        # Fall through to RAG logic (Location handler) or handle explicitly here if needed.
+        pass
+
             
         # ... Add other handlers as needed ...
     
