@@ -238,32 +238,43 @@ def get_sport_schedule(sport_name):
 def get_disciplines_by_level(level_name):
     """
     Get list of disciplines (games) played at a specific level.
-    Based on is_level_code in tb_discipline.
-    Mapping (inferred):
-    1: Cluster Level
-    2: Mandal Level
-    3: District/State Level
+    Filtering based on `cat_no` in tb_discipline:
+    - Cluster: cat_no = 4
+    - Mandal: cat_no IN (3, 4)
+    - Assembly: cat_no IN (3, 4, 5)
+    - District: cat_no IN (2, 3, 4, 5)
+    - State: cat_no IN (1, 2, 3, 4, 5)
     """
     ds = get_datastore()
     if not ds.initialized: ds.init_db()
     
-    level_map = {
-        "cluster": 1,
-        "village": 1, 
-        "mandal": 2,
-        "district": 3,
-        "state": 5
+    level = level_name.lower().strip()
+    
+    # Map level name to allowed cat_no values
+    level_cat_map = {
+        "cluster": [4],
+        "village": [4], # Cluster/Village same
+        "mandal": [3, 4],
+        "assembly": [3, 4, 5],
+        "district": [2, 3, 4, 5],
+        "state": [1, 2, 3, 4, 5]
     }
     
-    code = level_map.get(level_name.lower().strip())
-    if not code:
+    allowed_cats = level_cat_map.get(level)
+    if not allowed_cats:
         return []
-        
-    query = "SELECT dist_game_nm FROM tb_discipline WHERE is_level_code <= ?"
-    df = ds.query(query, (code,))
+    
+    # Base Query with IN clause
+    placeholders = ",".join("?" * len(allowed_cats))
+    query = f"SELECT dist_game_nm FROM tb_discipline WHERE cat_no IN ({placeholders})"
+    params = list(allowed_cats)
+            
+    df = ds.query(query, tuple(params))
     
     if df.empty:
         return []
+        
+    return [r['dist_game_nm'] for r in df.to_dict(orient="records")]
         
 
 def get_player_venues_by_phone(phone):
@@ -371,3 +382,49 @@ def get_player_venue_by_ack(ack_no):
         
     return df.to_dict(orient="records")[0]
 
+
+def get_discipline_info(sport_name):
+    """
+    Get basic info including ID for a sport from tb_discipline.
+    """
+    ds = get_datastore()
+    if not ds.initialized: ds.init_db()
+    
+    query = "SELECT game_id, dist_game_nm, rules_pdf FROM tb_discipline WHERE LOWER(dist_game_nm) LIKE ?"
+    # Fuzzy match or exact? Let's try exact first, then fuzzy.
+    # The stored session name comes from the DB list so it should be exact.
+    
+    df = ds.query(query, (sport_name.lower(),))
+    
+    if df.empty:
+        # Try fuzzy
+        df = ds.query(query, (f"%{sport_name.lower()}%",))
+        
+    if df.empty:
+        return None
+        
+    return df.to_dict(orient="records")[0]
+
+def get_categories_by_sport(game_id):
+    """
+    Get age criteria/categories for a sport ID from tb_category.
+    """
+    ds = get_datastore()
+    if not ds.initialized: ds.init_db()
+    
+    query = """
+    SELECT 
+        c.cat_name, 
+        c.gender, 
+        c.from_age, 
+        c.to_age 
+    FROM tb_category c 
+    WHERE c.discipline_id = ? AND c.status = 1
+    """
+    
+    df = ds.query(query, (game_id,))
+    
+    if df.empty:
+        return []
+        
+    return df.to_dict(orient="records")

@@ -64,6 +64,7 @@ CHAT_SESSIONS = {}
 
 # MENU STATE MANAGEMENT
 SESSION_STATE = {} # {session_id: current_state_str}
+SESSION_DATA = {} # {session_id: {key: val}}
 
 # MENU CONSTANTS
 MENU_MAIN = "MAIN_MENU"
@@ -80,7 +81,14 @@ MENU_LANGUAGE = "MENU_LANGUAGE"         # 9. Language
 # SUB-INTERACTION STATES (Waiting for input)
 STATE_WAIT_PHONE = "STATE_WAIT_PHONE"
 STATE_WAIT_ACK = "STATE_WAIT_ACK"
+# SUB-INTERACTION STATES (Waiting for input)
+STATE_WAIT_PHONE = "STATE_WAIT_PHONE"
+STATE_WAIT_ACK = "STATE_WAIT_ACK"
 STATE_WAIT_LOCATION = "STATE_WAIT_LOCATION"
+MENU_DISCIPLINES_LEVEL = "MENU_DISCIPLINES_LEVEL"
+MENU_DISCIPLINES_CATEGORY = "MENU_DISCIPLINES_CATEGORY"
+MENU_SELECT_SPORT = "MENU_SELECT_SPORT"
+MENU_GAME_OPTIONS = "MENU_GAME_OPTIONS"
 
 PARENT_MAP = {
     MENU_REG_FAQ: MENU_MAIN,
@@ -96,7 +104,12 @@ PARENT_MAP = {
     # Sub-states
     STATE_WAIT_PHONE: MENU_PLAYER_STATUS, # Back to player status menu
     STATE_WAIT_ACK: MENU_PLAYER_STATUS,
+    STATE_WAIT_PHONE: MENU_PLAYER_STATUS, # Back to player status menu
+    STATE_WAIT_ACK: MENU_PLAYER_STATUS,
     STATE_WAIT_LOCATION: MENU_VENUES,     # Back to Venues menu
+    MENU_DISCIPLINES_LEVEL: MENU_MAIN,
+    MENU_SELECT_SPORT: MENU_DISCIPLINES,  # Back to Level Selection
+    MENU_GAME_OPTIONS: MENU_SELECT_SPORT, # Back to Sport List
 }
 
 
@@ -212,7 +225,16 @@ def get_menu_text(menu_name):
             "🔙 *Type 'Back' to return to Main Menu*"
         )
     elif menu_name == MENU_DISCIPLINES:
-        return "📅 Please enter the **Sport Name** (e.g., Cricket, Kabaddi) to see disciplines."
+        return (
+            "📅 **Disciplines - Select Level**\n\n"
+            "1️⃣ Gram Panchayat / Cluster Level\n"
+            "2️⃣ Mandal Level\n"
+            "3️⃣ Assembly Constituency Level\n"
+            "4️⃣ District Level\n"
+            "5️⃣ State Level\n\n"
+            "🔙 *Type 'Back' for Main Menu*"
+        )
+
     elif menu_name == MENU_SCHEDULE:
         return (
             "🏆 **Schedules**\n\n"
@@ -464,6 +486,117 @@ async def process_user_query(raw_query: str, session_id: str = None):
                 SESSION_STATE.pop(session_id, None)
                 return {"response": "👋 precise. Chat Session Ended. Type 'Hi' to start again.", "source": "menu_system"}
         
+        # --- SUB MENU: DISCIPLINES (LEVEL Selection) ---
+        elif current_state == MENU_DISCIPLINES:
+            level_map = {
+                1: "cluster",
+                2: "mandal",
+                3: "assembly",
+                4: "district",
+                5: "state"
+            }
+            if choice in level_map:
+                level_name = level_map[choice]
+                try:
+                    from rag.sql_queries import get_disciplines_by_level
+                    games = get_disciplines_by_level(level_name)
+                    
+                    # Display titles mapping
+                    titles = {
+                        "cluster": "Cluster / Gram Panchayat Level",
+                        "mandal": "Mandal Level",
+                        "assembly": "Assembly Constituency Level",
+                        "district": "District Level",
+                        "state": "State Level"
+                    }
+                    display_title = titles.get(level_name, level_name.title() + " Level")
+
+                    if games:
+                        # Store in Session Data
+                        if session_id:
+                            SESSION_STATE[session_id] = MENU_SELECT_SPORT
+                            SESSION_DATA[session_id] = {"sports": games, "level_title": display_title}
+
+                        txt = f"### 🏅 Sports at {display_title}\n\n"
+                        for i, g in enumerate(games, 1):
+                            txt += f"{i}. {g}\n"
+                        txt += "\nℹ️ *Select a number to view details (Age, Events, Rules)*"
+                        return {"response": txt, "source": "sql_database"}
+                    else:
+                         return {"response": f"ℹ️ No sports found specifically for **{display_title}** in the database.", "source": "sql_database"}
+                except Exception as e:
+                    print(f"Error fetching disciplines: {e}")
+                    return {"response": "❌ An error occurred while fetching disciplines. Please try again.", "source": "error_handler"}
+
+        # --- SUB MENU: SELECT SPORT (Drill Down) ---
+        elif current_state == MENU_SELECT_SPORT:
+            data = SESSION_DATA.get(session_id, {})
+            sports = data.get("sports", [])
+            
+            # Check if valid index
+            if 1 <= choice <= len(sports):
+                selected_sport = sports[choice - 1]
+                
+                # Store selected sport
+                if session_id:
+                     SESSION_STATE[session_id] = MENU_GAME_OPTIONS
+                     SESSION_DATA[session_id]["selected_sport"] = selected_sport
+                
+                return {
+                    "response": (
+                        f"🏅 **{selected_sport}** - Options\n\n"
+                        "1️⃣ Age Criteria\n"
+                        "2️⃣ Events of the Game\n"
+                        "3️⃣ Rules of Game\n\n"
+                        "🔙 *Type 'Back' to list sports again*"
+                    ),
+                    "source": "menu_system"
+                }
+            else:
+                 return {"response": "❌ Invalid Option. Please select a number from the list above.", "source": "validation_error"}
+
+        # --- SUB MENU: GAME OPTIONS (Age, Events, Rules) ---
+        elif current_state == MENU_GAME_OPTIONS:
+            data = SESSION_DATA.get(session_id, {})
+            selected_sport = data.get("selected_sport", "Unknown Sport")
+            
+            from rag.sql_queries import get_discipline_info, get_categories_by_sport
+            
+            info = get_discipline_info(selected_sport)
+            game_id = info['game_id'] if info else None
+
+            if choice == 1: # Age Criteria
+                if not game_id:
+                     return {"response": f"ℹ️ No detailed age info found for **{selected_sport}**.", "source": "sql_database"}
+                
+                cats = get_categories_by_sport(game_id)
+                if cats:
+                     txt = f"### 🎂 Age Criteria for {selected_sport}\n\n"
+                     for c in cats:
+                         gender_map = {1: "Male", 2: "Female"}
+                         g_str = gender_map.get(c['gender'], "Open")
+                         txt += f"- **{c['cat_name']}** ({g_str}): {c['from_age']} - {c['to_age']} Years\n"
+                     return {"response": txt, "source": "sql_database"}
+                else:
+                     return {"response": f"ℹ️ No specific age categories found for **{selected_sport}**.", "source": "sql_database"}
+
+            elif choice == 2: # Events
+                if not game_id:
+                     return {"response": "ℹ️ Link not available.", "source": "error"}
+                
+                url = f"https://satg.telangana.gov.in/cmcup/showDisciplineEvents/{game_id}"
+                return {
+                    "response": (
+                        f"🏆 **Events for {selected_sport}**\n\n"
+                        f"Please visit the official link below to view all events:\n"
+                        f"👉 [View Events for {selected_sport}]({url})"
+                    ),
+                    "source": "static_link"
+                }
+
+            elif choice == 3: # Rules
+                 return {"response": "📜 **Rules of Game**\n\nThe rulebook is currently being updated. Please check back later!", "source": "static_placeholder"}
+
         # --- SUB MENU: REGISTRATION ---
         # --- SUB MENU: REGISTRATION (PLAYER DETAILS) ---
         elif current_state == MENU_PLAYER_STATUS:

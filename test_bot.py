@@ -1,12 +1,15 @@
 import requests
 import json
 import time
+import uuid
 
 API_URL = "http://localhost:8000/chat"
+SESSION_ID = str(uuid.uuid4())
 
 def main():
-    print("🤖 RAG Chatbot CLI Tester (Connected to Localhost:8000)")
+    print(f"🤖 RAG Chatbot CLI Tester (Connected to Localhost:8000)")
     print(f"📡 API Endpoint: {API_URL}")
+    print(f"🔑 Session ID: {SESSION_ID}")
     print("EXIT/QUIT to stop.\n")
     
     # Check health
@@ -46,7 +49,7 @@ def main():
                 try:
                     response = requests.post(
                         API_URL, 
-                        json={"query": q},
+                        json={"query": q, "session_id": SESSION_ID},
                         headers={"Content-Type": "application/json; charset=utf-8"},
                         timeout=60
                     )

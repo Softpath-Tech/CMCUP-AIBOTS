@@ -44,6 +44,19 @@ def ingest_all():
         except Exception as e:
             print(f"     ❌ Failed to load {file_path}: {e}")
 
+    # 3. Load Generated MD Files (SQL Data)
+    md_dir = "data/mdFiles"
+    if os.path.exists(md_dir):
+        md_files = glob.glob(os.path.join(md_dir, "*.md"))
+        print(f"📂 Found {len(md_files)} markdown files in {md_dir}")
+        for file_path in md_files:
+            print(f"   - Loading {file_path}...")
+            try:
+                loader = TextLoader(file_path, encoding='utf-8')
+                docs.extend(loader.load())
+            except Exception as e:
+                print(f"     ❌ Failed to load {file_path}: {e}")
+
     # 3. Split
     print(f"✂️ Splitting {len(docs)} documents...")
     text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
