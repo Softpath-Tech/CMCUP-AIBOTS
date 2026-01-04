@@ -175,7 +175,7 @@ def ask_llm(context: str, question: str, chat_history: list = [], language: str 
         answer = call_google_api(PRIMARY_MODEL, system_prompt, question, context, chat_history)
         return {"response": answer, "model_used": PRIMARY_MODEL}
     except Exception as e:
-        print(f"⚠️ Primary Model ({PRIMARY_MODEL}) Failed: {str(e)}")
+        print(f"[WARN] Primary Model ({PRIMARY_MODEL}) Failed: {str(e)}")
         print(f"DEBUG: Falling back to Secondary Model: {SECONDARY_MODEL}")
         
         # 2. Try Secondary (OpenAI)
@@ -183,7 +183,7 @@ def ask_llm(context: str, question: str, chat_history: list = [], language: str 
             answer = call_openai_api(SECONDARY_MODEL, system_prompt, question, context, chat_history)
             return {"response": answer, "model_used": SECONDARY_MODEL}
         except Exception as e2:
-            print(f"❌ Secondary Model ({SECONDARY_MODEL}) Failed: {str(e2)}")
+            print(f"[ERROR] Secondary Model ({SECONDARY_MODEL}) Failed: {str(e2)}")
             return {
                 "response": f"I apologize, but I am unable to process your request at the moment due to system connectivity issues. (Primary Err: {str(e)}, Secondary Err: {str(e2)})",
                 "model_used": "None"

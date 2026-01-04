@@ -74,6 +74,7 @@ MENU_SPORTS_MATCHES = "MENU_SPORTS_MATCHES"
 MENU_VENUES_OFFICIALS = "MENU_VENUES_OFFICIALS"
 MENU_PLAYER_STATUS = "MENU_PLAYER_STATUS"
 MENU_HELP_LANGUAGE = "MENU_HELP_LANGUAGE"
+MENU_SCHEDULE_OPTIONS = "MENU_SCHEDULE_OPTIONS"
 
 # SUB-MENUS / STATES
 MENU_DISCIPLINES = "MENU_DISCIPLINES" # Reused for Level Selection
@@ -101,6 +102,7 @@ PARENT_MAP = {
     MENU_HELP_LANGUAGE: MENU_MAIN,
     
     MENU_DISCIPLINES: MENU_SPORTS_MATCHES,
+    MENU_SCHEDULE_OPTIONS: MENU_SPORTS_MATCHES,
     MENU_LANGUAGE: MENU_HELP_LANGUAGE,
     
     # Sub-states
@@ -108,7 +110,7 @@ PARENT_MAP = {
     STATE_WAIT_ACK: MENU_PLAYER_STATUS,
     STATE_WAIT_LOCATION: MENU_VENUES_OFFICIALS,
     STATE_WAIT_OFFICER_LOC: MENU_VENUES_OFFICIALS,
-    STATE_WAIT_SPORT_SCHEDULE: MENU_SPORTS_MATCHES,
+    STATE_WAIT_SPORT_SCHEDULE: MENU_SCHEDULE_OPTIONS,
     STATE_WAIT_SPORT_RULES: MENU_REG_ELIGIBILITY,
     STATE_WAIT_SPORT_AGE: MENU_REG_ELIGIBILITY,
     
@@ -126,7 +128,7 @@ def get_or_init_rag_chain():
     """
     global rag_chain
     if rag_chain is None:
-        print("🧠 Initializing RAG chain (lazy)...")
+        print("[INFO] Initializing RAG chain (lazy)...")
         rag_chain = get_rag_chain()
         print("✅ RAG chain initialized")
     return rag_chain
@@ -276,6 +278,14 @@ def get_menu_text(menu_name):
             "5️⃣ State Level\n\n"
             "🔙 *Type 'Back' for Previous Menu*"
         )
+    elif menu_name == MENU_SCHEDULE_OPTIONS:
+        return (
+            "📅 **Schedules & Fixtures**\n\n"
+            "1️⃣ Tournament Schedules 🗓️\n"
+            "2️⃣ Games Schedules 🏅\n\n"
+            "🔙 *Type 'Back' for Previous Menu*"
+        )
+
     return "Menu not found."
 
 def extract_plain_text(resp) -> str:
@@ -485,8 +495,8 @@ async def process_user_query(raw_query: str, session_id: str = None):
                 if session_id: SESSION_STATE[session_id] = MENU_DISCIPLINES
                 return {"response": get_menu_text(MENU_DISCIPLINES), "source": "menu_system"}
             elif choice == 2: # Schedules
-                if session_id: SESSION_STATE[session_id] = STATE_WAIT_SPORT_SCHEDULE
-                return {"response": "🏅 **Schedules:**\n\nWhich sport are you looking for? (e.g. Volleyball, Kho-Kho)", "source": "menu_system"}
+                if session_id: SESSION_STATE[session_id] = MENU_SCHEDULE_OPTIONS
+                return {"response": get_menu_text(MENU_SCHEDULE_OPTIONS), "source": "menu_system"}
             elif choice == 3: # Medal Tally
                 return {"response": "🥇 **Medal Tally:**\n\nThe CM Cup 2025 has not started yet. Tally will be updated live during the State Level games in Feb 2025.", "source": "static_answer"}
 
@@ -515,6 +525,25 @@ async def process_user_query(raw_query: str, session_id: str = None):
                 if session_id: SESSION_STATE[session_id] = MENU_LANGUAGE
                 return {"response": get_menu_text(MENU_LANGUAGE), "source": "menu_system"}
         
+        # --- SUB MENU: SCHEDULES ---
+        elif current_state == MENU_SCHEDULE_OPTIONS:
+            if choice == 1: # Tournament Schedules
+                 return {
+                     "response": (
+                         "🗓️ **Tournament Schedules (CM Cup 2025)**\n\n"
+                         "• **Mandal Level**: Jan 15 - Jan 17\n"
+                         "• **Assembly Level**: Jan 20 - Jan 22\n"
+                         "• **District Level**: Jan 28 - Jan 30\n"
+                         "• **State Level**: Feb 10 - Feb 15\n\n"
+                         "🔗 [Click here for detailed PDF](https://satg.telangana.gov.in/cmcup/schedule)\n\n"
+                         "🔙 *Type 'Back' for Menu*"
+                     ),
+                     "source": "static_answer"
+                 }
+            elif choice == 2: # Games Schedules
+                 if session_id: SESSION_STATE[session_id] = STATE_WAIT_SPORT_SCHEDULE
+                 return {"response": "🏅 **Games Schedules:**\n\nWhich sport are you looking for? (e.g. Volleyball, Kho-Kho)", "source": "menu_system"}
+
         # --- SUB MENU: DISCIPLINES (LEVEL Selection) ---
         elif current_state == MENU_DISCIPLINES:
             level_map = {1: "cluster", 2: "mandal", 3: "assembly", 4: "district", 5: "state"}
@@ -556,10 +585,21 @@ async def process_user_query(raw_query: str, session_id: str = None):
             data = SESSION_DATA.get(session_id, {})
             sports = data.get("sports", [])
             
-            # Check if valid index
-            if 1 <= choice <= len(sports):
+            # 1. Try Numeric Selection
+            selected_sport = None
+            if choice and 1 <= choice <= len(sports):
                 selected_sport = sports[choice - 1]
-                
+            
+            # 2. Try Text Selection (Fuzzy-ish)
+            if not selected_sport:
+                # normalize query
+                q_norm = user_query.strip().lower()
+                for s in sports:
+                    if s.lower() == q_norm or s.lower() in q_norm:
+                        selected_sport = s
+                        break
+            
+            if selected_sport:
                 # Store selected sport
                 if session_id:
                      SESSION_STATE[session_id] = MENU_GAME_OPTIONS
@@ -576,10 +616,15 @@ async def process_user_query(raw_query: str, session_id: str = None):
                     "source": "menu_system"
                 }
             else:
-                 return {"response": "❌ Invalid Option. Please select a number from the list above.", "source": "validation_error"}
+                 # If input was not a valid selection, fall through or ask again?
+                 # Better to ask again within this state or fall through to RAG?
+                 # If we return, we block RAG. If we fall through, we lose state context maybe.
+                 # Let's return error to keep flow.
+                 return {"response": "❌ Invalid Selection. Please select a number or type the exact sport name from the list.", "source": "validation_error"}
 
         # --- SUB MENU: GAME OPTIONS (Age, Events, Rules) ---
         elif current_state == MENU_GAME_OPTIONS:
+            print(f"[DEBUG] Inside MENU_GAME_OPTIONS. Choice: {choice}")
             data = SESSION_DATA.get(session_id, {})
             selected_sport = data.get("selected_sport", "Unknown Sport")
             
@@ -589,18 +634,19 @@ async def process_user_query(raw_query: str, session_id: str = None):
             game_id = info['game_id'] if info else None
 
             if choice == 1: # Age Criteria
-                if not game_id:
-                     return {"response": f"ℹ️ No detailed age info found for **{selected_sport}**.", "source": "sql_database"}
-                
-                cats = get_categories_by_sport(game_id)
-                if cats:
+                 print("[DEBUG] Choice 1 Selected")
+                 if not game_id:
+                      return {"response": f"ℹ️ No detailed age info found for **{selected_sport}**.", "source": "sql_database"}
+                 
+                 cats = get_categories_by_sport(game_id)
+                 if cats:
                      txt = f"### 🎂 Age Criteria for {selected_sport}\n\n"
                      for c in cats:
                          gender_map = {1: "Male", 2: "Female"}
                          g_str = gender_map.get(c['gender'], "Open")
                          txt += f"- **{c['cat_name']}** ({g_str}): {c['from_age']} - {c['to_age']} Years\n"
                      return {"response": txt, "source": "sql_database"}
-                else:
+                 else:
                      return {"response": f"ℹ️ No specific age categories found for **{selected_sport}**.", "source": "sql_database"}
 
             elif choice == 2: # Events
@@ -618,7 +664,24 @@ async def process_user_query(raw_query: str, session_id: str = None):
                 }
 
             elif choice == 3: # Rules
-                 return {"response": "📜 **Rules of Game**\n\nThe rulebook is currently being updated. Please check back later!", "source": "static_placeholder"}
+                 print("[DEBUG] Choice 3 Selected - Invoking RAG")
+                 try:
+                     query = f"What are the official rules and regulations for {selected_sport}?"
+                     print(f"[DEBUG] RAG Rules Query: {query}")
+                     
+                     # Invoke RAG
+                     from rag.chain import get_rag_chain # Ensure import available
+                     chain = get_rag_chain()
+                     res = chain.invoke({"question": query, "chat_history": []})
+                     answer_text = res.get("response", "Content not found.")
+                     
+                     return {
+                        "response": f"📜 **Rules for {selected_sport}**\n\n{answer_text}", 
+                        "source": "rag_knowledge_base"
+                     }
+                 except Exception as e:
+                     print(f"RAG Rules Error: {e}")
+                     return {"response": f"ℹ️ Could not retrieve detailed rules for **{selected_sport}** at this time.", "source": "error"}
 
         # --- SUB MENU: LANGUAGE ---
         elif current_state == MENU_LANGUAGE:
@@ -644,15 +707,24 @@ async def process_user_query(raw_query: str, session_id: str = None):
 
     # 2. SPORT SCHEDULE SEARCH
     if current_state == STATE_WAIT_SPORT_SCHEDULE and not user_query.isdigit():
-         from rag.sql_queries import get_sport_schedule
-         schedules = get_sport_schedule(user_query)
-         if schedules:
-             txt = f"### 📅 {user_query.title()} Schedule (Next 5)\n"
-             for m in schedules[:5]:
-                 txt += f"- **{m.get('event_name')}**: {m.get('team1_name')} vs {m.get('team2_name')} @ {m.get('venue')}\n"
-             return {"response": txt, "source": "sql_database"}
+         from rag.sql_queries import get_discipline_info
+         info = get_discipline_info(user_query)
+         
+         if info and info.get('game_id'):
+             sport_name = info.get('sport_name', user_query).title()
+             game_id = info['game_id']
+             url = f"https://satg.telangana.gov.in/cmcup/viewschedulegames/{game_id}"
+             
+             return {
+                 "response": (
+                     f"🗓️ **Schedule for {sport_name}**\n\n"
+                     f"You can view the specific schedule and fixtures here:\n"
+                     f"👉 [View {sport_name} Schedule]({url})"
+                 ),
+                 "source": "sql_database"
+             }
          else:
-             return {"response": f"ℹ️ No specific schedule found for **{user_query}**. It might not be scheduled yet or check spelling.\n\nType another sport or 'Back'.", "source": "sql_database"}
+             return {"response": f"ℹ️ Could not find a sport named **{user_query}**. Please check the spelling or try another sport.", "source": "sql_database"}
 
     # 3. SPORT AGE/RULES SEARCH
     if current_state == STATE_WAIT_SPORT_AGE and not user_query.isdigit():
@@ -1038,7 +1110,7 @@ async def process_user_query(raw_query: str, session_id: str = None):
             pass
 
     # 7. RAG Fallback
-    print(f"🧠 Intent: General Query")
+    print(f"[INFO] Intent: General Query")
     
     try:
         # Use Lazy Loaded Chain
