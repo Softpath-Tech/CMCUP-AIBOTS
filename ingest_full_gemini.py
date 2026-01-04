@@ -23,26 +23,52 @@ def ingest_all():
         docs.extend(loader.load())
         
     # 2. Load New Data Folder
-    new_data_dir = "data/new data"
-    files = glob.glob(os.path.join(new_data_dir, "*"))
-    print(f"📂 Found {len(files)} files in {new_data_dir}")
+    new_data_dirs = [
+        "data/new data", 
+        "data/new data/Discipline_Rules"
+    ]
     
-    for file_path in files:
-        print(f"   - Loading {file_path}...")
-        try:
-            if file_path.endswith(".txt"):
-                loader = TextLoader(file_path, encoding='utf-8')
-                docs.extend(loader.load())
-            elif file_path.endswith(".xlsx") or file_path.endswith(".xls"):
-                try:
-                    loader = UnstructuredExcelLoader(file_path)
+    # Load from all directories
+    for directory in new_data_dirs:
+        if not os.path.exists(directory):
+            continue
+            
+        print(f"📂 Scanning {directory}...")
+        files = glob.glob(os.path.join(directory, "*"))
+        print(f"   found {len(files)} files.")
+        
+        for file_path in files:
+            # Skip directories
+            if os.path.isdir(file_path):
+                continue
+
+            print(f"   - Loading {os.path.basename(file_path)}...")
+            try:
+                if file_path.lower().endswith(".txt"):
+                    loader = TextLoader(file_path, encoding='utf-8')
                     docs.extend(loader.load())
-                except Exception as e:
-                    print(f"     ⚠️ Excel Load Error: {e}")
-            else:
-                print(f"     ⚠️ Skipped unsupported file type: {file_path}")
-        except Exception as e:
-            print(f"     ❌ Failed to load {file_path}: {e}")
+                
+                elif file_path.lower().endswith(".pdf"):
+                    from langchain_community.document_loaders import PyPDFLoader
+                    loader = PyPDFLoader(file_path)
+                    docs.extend(loader.load())
+                    
+                elif file_path.lower().endswith(".xlsx") or file_path.lower().endswith(".xls"):
+                    try:
+                        loader = UnstructuredExcelLoader(file_path)
+                        docs.extend(loader.load())
+                    except Exception as e:
+                        print(f"     ⚠️ Excel Load Error: {e}")
+                
+                elif file_path.lower().endswith(".csv"):
+                    # Basic text loading for CSVs in RAG (optional, but requested to 'feed it')
+                    loader = TextLoader(file_path, encoding='utf-8')
+                    docs.extend(loader.load())
+
+                else:
+                    print(f"     ⚠️ Skipped unsupported file type: {file_path}")
+            except Exception as e:
+                print(f"     ❌ Failed to load {file_path}: {e}")
 
     # 3. Load Generated MD Files (SQL Data)
     md_dir = "data/mdFiles"

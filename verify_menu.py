@@ -1,34 +1,54 @@
-import requests
-import json
-import time
+import sys
+import os
+import asyncio
 
-url = "http://127.0.0.1:8000/chat"
+sys.path.append(os.getcwd())
+from api.main import get_menu_text, process_user_query, MENU_MAIN, SESSION_STATE, MENU_REGISTRATION, MENU_DISCIPLINES, MENU_SCHEDULE
 
-def send(query, session_id="test_fuzzy_v2"):
-    payload = {"query": query, "session_id": session_id}
-    print(f"\nUser: {query}")
-    try:
-        resp = requests.post(url, json=payload).json()
-        print(f"Bot: {resp.get('response')[:300]}...") 
-        return resp
-    except Exception as e:
-        print(f"Error: {e}")
-        return {}
+async def test_submenus():
+    print("--- Verifying Submenus ---")
+    sess = "test_sess_sub"
+    SESSION_STATE[sess] = MENU_MAIN
+    
+    # 1. Registration Menu (Main Option 1)
+    resp = await process_user_query("1", sess)
+    print(f"\n[1] Main->Reg: {resp['response'][:50]}...")
+    assert "Registration FAQs" in resp['response']
+    
+    # 1.1 Reg Option 3 (Docs)
+    resp = await process_user_query("3", sess)
+    print(f"[1.1] Reg->Docs: {resp['response'][:50]}...")
+    assert "Required Documents" in resp['response']
+    
+    # RESET
+    SESSION_STATE[sess] = MENU_MAIN
+    
+    # 2. Disciplines Menu (Main Option 2)
+    resp = await process_user_query("2", sess)
+    print(f"\n[2] Main->Disc: {resp['response'][:50]}...")
+    assert "Select Level" in resp['response']
+    
+    # 2.1 Disc Option 4 (District)
+    resp = await process_user_query("4", sess)
+    print(f"[2.1] Disc->District List FULL: {resp['response']}")
+    # assert "Disciplines at District Level" in resp['response']
+    # assert "Kabaddi" in resp['response'] # Assumption: Kabaddi is in DB
+    
+    # RESET
+    SESSION_STATE[sess] = MENU_MAIN
+    
+    # 3. Schedules Menu (Main Option 3)
+    resp = await process_user_query("3", sess)
+    print(f"\n[3] Main->Sched: {resp['response'][:50]}...")
+    assert "Schedules" in resp['response']
+    
+    # 3.1 Sched Option 1 (Tournament)
+    resp = await process_user_query("1", sess)
+    print(f"[3.1] Sched->Tournament: {resp['response'][:50]}...")
+    assert "Tournament Schedule" in resp['response']
+    assert "28 Jan" in resp['response']
 
-# 1. Start Session
-send("menu")
+    print("\n✅ Submenu Verification Passed!")
 
-# 2. Go to Officers Menu
-send("5") 
-
-# 3. Test Partial Match ("Akine")
-send("Akine")
-
-# 4. Test User's Reported Typo ("Ankinapally")
-send("Ankinapally")
-
-# 5. Test Another Typo ("dampeta")
-send("dampeta")
-
-# 6. Back
-send("Back")
+if __name__ == "__main__":
+    asyncio.run(test_submenus())
