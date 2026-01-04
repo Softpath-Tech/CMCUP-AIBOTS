@@ -384,6 +384,7 @@ def get_sport_rules(sport_name):
     query = """
     SELECT * FROM view_sport_rules 
     WHERE LOWER(sport_name) LIKE ?
+    ORDER BY LENGTH(sport_name) ASC
     """
     
     df = ds.query(query, (f"%{sport_name.strip().lower()}%",))
