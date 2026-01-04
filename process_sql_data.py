@@ -126,7 +126,19 @@ def process_disciplines():
         lines = []
         for _, row in df.iterrows():
             age_range = f"{clean_text(row.get('from_age'))} to {clean_text(row.get('to_age'))}"
-            line = f"Sport: **{clean_text(row.get('dist_game_nm'))}** (ID: {row.get('game_id')}). Age Eligibility: {age_range} years. Team Size: {clean_text(row.get('team_size'))} players."
+            
+            # Category Logic
+            is_para = str(row.get('is_para', '0')).strip()
+            category = "Para Sports" if is_para == '1' else "General Sports"
+            
+            # Rules Logic
+            rules = clean_text(row.get('rules_pdf'))
+            rules_str = f"Rules PDF: {rules}" if rules != "Unknown" else "Rules PDF: Not Available"
+            
+            # Category Number for Reference
+            cat_no = row.get('cat_no')
+
+            line = f"Sport: **{clean_text(row.get('dist_game_nm'))}** (ID: {row.get('game_id')}). Category: **{category}** (Cat No: {cat_no}). Age Eligibility: {age_range} years. Team Size: {clean_text(row.get('team_size'))} players. {rules_str}."
             lines.append(line)
         
         with open(os.path.join(MD_DIR, "rag_disciplines.md"), "w", encoding="utf-8") as f:
@@ -219,6 +231,31 @@ def process_players():
     except Exception as e:
         print(f"❌ Players Failed: {e}")
 
+def process_categories():
+    print("Processing Categories...")
+    try:
+        df = pd.read_csv(os.path.join(CSV_DIR, "tb_category.csv"))
+        lines = []
+        for _, row in df.iterrows():
+            cat_name = clean_text(row.get('cat_name'))
+            gender_code = row.get('gender')
+            gender_map = {1: "Male", 2: "Female"}
+            gender = gender_map.get(gender_code, "Mixed/Open")
+            
+            disc_id = row.get('discipline_id')
+            discipline = DISCIPLINE_MAP.get(disc_id, f"Sport ID {disc_id}")
+            
+            age_range = f"{clean_text(row.get('from_age'))} to {clean_text(row.get('to_age'))}"
+            
+            line = f"Category **{cat_name}** (ID: {row.get('id')}) is for **{discipline}** ({gender}). Age Eligibility: {age_range} years."
+            lines.append(line)
+            
+        with open(os.path.join(MD_DIR, "rag_categories.md"), "w", encoding="utf-8") as f:
+            f.write("# Sports Categories and Age Limits\n\n" + "\n".join(lines))
+        print("✅ Categories Done.")
+    except Exception as e:
+        print(f"❌ Categories Failed: {e}")
+
 if __name__ == "__main__":
     process_districts()
     process_mandals()
@@ -228,4 +265,5 @@ if __name__ == "__main__":
     process_events()
     process_fixtures()
     process_players()
+    process_categories()
     print("\n🎉 All CSVs processed into Markdown files for RAG!")
