@@ -251,6 +251,7 @@ def get_disciplines_by_level(level_name):
         "cluster": 1,
         "village": 1, 
         "mandal": 2,
+        "assembly": 2,
         "district": 3,
         "state": 5
     }
@@ -259,11 +260,13 @@ def get_disciplines_by_level(level_name):
     if not code:
         return []
         
-    query = "SELECT dist_game_nm FROM tb_discipline WHERE is_level_code <= ?"
-    df = ds.query(query, (code,))
+    query = f"SELECT dist_game_nm FROM tb_discipline WHERE CAST(is_level_code AS INTEGER) <= {code}"
+    df = ds.query(query)
     
     if df.empty:
         return []
+
+    return df.to_dict(orient="records")
         
 
 def get_player_venues_by_phone(phone):
@@ -365,6 +368,25 @@ def get_player_venue_by_ack(ack_no):
     """
     
     df = ds.query(query, (str(ack_no),))
+    
+    if df.empty:
+        return None
+        
+    return df.to_dict(orient="records")[0]
+
+def get_sport_rules(sport_name):
+    """
+    Get age and team rules for a specific sport.
+    """
+    ds = get_datastore()
+    if not ds.initialized: ds.init_db()
+    
+    query = """
+    SELECT * FROM view_sport_rules 
+    WHERE LOWER(sport_name) LIKE ?
+    """
+    
+    df = ds.query(query, (f"%{sport_name.strip().lower()}%",))
     
     if df.empty:
         return None
