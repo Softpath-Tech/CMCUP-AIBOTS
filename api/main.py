@@ -1,6 +1,7 @@
 import sys
 import os
 import re
+import uuid
 from fastapi import FastAPI, HTTPException, Response
 from pydantic import BaseModel
 from typing import Optional
@@ -1116,7 +1117,17 @@ async def process_user_query(raw_query: str, session_id: str = None):
 
 @app.post("/chat")
 async def chat_endpoint(request: ChatRequest):
-    return await process_user_query(request.query, request.session_id)
+    # Auto-generate session_id if missing to support tools like Postman
+    # However, the client MUST send this back to maintain state!
+    current_session_id = request.session_id or str(uuid.uuid4())
+    
+    response_data = await process_user_query(request.query, current_session_id)
+    
+    # Inject session_id into response so client knows what to send back
+    if isinstance(response_data, dict):
+        response_data["session_id"] = current_session_id
+        
+    return response_data
 
 @app.post("/ask")
 async def ask_endpoint(request: ChatRequest):
