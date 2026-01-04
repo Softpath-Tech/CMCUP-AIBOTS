@@ -16,10 +16,10 @@ class DataStore:
 
     def init_db(self, csv_dir="data/csvs"):
         if self.initialized:
-            print("✅ DataStore already initialized.")
+            print("[OK] DataStore already initialized.")
             return
 
-        print("⚡ Initializing SQLite Data Store...")
+        print("[*] Initializing SQLite Data Store...")
         
         # Load all CSVs
         csv_files = glob.glob(os.path.join(csv_dir, "*.csv"))
@@ -35,7 +35,7 @@ class DataStore:
                 df.to_sql(table_name, self.conn, if_exists="replace", index=False)
                 print(f"   -> Loaded table: {table_name} ({len(df)} rows)")
             except Exception as e:
-                print(f"   ❌ Error loading {f}: {e}")
+                print(f"   [!] Error loading {f}: {e}")
 
         # Create Indices for Performance
         indices = [
@@ -58,7 +58,7 @@ class DataStore:
         self.create_views()
 
         self.initialized = True
-        print("✅ DataStore Ready!")
+        print("[OK] DataStore Ready!")
 
     def create_views(self):
         """
@@ -67,7 +67,7 @@ class DataStore:
         - INCLUDES Mobile/RegID for lookup.
         - Denormalizes data (joins) for easier natural language querying.
         """
-        print("🛡️ Creating Secure SQL Views for AI...")
+        print("[*] Creating Secure SQL Views for AI...")
         
         # 1. view_player_unified
         # Joins: player -> village -> mandal -> district
@@ -109,7 +109,7 @@ class DataStore:
             self.conn.execute(view_query)
             print("   -> Created View: view_player_unified")
         except Exception as e:
-            print(f"   ❌ Error creating view: {e}")
+            print(f"   [!] Error creating view: {e}")
 
         # 2. view_sport_rules
         # Simple lookup for rules
@@ -128,7 +128,7 @@ class DataStore:
             self.conn.execute(view_rules_query)
             print("   -> Created View: view_sport_rules")
         except Exception as e:
-            print(f"   ❌ Error creating view_sport_rules: {e}")
+            print(f"   [!] Error creating view_sport_rules: {e}")
 
 
     def query(self, query, params=()):

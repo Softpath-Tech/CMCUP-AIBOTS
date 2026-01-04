@@ -428,3 +428,35 @@ def get_categories_by_sport(game_id):
         return []
         
     return df.to_dict(orient="records")
+
+def get_sport_rules(sport_name):
+    """
+    Derived rule info from discipline and categories.
+    """
+    info = get_discipline_info(sport_name)
+    if not info:
+        return None
+    
+    game_id = info['game_id']
+    cats = get_categories_by_sport(game_id)
+    
+    min_age = 99
+    max_age = 0
+    if cats:
+        for c in cats:
+            try:
+                min_age = min(min_age, int(c.get('from_age', 99)))
+                max_age = max(max_age, int(c.get('to_age', 0)))
+            except:
+                pass
+                
+    if min_age == 99: min_age = "N/A"
+    if max_age == 0: max_age = "N/A"
+
+    return {
+        "sport_name": info['dist_game_nm'],
+        "min_age": min_age,
+        "max_age": max_age,
+        "team_size": "Details in Rules PDF",
+        "is_para": '0'
+    }
