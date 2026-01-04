@@ -121,7 +121,14 @@ class DataStore:
             to_age as max_age,
             team_size,
             is_team,
-            is_para
+            is_para,
+            CASE 
+                WHEN is_level_code = '1' THEN 'Cluster/Village'
+                WHEN is_level_code = '2' THEN 'Mandal'
+                WHEN is_level_code = '3' THEN 'District'
+                WHEN is_level_code = '5' THEN 'State'
+                ELSE 'Unknown'
+            END as level
         FROM tb_discipline
         """
         try:
