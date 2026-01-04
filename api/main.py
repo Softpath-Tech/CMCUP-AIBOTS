@@ -89,6 +89,7 @@ MENU_DISCIPLINES_LEVEL = "MENU_DISCIPLINES_LEVEL"
 MENU_DISCIPLINES_CATEGORY = "MENU_DISCIPLINES_CATEGORY"
 MENU_SELECT_SPORT = "MENU_SELECT_SPORT"
 MENU_GAME_OPTIONS = "MENU_GAME_OPTIONS"
+MENU_SCHEDULE_GAME_SEARCH = "MENU_SCHEDULE_GAME_SEARCH"
 
 PARENT_MAP = {
     MENU_REG_FAQ: MENU_MAIN,
@@ -102,7 +103,7 @@ PARENT_MAP = {
     MENU_LANGUAGE: MENU_MAIN,
     
     # Sub-states
-    STATE_WAIT_PHONE: MENU_PLAYER_STATUS, # Back to player status menu
+    STATE_WAIT_PHONE: MENU_PLAYER_STATUS, # Back to Registration menu
     STATE_WAIT_ACK: MENU_PLAYER_STATUS,
     STATE_WAIT_PHONE: MENU_PLAYER_STATUS, # Back to player status menu
     STATE_WAIT_ACK: MENU_PLAYER_STATUS,
@@ -110,6 +111,7 @@ PARENT_MAP = {
     MENU_DISCIPLINES_LEVEL: MENU_MAIN,
     MENU_SELECT_SPORT: MENU_DISCIPLINES,  # Back to Level Selection
     MENU_GAME_OPTIONS: MENU_SELECT_SPORT, # Back to Sport List
+    MENU_SCHEDULE_GAME_SEARCH: MENU_SCHEDULE, # Back to Schedules Menu
 }
 
 
@@ -238,11 +240,9 @@ def get_menu_text(menu_name):
     elif menu_name == MENU_SCHEDULE:
         return (
             "🏆 **Schedules**\n\n"
-            "1️⃣ Sports List\n"
-            "2️⃣ Mandal Level Dates\n"
-            "3️⃣ District Level Dates\n"
-            "4️⃣ State Level Dates\n\n"
-            "� *Type 'Back' to return to Main Menu*"
+            "1️⃣ Tournament Schedule\n"
+            "2️⃣ Games Schedule\n\n"
+            "🔙 *Type 'Back' to return to Main Menu*"
         )
     elif menu_name == MENU_VENUES:
         return (
@@ -618,13 +618,36 @@ async def process_user_query(raw_query: str, session_id: str = None):
         # --- SUB MENU: SCHEDULE ---
         elif current_state == MENU_SCHEDULE:
             if choice == 1:
-                return {"response": "🏅 Which sport's schedule do you want to see? (e.g. Cricket, Kabaddi)", "source": "menu_system"}
+                return {
+                    "response": (
+                        "🗓️ **Tournament Schedule**\n\n"
+                        "🔸 **Gram Panchayat / Cluster:** 17 Jan - 22 Jan 2026\n"
+                        "🔸 **Mandal Level:** 28 Jan - 31 Jan 2026\n"
+                        "🔸 **Assembly Constituency:** 03 Feb - 07 Feb 2026\n"
+                        "🔸 **District Level:** 10 Feb - 14 Feb 2026\n"
+                        "🔸 **State Level:** 19 Feb - 26 Feb 2026"
+                    ),
+                    "source": "static_data"
+                }
             elif choice == 2:
-                return {"response": "🗓️ **Mandal Level Schedule:** 28 Jan - 31 Jan 2026.", "source": "static_data"}
-            elif choice == 3:
-                return {"response": "🗓️ **District Level Schedule:** 10 Feb - 14 Feb 2026.", "source": "static_data"}
-            elif choice == 4:
-                return {"response": "🗓️ **State Level Schedule:** 19 Feb - 26 Feb 2026.", "source": "static_data"}
+                if session_id: SESSION_STATE[session_id] = MENU_SCHEDULE_GAME_SEARCH
+                return {
+                    "response": (
+                        "🏅 **Games Schedule**\n\n"
+                        "Please enter the Name of the Game you are looking for.\n"
+                        "Example: *Kabaddi, Athletics, Cricket*"
+                    ),
+                    "source": "menu_system"
+                }
+
+        # --- SUB MENU: SCHEDULE GAME SEARCH (TEXT INPUT) ---
+        elif current_state == MENU_SCHEDULE_GAME_SEARCH:
+             pass # Logic is handled in TEXT INPUT section below because this handles digits too perfectly well if game name is a digit (unlikely) or we just pass through.
+             # Wait, the digit check `if user_query.isdigit():` wraps this whole block. 
+             # If user enters "Kabaddi" (text), it WON'T be caught here.
+             # We need to implement this outside the digit block or add a pass here and handle below?
+             # Correct, we should handle below in the Text Input section.
+             pass
 
         # --- SUB MENU: VENUES ---
         elif current_state == MENU_VENUES:
@@ -646,6 +669,28 @@ async def process_user_query(raw_query: str, session_id: str = None):
     # ------------------------------------------------
 
     # --- TEXT INPUT HANDLING FOR MENUS ---
+    if current_state == MENU_SCHEDULE_GAME_SEARCH and not user_query.isdigit():
+        from rag.sql_queries import get_discipline_info
+        info = get_discipline_info(user_query)
+        
+        if info:
+             game_id = info['game_id']
+             game_name = info['dist_game_nm']
+             url = f"https://satg.telangana.gov.in/cmcup/viewschedulegames/{game_id}"
+             return {
+                 "response": (
+                     f"🗓️ **Schedule for {game_name}**\n\n"
+                     f"You can view the specific schedule and fixtures here:\n"
+                     f"👉 [View {game_name} Schedule]({url})"
+                 ),
+                 "source": "sql_database"
+             }
+        else:
+             return {
+                 "response": f"❌ Could not find a game named '**{user_query}**'.\nPlease check the spelling (e.g., 'Athletics', 'Kabaddi') and try again.", 
+                 "source": "sql_database"
+             }
+
     if current_state == MENU_OFFICERS and not user_query.isdigit():
         # User entered cluster name?
         result = search_cluster_incharge(user_query)
