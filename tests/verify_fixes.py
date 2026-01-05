@@ -1,57 +1,49 @@
-import requests
-import json
-import time
 
-def test_query(query, name):
-    print(f"\n🧪 Testing [{name}] Query: '{query}'")
+import sys
+import os
+import asyncio
+
+# Mock project root
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from api.main import process_user_query, STATE_WAIT_DIST_OFFICER, STATE_WAIT_CLUSTER_INCHARGE, SESSION_STATE
+
+async def verify_fixes():
+    print("=== TEST: Final Logic Fixes ===\n")
+
+    # 1. District Officer Formatting
+    session_id_1 = "fix_test_1"
+    SESSION_STATE[session_id_1] = STATE_WAIT_DIST_OFFICER
+    print("Testing District Search Formatting ('Nalgonda')...")
+    resp1 = await process_user_query("Nalgonda", session_id_1)
+    
+    txt1 = str(resp1["response"])
+    print(f"   Response Preview: {txt1[:60]}...")
+    
+    if "{" in txt1 and "district_name" in txt1:
+        print("   FAILED: Still returning raw dictionary.")
+    elif "District Sports Officer - Nalgonda" in txt1:
+        print("   SUCCESS: Formatting applied.")
+    else:
+        print(f"   WARNING: Unexpected output format: {txt1}")
+
+    # 2. Cluster In-Charge 500 Fix
+    session_id_2 = "fix_test_2"
+    SESSION_STATE[session_id_2] = STATE_WAIT_CLUSTER_INCHARGE
+    print("\nTesting Cluster Search 500 Fix ('ADILABAD')...")
+    
     try:
-        response = requests.post(
-            "http://localhost:8000/chat",
-            json={"query": query},
-            headers={"Content-Type": "application/json"}
-        )
-        if response.status_code == 200:
-            res_json = response.json()
-            res_text = res_json.get("response", "")
-            source = res_json.get("source", "")
-            
-            print(f"🔹 Source: {source}")
-            print(f"🔹 Response Length: {len(res_text)}")
-            print("Response Preview:\n" + ("-"*40))
-            print(res_text[:300] + "..." if len(res_text) > 300 else res_text)
-            print("-" * 40)
-            
-            # Check for JSON leak
-            if list(set(res_text.strip())) == ['{'] or '{"response":' in res_text[:20]:
-                print("❌ FAIL: JSON Leak Detected in output!")
-            else:
-                print("✅ PASS: Output looks like plain text.")
-
-            # Check for SATG vs SATS
-            if "SATG" in res_text:
-                print("✅ PASS: Found 'SATG'")
-            elif "SATS" in res_text:
-                print("❌ FAIL: Found 'SATS' (Should be SATG)")
-            
-            # Check for Fallback "Not available"
-            if "not currently available in my database" in res_text:
-                print("⚠️ CAUTION: Found old fallback phrase (might be expected if regex didn't catch all variants)")
-            elif "I couldn't find specific details" in res_text:
-                 print("✅ PASS: Found new fallback phrase")
-
+        resp2 = await process_user_query("ADILABAD", session_id_2)
+        txt2 = str(resp2["response"])
+        print(f"   Response Preview: {txt2[:60]}...")
+        
+        if "Venue In-Charge" in txt2:
+            print("   SUCCESS: Logic executed without crash.")
         else:
-            print(f"❌ Error {response.status_code}")
+            print("   FAILED: Logic executed but returned unexpected.")
+            
     except Exception as e:
-        print(f"❌ Connection Error: {e}")
+        print(f"   FAILED: CRASHED with error: {e}")
 
 if __name__ == "__main__":
-    # 1. Transport (Likely fallback or empty context)
-    test_query("Is transport provided?", "Transport Check")
-    time.sleep(1)
-
-    # 2. Organizer (Check SATG vs SATS)
-    test_query("Who is organizing this event?", "Organizer Check")
-    time.sleep(1)
-
-    # 3. Matches Near Me (History of JSON Leak)
-    test_query("Are matches near me?", "JSON Leak Check")
+    asyncio.run(verify_fixes())

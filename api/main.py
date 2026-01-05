@@ -613,10 +613,20 @@ async def process_user_query(raw_query: str, session_id: str = None):
         print(f"⚡ Intent: District Officer Lookup ({district_name})")
         
         try:
-            officer_details = search_district_officer(district_name)
-            if officer_details:
-                if session_id: SESSION_STATE[session_id] = MENU_OFFICERS_DISTRICT # Keep state for continuous search
-                return {"response": officer_details, "source": "file_search"}
+             # Lazy import for safety
+            from rag.location_search import search_district_officer
+            officer = search_district_officer(district_name)
+            
+            if officer:
+                if session_id: SESSION_STATE[session_id] = MENU_OFFICERS_DISTRICT
+                
+                # Format output properly
+                txt = f"### 👮‍♂️ District Sports Officer - {officer.get('district_name')}\n\n"
+                txt += f"**Name:** {officer.get('special_officer_name')}\n"
+                txt += f"**Designation:** {officer.get('designation')}\n"
+                txt += f"**Contact:** {officer.get('contact_no')}\n\n"
+                txt += "Type another District Name or 'Back'."
+                return {"response": txt, "source": "file_search"}
             else:
                 return {"response": f"ℹ️ No District Sports Officer found for **{district_name}**. Please check the spelling or try another district.\n\nType another district or 'Back'.", "source": "file_search"}
         except Exception as e:
@@ -628,10 +638,28 @@ async def process_user_query(raw_query: str, session_id: str = None):
         print(f"⚡ Intent: Cluster In-Charge Lookup ({cluster_name})")
         
         try:
-            incharge_details = search_cluster_incharge_helper(cluster_name)
-            if incharge_details:
-                if session_id: SESSION_STATE[session_id] = MENU_OFFICERS_CLUSTER # Keep state for continuous search
-                return {"response": incharge_details, "source": "file_search"}
+            # Lazy import for safety
+            from rag.location_search import search_cluster_incharge
+            
+            # Correct function name
+            res = search_cluster_incharge(cluster_name)
+            
+            if res:
+                if session_id: SESSION_STATE[session_id] = MENU_OFFICERS_CLUSTER
+                
+                t = res.get('type', 'Cluster')
+                d = res.get('data', {})
+                
+                if t == 'Village':
+                     txt = f"### 🏟️ Venue In-Charge (Village: {d.get('villagename')})\n"
+                     txt += f"mapped to **Cluster: {res.get('mapped_cluster')}**\n\n"
+                else:
+                     txt = f"### 🏟️ Venue In-Charge (Cluster: {d.get('clustername')})\n\n"
+                
+                txt += f"**In-Charge:** {d.get('incharge_name')}\n"
+                txt += f"**Contact:** {d.get('mobile_no')}\n\n"
+                txt += "Type another Cluster/Village Name or 'Back'."
+                return {"response": txt, "source": "file_search"}
             else:
                 return {"response": f"ℹ️ No Venue In-Charge found for **{cluster_name}**. Please check the spelling or try another cluster.\n\nType another cluster or 'Back'.", "source": "file_search"}
         except Exception as e:
