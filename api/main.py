@@ -1064,6 +1064,11 @@ async def process_user_query(raw_query: str, session_id: str = None):
 
     # 1. Phone Number match - PRIVACY GUARD & VENUE FLOW
     original_query = raw_query.strip() # Keep casing for Reg IDs if needed
+    
+    # Define venue intent keywords (Fix for NameError)
+    venue_keywords = ["venue", "status", "application", "check", "where", "game status", "match status"]
+    venue_intent = any(k in user_query for k in venue_keywords)
+
     phone_match = re.search(r'\b[6-9]\d{9}\b', original_query)
     
     # 1A. Venue/Status Flow (Exception to Filter)
