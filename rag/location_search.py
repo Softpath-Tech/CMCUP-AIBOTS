@@ -49,46 +49,51 @@ def search_district_officer(district_name):
 
 def search_cluster_incharge(query_name):
     """
-    Search for Cluster In-charge details.
-    Logic:
-    1. Try to find the input as a Cluster Name.
-    2. If not found, try to find the input as a Village Name, map to Cluster, then find Cluster.
+    Search for Cluster In-charge details using DistrictWIseClusters.xlsx
     """
-    ds = get_datastore()
-    if not ds.initialized:
-        ds.init_db()
+    try:
+        # Load Data
+        file_path = "data/new data/DistrictWIseClusters.xlsx"
         
-    q_str = query_name.strip().lower()
-    
-    # 1. Direct Cluster Search
-    sql_cluster = """
-    SELECT clustername, incharge_name, mobile_no
-    FROM clustermaster
-    WHERE LOWER(clustername) LIKE ?
-    """
-    df_cluster = ds.query(sql_cluster, (f"%{q_str}%",))
-    
-    if not df_cluster.empty:
+        if not os.path.exists(file_path):
+             return None
+             
+        df = pd.read_excel(file_path)
+        
+        # Clean Cluster Names for matching
+        # Data columns: ['Sl.No', 'District Name', 'Mandal Name', 'Cluster Name', 'Incharge Name', 'Mobile No']
+        df['ClusterName_clean'] = df['Cluster Name'].astype(str).str.strip().str.lower()
+        query_str = query_name.strip().lower()
+        
+        # 1. Exact Match
+        match = df[df['ClusterName_clean'] == query_str]
+        
+        if match.empty:
+            # 2. Fuzzy Match
+            import difflib
+            all_clusters = df['ClusterName_clean'].unique().tolist()
+            # Try close matches
+            matches = difflib.get_close_matches(query_str, all_clusters, n=1, cutoff=0.6)
+            
+            if matches:
+                match = df[df['ClusterName_clean'] == matches[0]]
+            else:
+                return None
+
+        # Get first result
+        rec = match.iloc[0]
+        
         return {
             "type": "Cluster",
-            "data": df_cluster.to_dict(orient="records")[0]
+            "data": {
+                "clustername": rec['Cluster Name'],
+                "incharge_name": rec['Incharge Name'],
+                "mobile_no": str(rec['Mobile No']),
+                "district_name": rec['District Name'],
+                "mandal_name": rec['Mandal Name']
+            }
         }
-        
-    # 2. Village Mapping Search
-    # Find village, get cluster_id, then get cluster info
-    sql_village = """
-    SELECT v.villagename, c.clustername, c.incharge_name, c.mobile_no
-    FROM villagemaster v
-    JOIN clustermaster c ON v.cluster_id = c.cluster_id
-    WHERE LOWER(v.villagename) LIKE ?
-    """
-    df_village = ds.query(sql_village, (f"%{q_str}%",))
-    
-    if not df_village.empty:
-        return {
-            "type": "Village",
-            "mapped_cluster": df_village.iloc[0]['clustername'],
-            "data": df_village.to_dict(orient="records")[0]
-        }
-        
-    return None
+
+    except Exception as e:
+        print(f"Error in search_cluster_incharge: {e}")
+        return None
