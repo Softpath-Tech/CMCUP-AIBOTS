@@ -238,6 +238,7 @@ def search_cluster_incharge_helper(user_query):
 
 # --- MENU TEXT HELPERS ---
 def get_menu_text(menu_name):
+    print(f"DEBUG: get_menu_text called with {menu_name}")
     if menu_name == MENU_MAIN:
         return (
             "🏆 **Welcome to Telangana Sports Authority – CM Cup 2025 Chatbot** 👋\n\n"
@@ -682,14 +683,15 @@ async def process_user_query(raw_query: str, session_id: str = None):
             elif choice == 2:
                  try:
                      if session_id: SESSION_STATE[session_id] = STATE_WAIT_DIST_OFFICER
-                     return {"response": get_menu_text(MENU_OFFICERS_DISTRICT), "source": "menu_system"}
+                     # Using literal string to prevent potential NameError if constant is missing in runtime env
+                     return {"response": get_menu_text("MENU_OFFICERS_DISTRICT"), "source": "menu_system"}
                  except Exception as e:
                      print(f"CRASH in Option 2: {e}")
                      return {"response": f"❌ Error loading District Officers menu: {str(e)}", "source": "error_handler"}
             elif choice == 3:
                  try:
                      if session_id: SESSION_STATE[session_id] = STATE_WAIT_CLUSTER_INCHARGE
-                     return {"response": get_menu_text(MENU_OFFICERS_CLUSTER), "source": "menu_system"}
+                     return {"response": get_menu_text("MENU_OFFICERS_CLUSTER"), "source": "menu_system"}
                  except Exception as e:
                      print(f"CRASH in Option 3: {e}")
                      return {"response": f"❌ Error loading Venue In-Charge menu: {str(e)}", "source": "error_handler"}
