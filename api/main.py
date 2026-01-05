@@ -81,7 +81,7 @@ SESSION_DATA = {} # {session_id: {key: val}}
 MENU_MAIN = "MAIN_MENU"
 MENU_REG_FAQ = "MENU_REG_FAQ"           # 1. Registration FAQ
 MENU_DISCIPLINES = "MENU_DISCIPLINES"
-MENU_RULES = "MENU_RULES"   # 2. Disciplines
+
 MENU_SCHEDULE = "MENU_SCHEDULE"         # 3. Schedules
 MENU_VENUES = "MENU_VENUES"             # 4. Venues
 MENU_OFFICERS = "MENU_OFFICERS"         # 5. Officers
@@ -895,19 +895,6 @@ async def process_user_query(raw_query: str, session_id: str = None):
                  return {"response": "❓ **General FAQs:**\n\n- *Is it free?* Yes.\n- *Can I play multiple sports?* Yes, if schedules allow.\n- *Where to report?* Check Venue details.\n\nType 'Back' to return.", "source": "static"}
 
         
-        # --- SUB MENU: RULES ---
-        if current_state == MENU_RULES:
-            if choice == 1:
-                if session_id: SESSION_STATE[session_id] = STATE_WAIT_SPORT_RULES
-                return {"response": "🧒 **Age Limit & Eligibility** depends on the sport.\n\nWhich **Sport** are you asking about? (e.g. Judo, Boxing, Athletics)", "source": "menu_system"}
-            elif choice == 2:
-                return {"response": "👥 **Team Size & Format** varies by discipline.\n\nPlease type the name of the **Sport** you are interested in.", "source": "menu_system"}
-            elif choice == 3:
-                return {"response": "📄 **Required Documents:**\n\n1. Aadhaar Card (Mandatory)\n2. Date of Birth Certificate\n3. Bonafide Certificate / Study Certificate\n4. Bank Passbook (for specific schemes)\n\nType a **Sport Name** for specific rules.", "source": "static_data"}
-            elif choice == 4:
-                return {"response": "🏠 **Facilities Provided:**\n\n- **Food & Accommodation:** Provided for all State-level participants.\n- **Transport:** Allowances provided for travel to State venue.\n- **Jersey/Kit:** Provided for finalists.\n\nDo you have a specific question?", "source": "static_data"}
-            elif choice == 5:
-                return {"response": "❓ **General FAQs:**\n\n- *Can I participate in multiple sports?* Yes, if schedules don't clash.\n- *Is registration free?* Yes, completely free.\n\nType your specific question below.", "source": "static_data"}
 
         # --- SUB MENU: SCHEDULE ---
         # --- SUB MENU: SCHEDULE ---
