@@ -1,4 +1,4 @@
-import pytest
+
 from fastapi.testclient import TestClient
 # Import app after making sure sys.path is correct if needed, but TestClient handles it usually if package form is good.
 import sys
@@ -18,26 +18,26 @@ def test_menu_flow():
     data = resp.json()
     print(f"Response 1: {data['response']}")
     assert "Welcome to Telangana Sports Authority" in data["response"]
-    assert "1️⃣ Player Registration" in data["response"]
+    assert "1️⃣ Registration & Eligibility" in data["response"]
 
-    # 2. Navigate to Registration (Option 1)
-    resp = client.post("/chat", json={"query": "1", "session_id": session_id})
+    # 2. Navigate to Player Status (Option 4)
+    resp = client.post("/chat", json={"query": "4", "session_id": session_id})
     data = resp.json()
     print(f"Response 2: {data['response']}")
-    assert "Player Registration & Venue" in data["response"]
-    assert "1️⃣ Search by Phone Number" in data["response"]
+    assert "Player Details / Status" in data["response"]
+    assert "1️⃣ Search by Phone No" in data["response"]
 
     # 3. Sub-menu Navigation (Option 1 -> Search by Phone)
     resp = client.post("/chat", json={"query": "1", "session_id": session_id})
     data = resp.json()
     print(f"Response 3: {data['response']}")
-    assert "Please enter your registered **Phone Number**" in data["response"]
+    assert "Please enter your registered **Mobile Number**" in data["response"]
 
     # 4. Back Navigation
     resp = client.post("/chat", json={"query": "Back", "session_id": session_id})
     data = resp.json()
     print(f"Response 4: {data['response']}")
-    assert "Player Registration & Venue" in data["response"]  # Should go back to Reg menu
+    assert "Player Details / Status" in data["response"]  # Should go back to Player Status menu
     
     # 5. Back to Main
     resp = client.post("/chat", json={"query": "Back", "session_id": session_id})
@@ -49,9 +49,22 @@ def test_unknown_input_in_menu():
     # Start
     client.post("/chat", json={"query": "Hi", "session_id": session_id})
     
+
     # Invalid Option
     resp = client.post("/chat", json={"query": "99", "session_id": session_id})
     data = resp.json()
     # Should probably stay in menu or show error, but currently might fall through to RAG logic unless handled.
     # For this implementation, let's assume valid digits are caught, invalid might fall through or show invalid.
     # We'll check if it handles it gracefully.
+    print(f"Response Invalid: {data.get('response')}")
+
+if __name__ == "__main__":
+    try:
+        test_menu_flow()
+        print("test_menu_flow PASSED")
+        test_unknown_input_in_menu()
+        print("test_unknown_input_in_menu PASSED")
+    except Exception as e:
+        print(f"TEST FAILED: {e}")
+        exit(1)
+

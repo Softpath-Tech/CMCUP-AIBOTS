@@ -159,6 +159,51 @@ def search_cluster_incharge(query_name):
 
         return None
 
+
     except Exception as e:
         print(f"Error in search_cluster_incharge: {e}")
         return None
+
+def search_mandal_incharge(mandal_name):
+    """
+    Search for Mandal In-charge (MEO) details from MEO_Details.xlsx
+    """
+    try:
+        file_path = "data/new data/MEO_Details.xlsx"
+        if not os.path.exists(file_path):
+            return None
+            
+        df = pd.read_excel(file_path)
+        
+        # Clean for matching
+        # BLKNAME seems to be the Mandal Name based on inspection
+        df['Mandal_clean'] = df['BLKNAME'].astype(str).str.strip().str.lower()
+        query_str = mandal_name.strip().lower()
+        
+        # 1. Exact Match
+        match = df[df['Mandal_clean'] == query_str]
+        
+        # 2. Fuzzy Match
+        if match.empty:
+            import difflib
+            all_mandals = df['Mandal_clean'].unique().tolist()
+            matches = difflib.get_close_matches(query_str, all_mandals, n=1, cutoff=0.6)
+            if matches:
+                 match = df[df['Mandal_clean'] == matches[0]]
+        
+        if not match.empty:
+            rec = match.iloc[0]
+            return {
+                "mandal_name": rec['BLKNAME'],
+                "incharge_name": rec['EmployeeName'],
+                "mobile_no": str(rec['mobile']),
+                "district_name": rec['DISTNAME'],
+                "designation": "Mandal Educational Officer (MEO)"
+            }
+            
+        return None
+
+    except Exception as e:
+        print(f"Error in search_mandal_incharge: {e}")
+        return None
+

@@ -108,6 +108,7 @@ STATE_WAIT_SPORT_RULES = "STATE_WAIT_SPORT_RULES"
 STATE_WAIT_SPORT_AGE = "STATE_WAIT_SPORT_AGE"
 STATE_WAIT_DIST_OFFICER = "STATE_WAIT_DIST_OFFICER"
 STATE_WAIT_CLUSTER_INCHARGE = "STATE_WAIT_CLUSTER_INCHARGE"
+STATE_WAIT_MANDAL_INCHARGE = "STATE_WAIT_MANDAL_INCHARGE"
 
 MENU_DISCIPLINES_LEVEL = "MENU_DISCIPLINES_LEVEL"
 MENU_DISCIPLINES_CATEGORY = "MENU_DISCIPLINES_CATEGORY"
@@ -133,7 +134,9 @@ PARENT_MAP = {
     STATE_WAIT_SPORT_SCHEDULE: MENU_SCHEDULE,
     STATE_WAIT_SPORT_RULES: MENU_MAIN, # Or relevant parent
     STATE_WAIT_DIST_OFFICER: MENU_OFFICERS,
+    STATE_WAIT_DIST_OFFICER: MENU_OFFICERS,
     STATE_WAIT_CLUSTER_INCHARGE: MENU_OFFICERS,
+    STATE_WAIT_MANDAL_INCHARGE: MENU_OFFICERS,
     
     MENU_DISCIPLINES_LEVEL: MENU_MAIN,
     MENU_SELECT_SPORT: MENU_DISCIPLINES,  # Back to Level Selection
@@ -263,7 +266,8 @@ def get_menu_text(menu_name):
             "🏟️ **Venues & Officials**\n\n"
             "1️⃣ Venues\n"
             "2️⃣ District Officers\n"
-            "3️⃣ Venue In-Charge\n\n"
+            "3️⃣ Venue In-Charge\n"
+            "4️⃣ Mandal In-Charge\n\n"
             "🔙 *Type 'Back' for Main Menu*"
         )
     elif menu_name == MENU_GROUP_HELP:
@@ -354,6 +358,12 @@ def get_menu_text(menu_name):
             "🏟️ **Venue In-Charge (Cluster/Village)**\n\n"
             "Please enter the **Cluster Name** to find the In-Charge details.\n"
             "Example: *'Akinepalli', 'Dammapeta', 'Allipalli'*"
+        )
+    elif menu_name == "MENU_OFFICERS_MANDAL":
+        return (
+            "🏫 **Mandal Level In-Charge**\n\n"
+            "Please enter the **Mandal Name** to find the Mandal Educational Officer (MEO) details.\n"
+            "Example: *'Jainad', 'Bela', 'Bheempoor'*"
         )
     return "Menu not found."
 
@@ -665,6 +675,31 @@ async def process_user_query(raw_query: str, session_id: str = None):
         except Exception as e:
             return {"response": f"Error searching for cluster in-charge: {str(e)}", "source": "error"}
 
+    # State: WAITING FOR MANDAL INCHARGE
+    if current_state == STATE_WAIT_MANDAL_INCHARGE:
+        mandal_name = user_query
+        print(f"⚡ Intent: Mandal In-Charge Lookup ({mandal_name})")
+        
+        try:
+            # Lazy import
+            from rag.location_search import search_mandal_incharge
+            
+            res = search_mandal_incharge(mandal_name)
+            
+            if res:
+                if session_id: SESSION_STATE[session_id] = "MENU_OFFICERS_MANDAL"
+                
+                txt = f"### 🏫 Mandal In-Charge (MEO) - {res.get('mandal_name')}\n\n"
+                txt += f"**Name:** {res.get('incharge_name')}\n"
+                txt += f"**District:** {res.get('district_name')}\n"
+                txt += f"**Mobile:** {res.get('mobile_no', 'N/A')}\n\n"
+                txt += "Type another Mandal Name or 'Back'."
+                return {"response": txt, "source": "file_search"}
+            else:
+                return {"response": f"ℹ️ No Mandal In-Charge found for **{mandal_name}**. Please check the spelling or try another mandal.\n\nType another mandal or 'Back'.", "source": "file_search"}
+        except Exception as e:
+            return {"response": f"Error searching for mandal in-charge: {str(e)}", "source": "error"}
+
     # State Handling Logic
     if user_query.isdigit():
         choice = int(user_query)
@@ -723,6 +758,13 @@ async def process_user_query(raw_query: str, session_id: str = None):
                  except Exception as e:
                      print(f"CRASH in Option 3: {e}")
                      return {"response": f"❌ Error loading Venue In-Charge menu: {str(e)}", "source": "error_handler"}
+            elif choice == 4:
+                 try:
+                     if session_id: SESSION_STATE[session_id] = STATE_WAIT_MANDAL_INCHARGE
+                     return {"response": get_menu_text("MENU_OFFICERS_MANDAL"), "source": "menu_system"}
+                 except Exception as e:
+                     print(f"CRASH in Option 4: {e}")
+                     return {"response": f"❌ Error loading Mandal In-Charge menu: {str(e)}", "source": "error_handler"}
         
         elif current_state == MENU_GROUP_HELP:
              if choice == 1:
