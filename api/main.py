@@ -946,6 +946,10 @@ async def process_user_query(raw_query: str, session_id: str = None):
         elif current_state == MENU_OFFICERS:
             pass
 
+
+        # Catch-all for invalid numbers in a menu context
+        return {"response": "❌ Invalid Option. Please select a valid number from the menu or type 'Back'.", "source": "menu_system"}
+
     # ------------------------------------------------
     # END MENU MACHINE (DIGIT HANDLING)
     # ------------------------------------------------
@@ -986,10 +990,6 @@ async def process_user_query(raw_query: str, session_id: str = None):
         pass
 
             
-        # Catch-all for invalid numbers in a menu context
-        return {"response": "❌ Invalid Option. Please select a valid number from the menu or type 'Back'.", "source": "menu_system"}
-            
-        # ... Add other handlers as needed ...
     
     # ------------------------------------------------
     # END MENU MACHINE -> FALLTHROUGH TO LOGIC
