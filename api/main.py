@@ -777,9 +777,25 @@ async def process_user_query(raw_query: str, session_id: str = None):
                  if session_id: SESSION_STATE[session_id] = MENU_LANGUAGE
                  return {"response": get_menu_text(MENU_LANGUAGE), "source": "menu_system"}
 
-        elif current_state == MENU_OFFICERS:
+        if current_state == MENU_OFFICERS:
             # Deprecated direct access but keeping compliant just in case
             pass
+        
+        # --- SUB MENU: LANGUAGE ---
+        elif current_state == MENU_LANGUAGE:
+            resp_text = ""
+            if choice == 1:
+                resp_text = "✅ **Language set to English**.\n\nType 'Menu' to go back to main menu."
+            elif choice == 2:
+                resp_text = "✅ **భాష తెలుగుకి మార్చబడింది** (Language set to Telugu).\n\nప్రధాన మెనూకి వెళ్లడానికి 'Menu' అని టైప్ చేయండి."
+            elif choice == 3:
+                resp_text = "✅ **भाषा हिंदी में सेट की गई है** (Language set to Hindi).\n\nमुख्य मेनू पर जाने के लिए 'Menu' टाइप करें."
+            else:
+                resp_text = "❌ Invalid Option. Please select 1, 2, or 3."
+            
+            # Since we don't have real multi-lingual support yet, just acknowledging
+            return {"response": resp_text, "source": "menu_system"}
+
         
         # --- SUB MENU: DISCIPLINES (LEVEL Selection) ---
         elif current_state == MENU_DISCIPLINES:
