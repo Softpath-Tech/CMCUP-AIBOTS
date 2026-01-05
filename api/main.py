@@ -680,11 +680,19 @@ async def process_user_query(raw_query: str, session_id: str = None):
                  if session_id: SESSION_STATE[session_id] = MENU_VENUES
                  return {"response": get_menu_text(MENU_VENUES), "source": "menu_system"}
             elif choice == 2:
-                 if session_id: SESSION_STATE[session_id] = STATE_WAIT_DIST_OFFICER
-                 return {"response": get_menu_text(MENU_OFFICERS_DISTRICT), "source": "menu_system"}
+                 try:
+                     if session_id: SESSION_STATE[session_id] = STATE_WAIT_DIST_OFFICER
+                     return {"response": get_menu_text(MENU_OFFICERS_DISTRICT), "source": "menu_system"}
+                 except Exception as e:
+                     print(f"CRASH in Option 2: {e}")
+                     return {"response": f"❌ Error loading District Officers menu: {str(e)}", "source": "error_handler"}
             elif choice == 3:
-                 if session_id: SESSION_STATE[session_id] = STATE_WAIT_CLUSTER_INCHARGE
-                 return {"response": get_menu_text(MENU_OFFICERS_CLUSTER), "source": "menu_system"}
+                 try:
+                     if session_id: SESSION_STATE[session_id] = STATE_WAIT_CLUSTER_INCHARGE
+                     return {"response": get_menu_text(MENU_OFFICERS_CLUSTER), "source": "menu_system"}
+                 except Exception as e:
+                     print(f"CRASH in Option 3: {e}")
+                     return {"response": f"❌ Error loading Venue In-Charge menu: {str(e)}", "source": "error_handler"}
         
         elif current_state == MENU_GROUP_HELP:
              if choice == 1:
