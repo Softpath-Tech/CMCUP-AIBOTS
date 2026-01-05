@@ -1030,9 +1030,10 @@ async def process_user_query(raw_query: str, session_id: str = None):
     phone_match = re.search(r'\b[6-9]\d{9}\b', original_query)
     
     # 1A. Venue/Status Flow (Exception to Filter)
-    venue_intent = re.search(r'(venue|status|game|match|fixture)', user_query)
+    # 1A. Venue/Status Flow (Implicit if phone number provided)
+    # venue_intent is now optional if phone number is present
     
-    if phone_match and venue_intent:
+    if phone_match:
         phone = phone_match.group(0)
         print(f"⚡ Intent: Venue Lookup via Phone ({phone})")
         
@@ -1070,13 +1071,8 @@ async def process_user_query(raw_query: str, session_id: str = None):
             txt += "\nSince you have multiple events, please provide your **Acknowledgment Number** (e.g., SATGCMC-...) to get specific venue details."
             return {"response": txt, "source": "sql_database"}
 
-    # 1B. General Privacy Block
-    if phone_match:
-        print(f"⚡ Intent: Phone Number detected. Triggering Privacy Warning.")
-        return {
-             "response": "⚠️ **Privacy Notice:**\n\nFor your security, please **do not share personal phone numbers** or sensitive information in this chat. I cannot look up individual player records using phone numbers.\n\nHowever, if you are looking for your **venue details**, please ask 'Venue details for 9876543210'.",
-             "source": "privacy_guardrail"
-        }
+            txt += "\nSince you have multiple events, please provide your **Acknowledgment Number** (e.g., SATGCMC-...) to get specific venue details."
+            return {"response": txt, "source": "sql_database"}
     
     # 1C. Venue Intent BUT NO Phone -> Prompt
     # If user mentions venue/status/game but didn't provide phone, prompt them.
