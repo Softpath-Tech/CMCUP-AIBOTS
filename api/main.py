@@ -814,17 +814,16 @@ async def process_user_query(raw_query: str, session_id: str = None):
 
         # --- SUB MENU: REGISTRATION ---
         # --- SUB MENU: REGISTRATION (PLAYER DETAILS) ---
+        # --- SUB MENU: PLAYER STATUS ---
         elif current_state == MENU_PLAYER_STATUS:
             if choice == 1:
-                # How to register?
-                return {"response": "📝 **Registration Process:**\n\n1. Visit the official portal.\n2. Click on 'Player Registration'.\n3. Fill in your personal details and upload documents.\n4. Select your Sport and Level.\n5. Download your Acknowledgment.\n\n🔗 **Complete Steps & Signup:** [Click Here](https://satg.telangana.gov.in/cmcup/signup)\n\n🔙 *Type 'Back' for Menu*", "source": "static_answer"}
+                # Search by Phone No
+                if session_id: SESSION_STATE[session_id] = STATE_WAIT_PHONE
+                return {"response": "📱 **Search by Phone No**\n\nPlease enter your registered **Mobile Number** (10 digits).", "source": "menu_system"}
             elif choice == 2:
-                # Age Criteria
-                if session_id: SESSION_STATE[session_id] = STATE_WAIT_SPORT_AGE
-                return {"response": "🎂 **Age Criteria Check**\n\nFor which **Game/Sport** would you like to know the age limits? (e.g., Football, Karate)", "source": "menu_system"}
-            elif choice == 3:
-                # Documents Required
-                return {"response": "📄 **Required Documents:**\n\n1. Aadhaar Card (Mandatory)\n2. Date of Birth Certificate / SSC Memo\n3. Bonafide Certificate / Study Certificate\n4. Bank Passbook (for specific allowances)\n5. Passport Size Photo\n\n🔙 *Type 'Back' for Menu*", "source": "static_answer"}
+                # Search by Acknowledgment No
+                if session_id: SESSION_STATE[session_id] = STATE_WAIT_ACK
+                return {"response": "🔢 **Search by Acknowledgment No**\n\nPlease enter your **Acknowledgment Number** (e.g., SATGCMC-...).", "source": "menu_system"}
 
         # --- SUB MENU: DISCIPLINES ---
         elif current_state == MENU_DISCIPLINES:
