@@ -4,60 +4,43 @@ import os
 
 def search_district_officer(district_name):
     """
-    Search for Special Officers by District Name using users (1).csv and districtmaster.csv.
+    Search for Special Officers by District Name using district_officers.csv.
     """
     try:
         # Load Data
-        users_path = "data/new data/users (1).csv"
-        dist_map_path = "data/csvs/districtmaster.csv"
+        users_path = "data/new data/district_officers.csv"
         
-        if not os.path.exists(users_path) or not os.path.exists(dist_map_path):
+        if not os.path.exists(users_path):
              return None
              
         df_users = pd.read_csv(users_path)
-        df_dist = pd.read_csv(dist_map_path)
         
         # Clean District Names for matching
-        df_dist['DistrictName_clean'] = df_dist['DistrictName'].astype(str).str.strip().str.lower()
+        # The new CSV has 'DistrictName' column directly
+        df_users['DistrictName_clean'] = df_users['DistrictName'].astype(str).str.strip().str.lower()
         query_dist = district_name.strip().lower()
         
-        # Find District ID
-        dist_match = df_dist[df_dist['DistrictName_clean'] == query_dist]
+        # Find District Match
+        dist_match = df_users[df_users['DistrictName_clean'] == query_dist]
         
         if dist_match.empty:
             # Try fuzzy match if exact match fails
             import difflib
-            all_dists = df_dist['DistrictName_clean'].tolist()
+            all_dists = df_users['DistrictName_clean'].unique().tolist()
             matches = difflib.get_close_matches(query_dist, all_dists, n=1, cutoff=0.7)
             if matches:
-                dist_match = df_dist[df_dist['DistrictName_clean'] == matches[0]]
+                 dist_match = df_users[df_users['DistrictName_clean'] == matches[0]]
             else:
                 return None
-                
-        dist_id = dist_match.iloc[0]['DistrictNo']
-        real_dist_name = dist_match.iloc[0]['DistrictName']
         
-        # Filter Users for this District and Role (DYSO = 2)
-        # Note: 'dyso_dist' in users matches 'DistrictNo'
-        officer = df_users[
-            (df_users['dyso_dist'] == dist_id) & 
-            (df_users['role_id'] == 2)
-        ]
+        # Get the first matching record (assuming one officer per district in this file or taking the first one)
+        rec = dist_match.iloc[0]
         
-        if officer.empty:
-            return {
-                "district_name": real_dist_name, 
-                "special_officer_name": "Not Assigned", 
-                "contact_no": "N/A", 
-                "designation": "District Sports Officer"
-            }
-            
-        rec = officer.iloc[0]
         return {
-            "district_name": real_dist_name,
+            "district_name": rec['DistrictName'],
             "special_officer_name": rec['name'],
             "contact_no": str(rec['dyso_cont_no']),
-            "designation": rec['dyso_dept'] # Using department/designation field
+            "designation": rec['dyso_dept'] 
         }
 
     except Exception as e:
