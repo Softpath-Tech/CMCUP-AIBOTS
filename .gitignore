@@ -11,4 +11,3 @@ data/qdrant_db/
 data/qdrant_db_old/
 *.db
 *.sqlite
-data/new data/*.xlsx
