@@ -1410,6 +1410,34 @@ async def process_user_query(raw_query: str, session_id: str = None):
             print(f"SQL Error: {e}")
             pass
 
+    # 5.6 Mandal Incharge / MEO Lookup (Interceptor)
+    # Pattern: "Mandal Incharge of X", "Mandal Officer for X", "Who is MEO of X"
+    meo_pattern = r"(?:mandal\s*(?:incharge|officer|meo|level|education officer)|meo)\s*(?:of|for|in)?\s*([a-zA-Z\s]+)"
+    meo_match = re.search(meo_pattern, original_query, re.IGNORECASE)
+    
+    # Exclude if it looks like just a menu navigation command like "Mandal Incharge" without a name
+    if meo_match:
+        raw_mandal = meo_match.group(1).strip()
+        clean_mandal = re.sub(r'\b(details|number|contact|name|who|is|the)\b', '', raw_mandal, flags=re.IGNORECASE).strip()
+        
+        if len(clean_mandal) > 3:
+             print(f"⚡ Intent: Mandal Incharge Lookup ({clean_mandal})")
+             try:
+                 from rag.location_search import search_mandal_incharge
+                 res = search_mandal_incharge(clean_mandal)
+                 if res:
+                    txt = f"### 🏫 Mandal In-Charge (MEO) - {res.get('mandal_name')}\n\n"
+                    txt += f"**Name:** {res.get('incharge_name')}\n"
+                    txt += f"**District:** {res.get('district_name')}\n"
+                    txt += f"**Mobile:** {res.get('mobile_no', 'N/A')}\n\n"
+                    txt += "Type another Mandal Name or 'Back'."
+                    return {"response": txt, "source": "logic_interceptor"}
+                 else:
+                     # If specific lookup fails, we can let it fall through or return not found.
+                     return {"response": f"ℹ️ I couldn't find a Mandal In-Charge for **{clean_mandal}**.\nPlease check the spelling (e.g., 'Jainad', 'Bela').", "source": "logic_interceptor"}
+             except Exception as e:
+                 print(f"Error in MEO Interceptor: {e}")
+
     # 6. Complex SQL Queries (Agentic)
     # Detects questions about counts, lists, specific aggregations (Agentic)
     # 1. Strong Rule Keywords (Age, Born, Criteria) - Trigger SQL immediately (handles typos like 'hokey')
