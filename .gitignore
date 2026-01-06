@@ -9,7 +9,5 @@ env/
 .vscode/
 data/qdrant_db/
 data/qdrant_db_old/
-*.xlsx
 *.db
 *.sqlite
-data/new data/*.xlsx
