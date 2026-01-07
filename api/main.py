@@ -246,51 +246,50 @@ def get_menu_text(menu_name):
         return (
             "🏆 **Welcome to Telangana Sports Authority – CM Cup 2025 Chatbot** 👋\n\n"
             "I can help players, parents, coaches, and officials.\n\n"
-            "1️⃣ Registration & Eligibility\n"
-            "2️⃣ Sports & Matches\n"
-            "3️⃣ Venues & Officials\n"
-            "4️⃣ Player Status\n"
-            "5️⃣ Help & Language\n\n"
+            "**1. Registration & Eligibility**\n"
+            "**2. Sports & Matches**\n"
+            "**3. Venues & Officials**\n"
+            "**4. Player Status**\n"
+            "**5. Help & Language**\n\n"
             "💡 *Type a number (1–5) to proceed*"
         )
     elif menu_name == MENU_GROUP_SPORTS:
         return (
-            "🏅 **Sports & Matches**\n\n"
-            "1️⃣ Sports Disciplines\n"
-            "2️⃣ Schedules & Fixtures\n"
-            "3️⃣ Medal Tally\n\n"
+            "🏅 **2. Sports & Matches**\n\n"
+            "2.1 Sports Disciplines\n"
+            "2.2 Schedules & Fixtures\n"
+            "2.3 Medal Tally\n\n"
             "🔙 *Type 'Back' for Main Menu*"
         )
     elif menu_name == MENU_GROUP_VENUES:
         return (
-            "🏟️ **Venues & Officials**\n\n"
-            "1️⃣ Venues\n"
-            "2️⃣ District Officers\n"
-            "3️⃣ Venue In-Charge\n"
-            "4️⃣ Mandal In-Charge\n\n"
+            "🏟️ **3. Venues & Officials**\n\n"
+            "3.1 Venues\n"
+            "3.2 District Officers\n"
+            "3.3 Venue In-Charge\n\n"
             "🔙 *Type 'Back' for Main Menu*"
         )
     elif menu_name == MENU_GROUP_HELP:
         return (
-            "📞 **Help & Language**\n\n"
-            "1️⃣ Helpline Numbers\n"
-            "2️⃣ Email Support\n"
-            "3️⃣ Change Language\n\n"
+            "📞 **5. Help & Language**\n\n"
+            "5.1 Helpline Numbers\n"
+            "5.2 Email Support\n"
+            "5.3 Change Language\n\n"
             "🔙 *Type 'Back' for Main Menu*"
         )
     elif menu_name == MENU_REG_FAQ:
         return (
-            "📝 **Registration & Eligibility**\n\n"
-            "1️⃣ How to Register\n"
-            "2️⃣ Eligibility Rules\n"
-            "3️⃣ Documents Required\n"
-            "4️⃣ Registration Status\n"
-            "5️⃣ FAQs\n\n"
+            "📝 **1. Registration & Eligibility**\n\n"
+            "1.1 How to Register\n"
+            "1.2 Eligibility Rules\n"
+            "1.3 Documents Required\n"
+            "1.4 Registration Status\n"
+            "1.5 FAQs\n\n"
             "🔙 *Type 'Back' to return to Main Menu*"
         )
     elif menu_name == MENU_DISCIPLINES:
         return (
-            "📅 **Disciplines - Select Level**\n\n"
+            "📅 **2.1 Disciplines - Select Level**\n\n"
             "1️⃣ Gram Panchayat / Cluster Level\n"
             "2️⃣ Mandal Level\n"
             "3️⃣ Assembly Constituency Level\n"
@@ -301,7 +300,7 @@ def get_menu_text(menu_name):
 
     elif menu_name == MENU_SCHEDULE:
         return (
-            "🏆 **Schedules**\n\n"
+            "🏆 **2.2 Schedules**\n\n"
             "1️⃣ Tournament Schedule\n"
             "2️⃣ Games Schedule\n\n"
             "🔙 *Type 'Back' to return to Main Menu*"
@@ -320,14 +319,14 @@ def get_menu_text(menu_name):
         )
     elif menu_name == MENU_PLAYER_STATUS:
         return (
-            "📥 **Player Details / Status**\n\n"
-            "1️⃣ Search by Phone No\n"
-            "2️⃣ Search by Acknowledgment No\n\n"
+            "📥 **4. Player Status**\n\n"
+            "4.1 Search by Phone No\n"
+            "4.2 Search by Acknowledgment No\n\n"
             "🔙 *Type 'Back' to return*"
         )
     elif menu_name == MENU_MEDALS:
         return (
-            "📍 **Medal Tally**\n\n"
+            "📍 **2.3 Medal Tally**\n\n"
             "🏆 District-wise Medal Tally will be available after the State Meet commences.\n"
             "Stay tuned!"
         )
@@ -341,7 +340,7 @@ def get_menu_text(menu_name):
          )
     elif menu_name == MENU_LANGUAGE:
          return (
-             "🌐 **Select Language**\n\n"
+             "🌐 **5.3 Select Language**\n\n"
              "1️⃣ English\n"
              "2️⃣ తెలుగు (Telugu)\n"
              "3️⃣ हिन्दी (Hindi)\n\n"
@@ -349,13 +348,13 @@ def get_menu_text(menu_name):
          )
     elif menu_name == MENU_OFFICERS_DISTRICT:
         return (
-            "👮‍♂️ **District Sports Officers**\n\n"
+            "👮‍♂️ **3.2 District Sports Officers**\n\n"
             "Please enter the **District Name** to find the District Sports Officer details.\n"
             "Example: *'Warangal', 'Khammam', 'Nalgonda'*"
         )
     elif menu_name == MENU_OFFICERS_CLUSTER:
         return (
-            "🏟️ **Venue In-Charge (Cluster/Village)**\n\n"
+            "🏟️ **3.3 Venue In-Charge (Cluster/Village)**\n\n"
             "Please enter the **Cluster Name** to find the In-Charge details.\n"
             "Example: *'Akinepalli', 'Dammapeta', 'Allipalli'*"
         )
@@ -758,13 +757,6 @@ async def process_user_query(raw_query: str, session_id: str = None):
                  except Exception as e:
                      print(f"CRASH in Option 3: {e}")
                      return {"response": f"❌ Error loading Venue In-Charge menu: {str(e)}", "source": "error_handler"}
-            elif choice == 4:
-                 try:
-                     if session_id: SESSION_STATE[session_id] = STATE_WAIT_MANDAL_INCHARGE
-                     return {"response": get_menu_text("MENU_OFFICERS_MANDAL"), "source": "menu_system"}
-                 except Exception as e:
-                     print(f"CRASH in Option 4: {e}")
-                     return {"response": f"❌ Error loading Mandal In-Charge menu: {str(e)}", "source": "error_handler"}
         
         elif current_state == MENU_GROUP_HELP:
              if choice == 1:
