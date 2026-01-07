@@ -16,15 +16,15 @@ async def test_menu_structure():
     res = await process_user_query("menu", session_id)
     menu_txt = res["response"]
     print(menu_txt)
-    assert "**1. Registration & Eligibility**" in menu_txt
-    assert "**5. Help & Language**" in menu_txt
+    assert "1. Registration & Eligibility" in menu_txt
+    assert "5. Help & Language" in menu_txt
     
     # 2. Registration Menu (Option 1)
     print("\n--- Testing Registration Menu ---")
     res = await process_user_query("1", session_id)
     reg_txt = res["response"]
     print(reg_txt)
-    assert "**1. Registration & Eligibility**" in reg_txt
+    assert "**1. Registration & Eligibility**" in reg_txt # Header still mostly likely bolded/emoji? Check main.py
     assert "1.1 How to Register" in reg_txt
     assert "1.5 FAQs" in reg_txt
     

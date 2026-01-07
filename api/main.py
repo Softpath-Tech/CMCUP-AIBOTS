@@ -246,11 +246,11 @@ def get_menu_text(menu_name):
         return (
             "🏆 **Welcome to Telangana Sports Authority – CM Cup 2025 Chatbot** 👋\n\n"
             "I can help players, parents, coaches, and officials.\n\n"
-            "**1. Registration & Eligibility**\n"
-            "**2. Sports & Matches**\n"
-            "**3. Venues & Officials**\n"
-            "**4. Player Status**\n"
-            "**5. Help & Language**\n\n"
+            "1. Registration & Eligibility\n"
+            "2. Sports & Matches\n"
+            "3. Venues & Officials\n"
+            "4. Player Status\n"
+            "5. Help & Language\n\n"
             "💡 *Type a number (1–5) to proceed*"
         )
     elif menu_name == MENU_GROUP_SPORTS:
@@ -1098,6 +1098,42 @@ async def process_user_query(raw_query: str, session_id: str = None):
         }
 
     # 1. Phone Number match - PRIVACY WARNING
+
+    # --- NLQ INTERCEPTOR: DISTRICT INCHARGE ---
+    # Detects: "incharge for warangal", "khammam district officer", "who is ... for nalgonda"
+    officer_keywords = ["incharge", "in-charge", "officer", "dso", "district sports officer"]
+    if any(kw in user_query for kw in officer_keywords) and ("for" in user_query or "of" in user_query or "district" in user_query):
+        # Extract potential location name
+        # Strategy: Look for words that are NOT keywords. 
+        # Simple heuristic: Split by 'for', 'of', 'in' and take the noun.
+        # Better: Use known district list or try full query match by removing keywords.
+        
+        clean_q = user_query
+        for kw in officer_keywords:
+            clean_q = clean_q.replace(kw, "")
+        clean_q = clean_q.replace("who is the", "").replace("who is", "").replace("details", "").replace("district", "")
+        clean_q = clean_q.strip(" ?.!").lower()
+        
+        # Split by common prepositions if present
+        if " for " in clean_q:
+            clean_q = clean_q.split(" for ")[-1]
+        elif " of " in clean_q:
+             clean_q = clean_q.split(" of ")[-1]
+        elif " in " in clean_q:
+             clean_q = clean_q.split(" in ")[-1]
+            
+        target_loc = clean_q.strip()
+        
+        if len(target_loc) > 3: # Avoid extremely short noise like "me"
+            from rag.location_search import search_district_officer
+            officer = search_district_officer(target_loc)
+            
+            if officer:
+                txt = f"### 👮‍♂️ District Sports Officer - {officer.get('district_name')}\n\n"
+                txt += f"**Name:** {officer.get('special_officer_name')}\n"
+                txt += f"**Designation:** {officer.get('designation')}\n"
+                txt += f"**Contact:** {officer.get('contact_no')}\n"
+                return {"response": txt, "source": "nlq_interceptor"}
 
     # 0.6 Registration/Ack Number Link
     if "acknowledgment number" in user_query or "acknowledgement number" in user_query or "ack number" in user_query or "ack no" in user_query:

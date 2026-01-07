@@ -9,7 +9,7 @@ load_dotenv()
 # Configuration for Exact Models
 # User Request: "Gemini 2.5 Flash" and "GPT 5.2" (Pro failed verification)
 PRIMARY_MODEL = "gemini-2.5-flash" 
-SECONDARY_MODEL = "gpt-5.2"
+SECONDARY_MODEL = "gpt-5.2-pro"
 
 def get_system_prompt(language: str = "English") -> str:
     """
