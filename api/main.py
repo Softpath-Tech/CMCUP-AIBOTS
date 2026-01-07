@@ -266,7 +266,8 @@ def get_menu_text(menu_name):
             "🏟️ **3. Venues & Officials**\n\n"
             "3.1 Venues\n"
             "3.2 District Officers\n"
-            "3.3 Venue In-Charge\n\n"
+            "3.3 Venue In-Charge\n"
+            "3.4 Mandal In-Charge\n\n"
             "🔙 *Type 'Back' for Main Menu*"
         )
     elif menu_name == MENU_GROUP_HELP:
@@ -757,6 +758,13 @@ async def process_user_query(raw_query: str, session_id: str = None):
                  except Exception as e:
                      print(f"CRASH in Option 3: {e}")
                      return {"response": f"❌ Error loading Venue In-Charge menu: {str(e)}", "source": "error_handler"}
+            elif choice == 4:
+                 try:
+                     if session_id: SESSION_STATE[session_id] = STATE_WAIT_MANDAL_INCHARGE
+                     return {"response": get_menu_text("MENU_OFFICERS_MANDAL"), "source": "menu_system"}
+                 except Exception as e:
+                     print(f"CRASH in Option 4: {e}")
+                     return {"response": f"❌ Error loading Mandal In-Charge menu: {str(e)}", "source": "error_handler"}
         
         elif current_state == MENU_GROUP_HELP:
              if choice == 1:
