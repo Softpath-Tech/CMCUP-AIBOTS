@@ -19,6 +19,7 @@ if PROJECT_ROOT not in sys.path:
 # 2. Imports
 # --------------------------------------------------
 from rag.chain import get_rag_chain
+from rag.translations import get_translation, MENU_TRANSLATIONS
 from rag.sql_queries import (
     get_participation_stats, 
     get_fixture_details, 
@@ -75,7 +76,7 @@ CHAT_SESSIONS = {}
 
 # MENU STATE MANAGEMENT
 SESSION_STATE = {} # {session_id: current_state_str}
-SESSION_DATA = {} # {session_id: {key: val}}
+SESSION_DATA = {} # {session_id: {key: val, "language": "en" (default)}}
 
 # MENU CONSTANTS
 MENU_MAIN = "MAIN_MENU"
@@ -240,132 +241,39 @@ def search_cluster_incharge_helper(user_query):
         return f"Error searching data: {str(e)}"
 
 # --- MENU TEXT HELPERS ---
-def get_menu_text(menu_name):
-    print(f"DEBUG: get_menu_text called with {menu_name}")
-    if menu_name == MENU_MAIN:
-        return (
-            "🏆 **Welcome to Telangana Sports Authority – CM Cup 2025 Chatbot** 👋\n\n"
-            "I can help players, parents, coaches, and officials.\n\n"
-            "1. Registration & Eligibility\n"
-            "2. Sports & Matches\n"
-            "3. Venues & Officials\n"
-            "4. Player Status\n"
-            "5. Help & Language\n\n"
-            "💡 *Type a number (1–5) to proceed*"
-        )
-    elif menu_name == MENU_GROUP_SPORTS:
-        return (
-            "🏅 **2. Sports & Matches**\n\n"
-            "2.1 Sports Disciplines\n"
-            "2.2 Schedules & Fixtures\n"
-            "2.3 Medal Tally\n\n"
-            "🔙 *Type 'Back' for Main Menu*"
-        )
-    elif menu_name == MENU_GROUP_VENUES:
-        return (
-            "🏟️ **3. Venues & Officials**\n\n"
-            "3.1 Venues\n"
-            "3.2 District Officers\n"
-            "3.3 Venue In-Charge\n"
-            "3.4 Mandal In-Charge\n\n"
-            "🔙 *Type 'Back' for Main Menu*"
-        )
-    elif menu_name == MENU_GROUP_HELP:
-        return (
-            "📞 **5. Help & Language**\n\n"
-            "5.1 Helpline Numbers\n"
-            "5.2 Email Support\n"
-            "5.3 Change Language\n\n"
-            "🔙 *Type 'Back' for Main Menu*"
-        )
-    elif menu_name == MENU_REG_FAQ:
-        return (
-            "📝 **1. Registration & Eligibility**\n\n"
-            "1.1 How to Register\n"
-            "1.2 Eligibility Rules\n"
-            "1.3 Documents Required\n"
-            "1.4 Registration Status\n"
-            "1.5 FAQs\n\n"
-            "🔙 *Type 'Back' to return to Main Menu*"
-        )
-    elif menu_name == MENU_DISCIPLINES:
-        return (
-            "📅 **2.1 Disciplines - Select Level**\n\n"
-            "1️⃣ Gram Panchayat / Cluster Level\n"
-            "2️⃣ Mandal Level\n"
-            "3️⃣ Assembly Constituency Level\n"
-            "4️⃣ District Level\n"
-            "5️⃣ State Level\n\n"
-            "🔙 *Type 'Back' for Main Menu*"
-        )
+def get_menu_data(menu_name, session_id=None):
+    # 1. Determine Language
+    lang = "en"
+    if session_id:
+        lang = SESSION_DATA.get(session_id, {}).get("language", "en")
+    
+    print(f"DEBUG: get_menu_data called with {menu_name} [Lang: {lang}]")
+    
+    # 2. Return Translation Dict
+    return get_translation(menu_name, lang)
 
-    elif menu_name == MENU_SCHEDULE:
-        return (
-            "🏆 **2.2 Schedules**\n\n"
-            "1️⃣ Tournament Schedule\n"
-            "2️⃣ Games Schedule\n\n"
-            "🔙 *Type 'Back' to return to Main Menu*"
-        )
-    elif menu_name == MENU_VENUES:
-        return (
-            "📜 **Venues Information**\n\n"
-            "⚠️ *Data coming soon for Venues.*"
-        )
-    elif menu_name == MENU_OFFICERS:
-        return (
-            "📊 **Special Officers / In-Charge Details**\n\n"
-            "1️⃣ District Officers\n"
-            "2️⃣ Venue In-Charge\n\n"
-            "🔙 *Type 'Back' to return to Main Menu*"
-        )
-    elif menu_name == MENU_PLAYER_STATUS:
-        return (
-            "📥 **4. Player Status**\n\n"
-            "4.1 Search by Phone No\n"
-            "4.2 Search by Acknowledgment No\n\n"
-            "🔙 *Type 'Back' to return*"
-        )
-    elif menu_name == MENU_MEDALS:
-        return (
-            "📍 **2.3 Medal Tally**\n\n"
-            "🏆 District-wise Medal Tally will be available after the State Meet commences.\n"
-            "Stay tuned!"
-        )
-    elif menu_name == MENU_HELPDESK:
-         return (
-             "📞 **Helpdesk & Support**\n\n"
-             "1️⃣ State Helpline Numbers\n"
-             "2️⃣ District Sports Officers\n"
-             "3️⃣ Email Support\n\n"
-             "🔙 *Type 'Back' for Main Menu*"
-         )
-    elif menu_name == MENU_LANGUAGE:
-         return (
-             "🌐 **5.3 Select Language**\n\n"
-             "1️⃣ English\n"
-             "2️⃣ తెలుగు (Telugu)\n"
-             "3️⃣ हिन्दी (Hindi)\n\n"
-             "🔙 *Type 'Back' for Main Menu*"
-         )
-    elif menu_name == MENU_OFFICERS_DISTRICT:
-        return (
-            "👮‍♂️ **3.2 District Sports Officers**\n\n"
-            "Please enter the **District Name** to find the District Sports Officer details.\n"
-            "Example: *'Warangal', 'Khammam', 'Nalgonda'*"
-        )
-    elif menu_name == MENU_OFFICERS_CLUSTER:
-        return (
-            "🏟️ **3.3 Venue In-Charge (Cluster/Village)**\n\n"
-            "Please enter the **Cluster Name** to find the In-Charge details.\n"
-            "Example: *'Akinepalli', 'Dammapeta', 'Allipalli'*"
-        )
-    elif menu_name == "MENU_OFFICERS_MANDAL":
-        return (
-            "🏫 **Mandal Level In-Charge**\n\n"
-            "Please enter the **Mandal Name** to find the Mandal Educational Officer (MEO) details.\n"
-            "Example: *'Jainad', 'Bela', 'Bheempoor'*"
-        )
-    return "Menu not found."
+def create_api_response(content, source="menu_system", session_id=None):
+    """
+    Constructs the standardized JSON response.
+    Content can be a string (text only) or a dict ({text, buttons}).
+    """
+    text_val = ""
+    menus_val = []
+    
+    if isinstance(content, dict) and "text" in content:
+        text_val = content.get("text", "")
+        menus_val = content.get("buttons", [])
+    else:
+        text_val = str(content)
+        menus_val = []
+        
+    return {
+        "text": text_val,
+        "menus": menus_val,
+        "isMenusAvailable": len(menus_val) > 0,
+        "source": source,
+        "session_id": session_id
+    }
 
 def extract_plain_text(resp) -> str:
     """Try to extract a single answer string from various response shapes."""
@@ -464,13 +372,13 @@ async def process_user_query(raw_query: str, session_id: str = None):
     # Global Exit Commands
     if user_query in ["0", "exit", "quit"]:
          SESSION_STATE.pop(session_id, None)
-         return {"response": "👋 Chat Session Ended. Type 'Hi' to start again.", "source": "menu_system"}
+         return create_api_response("👋 Chat Session Ended. Type 'Hi' to start again.", "menu_system", session_id)
 
     # Global Reset (Home) Commands
     if user_query in ["hi", "hello", "menu", "start", "restart", "home"]:
         if session_id:
             SESSION_STATE[session_id] = MENU_MAIN
-        return {"response": get_menu_text(MENU_MAIN), "source": "menu_system"}
+        return create_api_response(get_menu_data(MENU_MAIN, session_id), "menu_system", session_id)
         
     # Get Current State
     current_state = SESSION_STATE.get(session_id, MENU_MAIN) if session_id else MENU_MAIN
@@ -479,13 +387,13 @@ async def process_user_query(raw_query: str, session_id: str = None):
     if user_query in ["back", "previous", "return", "exit"]:
         # Logic to return to parent
         if current_state == MENU_MAIN:
-            return {"response": "You are already at the Main Menu.", "source": "menu_system"}
+            return create_api_response("You are already at the Main Menu.", "menu_system", session_id)
         else:
             # Look up parent
             parent = PARENT_MAP.get(current_state, MENU_MAIN)
             if session_id:
                 SESSION_STATE[session_id] = parent
-            return {"response": get_menu_text(parent), "source": "menu_system"}
+            return create_api_response(get_menu_data(parent, session_id), "menu_system", session_id)
 
     # State: WAITING FOR INPUT (Phone, Ack, Location)
     # If we are in a 'waiting' state, we treat the query as the input value
@@ -503,7 +411,7 @@ async def process_user_query(raw_query: str, session_id: str = None):
             registrations = get_player_venues_by_phone(phone)
             
             if not registrations:
-                 return {"response": f"ℹ️ No registrations found for **{phone}**. Please check the number or register at the official site.", "source": "sql_database"}
+                 return create_api_response(f"ℹ️ No registrations found for **{phone}**. Please check the number or register at the official site.", "sql_database", session_id)
             
             # Logic: 1 Record vs Multi
             if len(registrations) == 1:
@@ -523,7 +431,7 @@ async def process_user_query(raw_query: str, session_id: str = None):
                      txt += f"\n👤 **Venue In-Charge:** {rec.get('cluster_incharge')}\n"
                      txt += f"📞 **Contact:** {rec.get('incharge_mobile', 'N/A')}\n"
                 
-                return {"response": txt, "source": "sql_database"}
+                return create_api_response(txt, "sql_database", session_id)
                 
             else:
                 # Multiple Records
@@ -533,9 +441,9 @@ async def process_user_query(raw_query: str, session_id: str = None):
                     txt += f"- {s}\n"
                 
                 txt += "\nSince you have multiple events, please provide your **Acknowledgment Number** (e.g., SATGCMC-...) to get specific venue details."
-                return {"response": txt, "source": "sql_database"} 
+                return create_api_response(txt, "sql_database", session_id)
         else:
-             return {"response": "❌ Invalid Phone Number. Please enter a 10-digit mobile number starting with 6-9.\n\nType 'Back' to cancel.", "source": "validation_error"}
+             return create_api_response("❌ Invalid Phone Number. Please enter a 10-digit mobile number starting with 6-9.\n\nType 'Back' to cancel.", "validation_error", session_id)
     
     # State: WAITING FOR LOCATION
     if current_state == STATE_WAIT_LOCATION:
@@ -557,11 +465,11 @@ async def process_user_query(raw_query: str, session_id: str = None):
                     txt += f"**District:** {d.get('parent_district')}"
                 
                 txt += "\n\nType another location to check, or 'Back'."
-                return {"response": txt, "source": "sql_database"}
+                return create_api_response(txt, "sql_database", session_id)
             else:
-                return {"response": f"🚫 **{loc_name}** could not be found in our database.\n\nType another name or 'Back'.", "source": "sql_database"}
+                return create_api_response(f"🚫 **{loc_name}** could not be found in our database.\n\nType another name or 'Back'.", "sql_database", session_id)
         except Exception as e:
-            return {"response": f"Error looking up location: {str(e)}", "source": "error"}
+            return create_api_response(f"Error looking up location: {str(e)}", "error", session_id)
 
     # State: WAITING FOR SPORT (SCHEDULE)
     if current_state == STATE_WAIT_SPORT_SCHEDULE:
@@ -576,11 +484,11 @@ async def process_user_query(raw_query: str, session_id: str = None):
                  txt = f"### 📅 {sport_name.title()} Schedule (Next 5)\n"
                  for m in schedules[:5]:
                      txt += f"- **{m.get('event_name')}**: {m.get('team1_name')} vs {m.get('team2_name')} @ {m.get('venue')}\n"
-                 return {"response": txt, "source": "sql_database"}
+                 return create_api_response(txt, "sql_database", session_id)
              else:
-                 return {"response": f"ℹ️ No specific schedule found for **{sport_name}**. It might not be scheduled yet or check spelling.\n\nType another sport or 'Back'.", "source": "sql_database"}
+                 return create_api_response(f"ℹ️ No specific schedule found for **{sport_name}**. It might not be scheduled yet or check spelling.\n\nType another sport or 'Back'.", "sql_database", session_id)
         except Exception as e:
-             return {"response": f"Error retrieving schedule: {str(e)}", "source": "error"}
+             return create_api_response(f"Error retrieving schedule: {str(e)}", "error", session_id)
 
     # State: WAITING FOR SPORT (AGE CRITERIA)
     if current_state == STATE_WAIT_SPORT_AGE:
@@ -596,11 +504,11 @@ async def process_user_query(raw_query: str, session_id: str = None):
                 txt += f"**Team Size:** {rules.get('team_size') or 'Individual'}\n"
                 txt += f"**Para Event:** {'Yes' if rules.get('is_para')=='1' else 'No'}\n\n"
                 txt += "Type another sport to check, or 'Back'."
-                return {"response": txt, "source": "sql_database"}
+                return create_api_response(txt, "sql_database", session_id)
             else:
-                return {"response": f"ℹ️ Could not find rules for **{sport_input}**. Please check the spelling or try another sport.", "source": "sql_database"}
+                return create_api_response(f"ℹ️ Could not find rules for **{sport_input}**. Please check the spelling or try another sport.", "sql_database", session_id)
         except Exception as e:
-            return {"response": f"Error looking up age rules: {e}", "source": "error"}
+            return create_api_response(f"Error looking up age rules: {e}", "error", session_id)
 
 
     # State: WAITING FOR SPORT (RULES)
@@ -610,12 +518,19 @@ async def process_user_query(raw_query: str, session_id: str = None):
         
         try:
             rag_bot = get_or_init_rag_chain()
-            rag_query = f"What are the age limits, eligibility and team rules for {sport_name} in CM Cup 2025?"
+            rag_bot = get_or_init_rag_chain()
+            
+            # Inject Language Instruction
+            lang_code = SESSION_DATA.get(session_id, {}).get('language', 'en')
+            lang_map = {"en": "English", "te": "Telugu", "hi": "Hindi"}
+            lang_name = lang_map.get(lang_code, "English")
+            
+            rag_query = f"What are the age limits, eligibility and team rules for {sport_name} in CM Cup 2025? Answer in {lang_name} language."
             rag_resp = rag_bot.invoke({"question": rag_query})
             rag_text = extract_plain_text(rag_resp.get('result', rag_resp))
-            return {"response": f"📜 **Rules for {sport_name}:**\n\n{rag_text}", "source": "rag_chain"}
+            return create_api_response(f"📜 **Rules for {sport_name}:**\n\n{rag_text}", "rag_chain", session_id)
         except Exception as e:
-             return {"response": f"Error retrieving rules: {str(e)}", "source": "error"}
+             return create_api_response(f"Error retrieving rules: {str(e)}", "error", session_id)
 
     # State: WAITING FOR DISTRICT OFFICER
     if current_state == STATE_WAIT_DIST_OFFICER:
@@ -636,11 +551,11 @@ async def process_user_query(raw_query: str, session_id: str = None):
                 txt += f"**Designation:** {officer.get('designation')}\n"
                 txt += f"**Contact:** {officer.get('contact_no')}\n\n"
                 txt += "Type another District Name or 'Back'."
-                return {"response": txt, "source": "file_search"}
+                return create_api_response(txt, "file_search", session_id)
             else:
-                return {"response": f"ℹ️ No District Sports Officer found for **{district_name}**. Please check the spelling or try another district.\n\nType another district or 'Back'.", "source": "file_search"}
+                return create_api_response(f"ℹ️ No District Sports Officer found for **{district_name}**. Please check the spelling or try another district.\n\nType another district or 'Back'.", "file_search", session_id)
         except Exception as e:
-            return {"response": f"Error searching for district officer: {str(e)}", "source": "error"}
+            return create_api_response(f"Error searching for district officer: {str(e)}", "error", session_id)
 
     # State: WAITING FOR CLUSTER INCHARGE
     if current_state == STATE_WAIT_CLUSTER_INCHARGE:
@@ -669,11 +584,11 @@ async def process_user_query(raw_query: str, session_id: str = None):
                 txt += f"**In-Charge:** {d.get('incharge_name')}\n"
                 txt += f"**Contact:** {d.get('mobile_no')}\n\n"
                 txt += "Type another Cluster/Village Name or 'Back'."
-                return {"response": txt, "source": "file_search"}
+                return create_api_response(txt, "file_search", session_id)
             else:
-                return {"response": f"ℹ️ No Venue In-Charge found for **{cluster_name}**. Please check the spelling or try another cluster.\n\nType another cluster or 'Back'.", "source": "file_search"}
+                return create_api_response(f"ℹ️ No Venue In-Charge found for **{cluster_name}**. Please check the spelling or try another cluster.\n\nType another cluster or 'Back'.", "file_search", session_id)
         except Exception as e:
-            return {"response": f"Error searching for cluster in-charge: {str(e)}", "source": "error"}
+            return create_api_response(f"Error searching for cluster in-charge: {str(e)}", "error", session_id)
 
     # State: WAITING FOR MANDAL INCHARGE
     if current_state == STATE_WAIT_MANDAL_INCHARGE:
@@ -694,11 +609,11 @@ async def process_user_query(raw_query: str, session_id: str = None):
                 txt += f"**District:** {res.get('district_name')}\n"
                 txt += f"**Mobile:** {res.get('mobile_no', 'N/A')}\n\n"
                 txt += "Type another Mandal Name or 'Back'."
-                return {"response": txt, "source": "file_search"}
+                return create_api_response(txt, "file_search", session_id)
             else:
-                return {"response": f"ℹ️ No Mandal In-Charge found for **{mandal_name}**. Please check the spelling or try another mandal.\n\nType another mandal or 'Back'.", "source": "file_search"}
+                return create_api_response(f"ℹ️ No Mandal In-Charge found for **{mandal_name}**. Please check the spelling or try another mandal.\n\nType another mandal or 'Back'.", "file_search", session_id)
         except Exception as e:
-            return {"response": f"Error searching for mandal in-charge: {str(e)}", "source": "error"}
+            return create_api_response(f"Error searching for mandal in-charge: {str(e)}", "error", session_id)
 
     # State Handling Logic
     if user_query.isdigit():
@@ -708,74 +623,73 @@ async def process_user_query(raw_query: str, session_id: str = None):
             if choice == 1:
                 # Registration & Eligibility
                 if session_id: SESSION_STATE[session_id] = MENU_REG_FAQ
-                return {"response": get_menu_text(MENU_REG_FAQ), "source": "menu_system"}
+                return create_api_response(get_menu_data(MENU_REG_FAQ, session_id), "menu_system", session_id)
             elif choice == 2:
                 # Sports & Matches -> Submenu
                 if session_id: SESSION_STATE[session_id] = MENU_GROUP_SPORTS
-                return {"response": get_menu_text(MENU_GROUP_SPORTS), "source": "menu_system"}
+                return create_api_response(get_menu_data(MENU_GROUP_SPORTS, session_id), "menu_system", session_id)
             elif choice == 3:
                 # Venues & Officials -> Submenu
                 if session_id: SESSION_STATE[session_id] = MENU_GROUP_VENUES
-                return {"response": get_menu_text(MENU_GROUP_VENUES), "source": "menu_system"}
+                return create_api_response(get_menu_data(MENU_GROUP_VENUES, session_id), "menu_system", session_id)
             elif choice == 4:
                 # Player Status
                 if session_id: SESSION_STATE[session_id] = MENU_PLAYER_STATUS
-                return {"response": get_menu_text(MENU_PLAYER_STATUS), "source": "menu_system"}
+                return create_api_response(get_menu_data(MENU_PLAYER_STATUS, session_id), "menu_system", session_id)
             elif choice == 5:
                 # Help & Language -> Submenu
                 if session_id: SESSION_STATE[session_id] = MENU_GROUP_HELP
-                return {"response": get_menu_text(MENU_GROUP_HELP), "source": "menu_system"}
+                return create_api_response(get_menu_data(MENU_GROUP_HELP, session_id), "menu_system", session_id)
         
         # --- INTERMEDIATE GROUPS ---
         elif current_state == MENU_GROUP_SPORTS:
             if choice == 1:
                 if session_id: SESSION_STATE[session_id] = MENU_DISCIPLINES
-                return {"response": get_menu_text(MENU_DISCIPLINES), "source": "menu_system"}
+                return create_api_response(get_menu_data(MENU_DISCIPLINES, session_id), "menu_system", session_id)
             elif choice == 2:
                 if session_id: SESSION_STATE[session_id] = MENU_SCHEDULE
-                return {"response": get_menu_text(MENU_SCHEDULE), "source": "menu_system"}
+                return create_api_response(get_menu_data(MENU_SCHEDULE, session_id), "menu_system", session_id)
             elif choice == 3:
                 if session_id: SESSION_STATE[session_id] = MENU_MEDALS
-                return {"response": get_menu_text(MENU_MEDALS), "source": "menu_system"}
+                return create_api_response(get_menu_data(MENU_MEDALS, session_id), "menu_system", session_id)
 
         elif current_state == MENU_GROUP_VENUES:
             # 1. Venues, 2. Dist Officers, 3. Cluster In-Charge
             if choice == 1:
                  if session_id: SESSION_STATE[session_id] = MENU_VENUES
-                 return {"response": get_menu_text(MENU_VENUES), "source": "menu_system"}
+                 return create_api_response(get_menu_data(MENU_VENUES, session_id), "menu_system", session_id)
             elif choice == 2:
                  try:
                      if session_id: SESSION_STATE[session_id] = STATE_WAIT_DIST_OFFICER
-                     # Using literal string to prevent potential NameError if constant is missing in runtime env
-                     return {"response": get_menu_text("MENU_OFFICERS_DISTRICT"), "source": "menu_system"}
+                     return create_api_response(get_menu_data("MENU_OFFICERS_DISTRICT", session_id), "menu_system", session_id)
                  except Exception as e:
                      print(f"CRASH in Option 2: {e}")
-                     return {"response": f"❌ Error loading District Officers menu: {str(e)}", "source": "error_handler"}
+                     return create_api_response(f"❌ Error loading District Officers menu: {str(e)}", "error_handler", session_id)
             elif choice == 3:
                  try:
                      if session_id: SESSION_STATE[session_id] = STATE_WAIT_CLUSTER_INCHARGE
-                     return {"response": get_menu_text("MENU_OFFICERS_CLUSTER"), "source": "menu_system"}
+                     return create_api_response(get_menu_data("MENU_OFFICERS_CLUSTER", session_id), "menu_system", session_id)
                  except Exception as e:
                      print(f"CRASH in Option 3: {e}")
-                     return {"response": f"❌ Error loading Venue In-Charge menu: {str(e)}", "source": "error_handler"}
+                     return create_api_response(f"❌ Error loading Venue In-Charge menu: {str(e)}", "error_handler", session_id)
             elif choice == 4:
                  try:
                      if session_id: SESSION_STATE[session_id] = STATE_WAIT_MANDAL_INCHARGE
-                     return {"response": get_menu_text("MENU_OFFICERS_MANDAL"), "source": "menu_system"}
+                     return create_api_response(get_menu_data("MENU_OFFICERS_MANDAL", session_id), "menu_system", session_id)
                  except Exception as e:
                      print(f"CRASH in Option 4: {e}")
-                     return {"response": f"❌ Error loading Mandal In-Charge menu: {str(e)}", "source": "error_handler"}
+                     return create_api_response(f"❌ Error loading Mandal In-Charge menu: {str(e)}", "error_handler", session_id)
         
         elif current_state == MENU_GROUP_HELP:
              if choice == 1:
                  # Helpline Numbers
-                 return {"response": "📞 **Helpline Numbers:**\n\nState Control Room: **040-12345678**\nWhatsApp Support: **+91-9876543210**", "source": "static_info"}
+                 return create_api_response("📞 **Helpline Numbers:**\n\nState Control Room: **040-12345678**\nWhatsApp Support: **+91-9876543210**", "static_info", session_id)
              elif choice == 2:
                  # Email Support
-                 return {"response": "📧 **Email Support:**\n\nPlease reach us at: **support@cmcup.telangana.gov.in**", "source": "static_info"}
+                 return create_api_response("📧 **Email Support:**\n\nPlease reach us at: **support@cmcup.telangana.gov.in**", "static_info", session_id)
              elif choice == 3:
                  if session_id: SESSION_STATE[session_id] = MENU_LANGUAGE
-                 return {"response": get_menu_text(MENU_LANGUAGE), "source": "menu_system"}
+                 return create_api_response(get_menu_data(MENU_LANGUAGE, session_id), "menu_system", session_id)
 
         if current_state == MENU_OFFICERS:
             # Deprecated direct access but keeping compliant just in case
@@ -785,16 +699,27 @@ async def process_user_query(raw_query: str, session_id: str = None):
         elif current_state == MENU_LANGUAGE:
             resp_text = ""
             if choice == 1:
+                # Set to English
+                if session_id: 
+                    if session_id not in SESSION_DATA: SESSION_DATA[session_id] = {}
+                    SESSION_DATA[session_id]["language"] = "en"
                 resp_text = "✅ **Language set to English**.\n\nType 'Menu' to go back to main menu."
             elif choice == 2:
+                # Set to Telugu
+                if session_id:
+                    if session_id not in SESSION_DATA: SESSION_DATA[session_id] = {}
+                    SESSION_DATA[session_id]["language"] = "te"
                 resp_text = "✅ **భాష తెలుగుకి మార్చబడింది** (Language set to Telugu).\n\nప్రధాన మెనూకి వెళ్లడానికి 'Menu' అని టైప్ చేయండి."
             elif choice == 3:
+                # Set to Hindi
+                if session_id:
+                    if session_id not in SESSION_DATA: SESSION_DATA[session_id] = {}
+                    SESSION_DATA[session_id]["language"] = "hi"
                 resp_text = "✅ **भाषा हिंदी में सेट की गई है** (Language set to Hindi).\n\nमुख्य मेनू पर जाने के लिए 'Menu' टाइप करें."
             else:
                 resp_text = "❌ Invalid Option. Please select 1, 2, or 3."
             
-            # Since we don't have real multi-lingual support yet, just acknowledging
-            return {"response": resp_text, "source": "menu_system"}
+            return create_api_response(resp_text, "menu_system", session_id)
 
         
         # --- SUB MENU: DISCIPLINES (LEVEL Selection) ---
@@ -828,13 +753,14 @@ async def process_user_query(raw_query: str, session_id: str = None):
                             SESSION_STATE[session_id] = MENU_SELECT_SPORT
                             SESSION_DATA[session_id] = {"sports": games, "level_title": display_title}
 
-                        txt = f"### 🏅 Sports at {display_title}\n\n"
-                        for i, g in enumerate(games, 1):
-                            txt += f"{i}. {g}\n"
-                        txt += "\nℹ️ *Select a number to view details (Age, Events, Rules)*"
-                        return {"response": txt, "source": "sql_database"}
+                        # Dynamic Buttons
+                        buttons = [{"name": g, "value": str(i)} for i, g in enumerate(games, 1)]
+                        buttons.append({"name": "Back", "value": "Back"})
+                        
+                        txt = f"### 🏅 Sports at {display_title}\n\nSelect a sport below:"
+                        return create_api_response({"text": txt, "buttons": buttons}, "sql_database", session_id)
                     else:
-                         return {"response": f"ℹ️ No sports found specifically for **{display_title}** in the database.", "source": "sql_database"}
+                         return create_api_response(f"ℹ️ No sports found specifically for **{display_title}** in the database.", "sql_database", session_id)
                 except Exception as e:
                     print(f"Error fetching disciplines: {e}")
                     return {"response": "❌ An error occurred while fetching disciplines. Please try again.", "source": "error_handler"}
@@ -878,7 +804,7 @@ async def process_user_query(raw_query: str, session_id: str = None):
 
             if choice == 1: # Age Criteria
                 if not game_id:
-                     return {"response": f"ℹ️ No detailed age info found for **{selected_sport}**.", "source": "sql_database"}
+                     return create_api_response(f"ℹ️ No detailed age info found for **{selected_sport}**.", "sql_database", session_id)
                 
                 cats = get_categories_by_sport(game_id)
                 if cats:
@@ -887,26 +813,23 @@ async def process_user_query(raw_query: str, session_id: str = None):
                          gender_map = {1: "Male", 2: "Female"}
                          g_str = gender_map.get(c['gender'], "Open")
                          txt += f"- **{c['cat_name']}** ({g_str}): {c['from_age']} - {c['to_age']} Years\n"
-                     return {"response": txt, "source": "sql_database"}
+                     return create_api_response(txt, "sql_database", session_id)
                 else:
-                     return {"response": f"ℹ️ No specific age categories found for **{selected_sport}**.", "source": "sql_database"}
+                     return create_api_response(f"ℹ️ No specific age categories found for **{selected_sport}**.", "sql_database", session_id)
 
             elif choice == 2: # Events
                 if not game_id:
-                     return {"response": "ℹ️ Link not available.", "source": "error"}
+                     return create_api_response("ℹ️ Link not available.", "error", session_id)
                 
                 url = f"https://satg.telangana.gov.in/cmcup/showDisciplineEvents/{game_id}"
-                return {
-                    "response": (
-                        f"🏆 **Events for {selected_sport}**\n\n"
-                        f"Please visit the official link below to view all events:\n"
-                        f"👉 [View Events for {selected_sport}]({url})"
-                    ),
-                    "source": "static_link"
-                }
+                return create_api_response(
+                    f"🏆 **Events for {selected_sport}**\n\nPlease visit the official link below to view all events:\n👉 [View Events for {selected_sport}]({url})",
+                    "static_link",
+                    session_id
+                )
 
             elif choice == 3: # Rules
-                 return {"response": "📜 **Rules of Game**\n\nThe rulebook is currently being updated. Please check back later!", "source": "static_placeholder"}
+                 return create_api_response("📜 **Rules of Game**\n\nThe rulebook is currently being updated. Please check back later!", "static_placeholder", session_id)
 
         # --- SUB MENU: REGISTRATION ---
         # --- SUB MENU: REGISTRATION (PLAYER DETAILS) ---
@@ -915,11 +838,11 @@ async def process_user_query(raw_query: str, session_id: str = None):
             if choice == 1:
                 # Search by Phone No
                 if session_id: SESSION_STATE[session_id] = STATE_WAIT_PHONE
-                return {"response": "📱 **Search by Phone No**\n\nPlease enter your registered **Mobile Number** (10 digits).", "source": "menu_system"}
+                return create_api_response("📱 **Search by Phone No**\n\nPlease enter your registered **Mobile Number** (10 digits).", "menu_system", session_id)
             elif choice == 2:
                 # Search by Acknowledgment No
                 if session_id: SESSION_STATE[session_id] = STATE_WAIT_ACK
-                return {"response": "🔢 **Search by Acknowledgment No**\n\nPlease enter your **Acknowledgment Number** (e.g., SATGCMC-...).", "source": "menu_system"}
+                return create_api_response("🔢 **Search by Acknowledgment No**\n\nPlease enter your **Acknowledgment Number** (e.g., SATGCMC-...).", "menu_system", session_id)
 
         # --- SUB MENU: DISCIPLINES ---
         elif current_state == MENU_DISCIPLINES:
@@ -936,21 +859,21 @@ async def process_user_query(raw_query: str, session_id: str = None):
                     txt += "\nType a **Sport Name** for rules or schedule."
                 else:
                     txt += "ℹ️ No specific disciplines listed for this level yet."
-                return {"response": txt, "source": "sql_database"}
+                return create_api_response(txt, "sql_database", session_id)
         
         # --- SUB MENU: REG FAQ ---
         elif current_state == MENU_REG_FAQ:
             if choice == 1: # How to Register
-                return {"response": "**To Register:**\nVisit [https://satg.telangana.gov.in/cmcup](https://satg.telangana.gov.in/cmcup) and select 'New Registration'.", "source": "static"}
+                return create_api_response("**To Register:**\nVisit [https://satg.telangana.gov.in/cmcup](https://satg.telangana.gov.in/cmcup) and select 'New Registration'.", "static", session_id)
             elif choice == 2: # Eligibility Rules
                 # Reuse Age/Rules logic? Or static text? Using static summary + prompt for specifics.
-                return {"response": "📋 **Eligibility Rules:**\n\n- Age: 15-35 Years.\n- Must be a resident of Telangana.\n- Cannot represent multiple units.\n\nType 'Back' to return.", "source": "static"}
+                return create_api_response("📋 **Eligibility Rules:**\n\n- Age: 15-35 Years.\n- Must be a resident of Telangana.\n- Cannot represent multiple units.\n\nType 'Back' to return.", "static", session_id)
             elif choice == 3: # Documents
-                return {"response": "**Documents Required:**\nAadhar Card, Photo, and Address Proof.", "source": "static"}
+                return create_api_response("**Documents Required:**\nAadhar Card, Photo, and Address Proof.", "static", session_id)
             elif choice == 4: # Registration Status
-                 return {"response": "🔍 **Check Registration Status:**\n\nPlease use **Option 4 (Player Status)** from the Main Menu to search by Phone or Acknowledgment Number.\n\nType 'Back' for Main Menu.", "source": "redirect"}
+                 return create_api_response("🔍 **Check Registration Status:**\n\nPlease use **Option 4 (Player Status)** from the Main Menu to search by Phone or Acknowledgment Number.\n\nType 'Back' for Main Menu.", "redirect", session_id)
             elif choice == 5: # FAQs
-                 return {"response": "❓ **General FAQs:**\n\n- *Is it free?* Yes.\n- *Can I play multiple sports?* Yes, if schedules allow.\n- *Where to report?* Check Venue details.\n\nType 'Back' to return.", "source": "static"}
+                 return create_api_response("❓ **General FAQs:**\n\n- *Is it free?* Yes.\n- *Can I play multiple sports?* Yes, if schedules allow.\n- *Where to report?* Check Venue details.\n\nType 'Back' to return.", "static", session_id)
 
         
 
@@ -959,29 +882,27 @@ async def process_user_query(raw_query: str, session_id: str = None):
         elif current_state == MENU_SCHEDULE:
             if choice == 1:
                 # Tournament Schedule (Static)
-                return {
-                    "response": (
-                        "🗓️ **Tournament Schedule**\n\n"
-                        "🔸 **Gram Panchayat / Cluster:** 17 Jan - 22 Jan 2026\n"
-                        "🔸 **Mandal Level:** 28 Jan - 31 Jan 2026\n"
-                        "🔸 **Assembly Constituency:** 03 Feb - 07 Feb 2026\n"
-                        "🔸 **District Level:** 10 Feb - 14 Feb 2026\n"
-                        "🔸 **State Level:** 19 Feb - 26 Feb 2026\n\n"
-                        "🔙 *Type 'Back' to return to Main Menu*"
-                    ),
-                    "source": "static_data"
-                }
+                return create_api_response(
+                    "🗓️ **Tournament Schedule**\n\n"
+                    "🔸 **Gram Panchayat / Cluster:** 17 Jan - 22 Jan 2026\n"
+                    "🔸 **Mandal Level:** 28 Jan - 31 Jan 2026\n"
+                    "🔸 **Assembly Constituency:** 03 Feb - 07 Feb 2026\n"
+                    "🔸 **District Level:** 10 Feb - 14 Feb 2026\n"
+                    "🔸 **State Level:** 19 Feb - 26 Feb 2026\n\n"
+                    "🔙 *Type 'Back' to return to Main Menu*",
+                    "static_data",
+                    session_id
+                )
             elif choice == 2:
                 # Games Schedule (Game Search)
                 if session_id: SESSION_STATE[session_id] = MENU_SCHEDULE_GAME_SEARCH
-                return {
-                    "response": (
-                        "🏅 **Games Schedule**\n\n"
-                        "Please enter the Name of the Game you are looking for.\n"
-                        "Example: *Kabaddi, Athletics, Cricket*"
-                    ),
-                    "source": "menu_system"
-                }
+                return create_api_response(
+                    "🏅 **Games Schedule**\n\n"
+                    "Please enter the Name of the Game you are looking for.\n"
+                    "Example: *Kabaddi, Athletics, Cricket*",
+                    "menu_system",
+                    session_id
+                )
 
         # --- SUB MENU: SCHEDULE GAME SEARCH (TEXT INPUT) ---
         elif current_state == MENU_SCHEDULE_GAME_SEARCH:
@@ -993,7 +914,7 @@ async def process_user_query(raw_query: str, session_id: str = None):
 
 
         # Catch-all for invalid numbers in a menu context
-        return {"response": "❌ Invalid Option. Please select a valid number from the menu or type 'Back'.", "source": "menu_system"}
+        return create_api_response("❌ Invalid Option. Please select a valid number from the menu or type 'Back'.", "menu_system", session_id)
 
     # ------------------------------------------------
     # END MENU MACHINE (DIGIT HANDLING)
@@ -1008,27 +929,27 @@ async def process_user_query(raw_query: str, session_id: str = None):
              game_id = info['game_id']
              game_name = info['dist_game_nm']
              url = f"https://satg.telangana.gov.in/cmcup/viewschedulegames/{game_id}"
-             return {
-                 "response": (
-                     f"🗓️ **Schedule for {game_name}**\n\n"
-                     f"You can view the specific schedule and fixtures here:\n"
-                     f"👉 [View {game_name} Schedule]({url})"
-                 ),
-                 "source": "sql_database"
-             }
+             return create_api_response(
+                 f"🗓️ **Schedule for {game_name}**\n\n"
+                 f"You can view the specific schedule and fixtures here:\n"
+                 f"👉 [View {game_name} Schedule]({url})",
+                 "sql_database",
+                 session_id
+             )
         else:
-             return {
-                 "response": f"❌ Could not find a game named '**{user_query}**'.\nPlease check the spelling (e.g., 'Athletics', 'Kabaddi') and try again.", 
-                 "source": "sql_database"
-             }
+             return create_api_response(
+                 f"❌ Could not find a game named '**{user_query}**'.\nPlease check the spelling (e.g., 'Athletics', 'Kabaddi') and try again.", 
+                 "sql_database",
+                 session_id
+             )
 
     if current_state == MENU_OFFICERS and not user_query.isdigit():
         # User entered cluster name?
         result = search_cluster_incharge(user_query)
         if result:
-            return {"response": result, "source": "local_data_file"}
+            return create_api_response(result, "local_data_file", session_id)
         else:
-            return {"response": f"❌ I couldn't find a cluster named '**{user_query}**'.\nPlease check the spelling or try another cluster name.", "source": "local_data_file"}
+            return create_api_response(f"❌ I couldn't find a cluster named '**{user_query}**'.\nPlease check the spelling or try another cluster name.", "local_data_file", session_id)
 
     # --- SUB MENU: VENUES (Text Input) ---
     if current_state == MENU_VENUES and not user_query.isdigit():
@@ -1047,28 +968,18 @@ async def process_user_query(raw_query: str, session_id: str = None):
     if year_match:
         year = int(year_match.group(1))
         if year != 2025 and ("cm" in user_query or "cup" in user_query):
-             return {
-                 "response": f"ℹ️ **Note:** I currently only have information for the **Key Minister's Cup (CM Cup) 2025**. I don't have data for {year}.",
-                 "source": "logic_interceptor"
-             }
+             return create_api_response(
+                 f"ℹ️ **Note:** I currently only have information for the **Key Minister's Cup (CM Cup) 2025**. I don't have data for {year}.",
+                 "logic_interceptor",
+                 session_id
+             )
 
-    # 0.2 Static Data Interceptor - DISABLED BY USER REQUEST
-    # All queries now proceed to logic interceptors, SQL, or RAG LLM.
+    # 0.2 ...
     pass
 
     # 0.4 Age / Rules Lookup Interceptor
-    # Pattern 1: "Age limit for Fencing", "Age criteria of Kabaddi"
-    age_pattern = re.search(r'(?:age|limit|criteria).*(?:for|of|in|limits?)\s+([a-zA-Z]+)', user_query)
-    # Pattern 2: "Fencing age", "Kabaddi limits"
-    age_pattern_2 = re.search(r'^([a-zA-Z]+)\s+(?:age|limits?|criteria)', user_query)
-
-    detected_sport = None
-    if age_pattern: detected_sport = age_pattern.group(1)
-    elif age_pattern_2: detected_sport = age_pattern_2.group(1)
-
-    # Filter out common false positives
-    ignored_sports = ["player", "participation", "total", "registration", "the", "my", "our", "your", "any"]
-    
+    # ...
+    # ...
     if detected_sport and detected_sport not in ignored_sports and len(detected_sport) > 2:
         try:
             rules = get_sport_rules(detected_sport)
@@ -1080,22 +991,21 @@ async def process_user_query(raw_query: str, session_id: str = None):
                 txt += f"**Level:** {rules.get('level', 'N/A')}\n"
                 txt += f"**Para Event:** {'Yes' if rules.get('is_para')=='1' else 'No'}\n\n"
                 txt += "Type 'Rules' for more details or another sport name."
-                return {"response": txt, "source": "sql_interceptor"}
+                return create_api_response(txt, "sql_interceptor", session_id)
         except Exception as e:
             print(f"Error in Age Interceptor: {e}")
 
     # 0.5 Participation Stats (New)
-    # Check for general count queries, but exclude "rules" or "limit" type queries (e.g., "how many players can register")
-    stats_keywords = ["total participation", "how many players", "total registration", "total players", "no participation"]
-    rule_exclusions = ["can", "limit", "allow", "eligible", "team size", "per team"]
+    # ...
     
     if any(k in user_query for k in stats_keywords) and not any(e in user_query for e in rule_exclusions):
         from rag.sql_queries import get_participation_stats
         count = get_participation_stats()
-        return {
-            "response": f"📊 **Participation Status:**\n\nA total of **{count} players** have registered for the Chief Minister's Cup (CM Cup) 2025 so far!",
-            "model_used": "sql_database"
-        }
+        return create_api_response(
+            f"📊 **Participation Status:**\n\nA total of **{count} players** have registered for the Chief Minister's Cup (CM Cup) 2025 so far!",
+            "sql_database",
+            session_id
+        )
 
     # 1. Phone Number match - PRIVACY WARNING
 
@@ -1133,15 +1043,16 @@ async def process_user_query(raw_query: str, session_id: str = None):
                 txt += f"**Name:** {officer.get('special_officer_name')}\n"
                 txt += f"**Designation:** {officer.get('designation')}\n"
                 txt += f"**Contact:** {officer.get('contact_no')}\n"
-                return {"response": txt, "source": "nlq_interceptor"}
+                return create_api_response(txt, "nlq_interceptor", session_id)
 
     # 0.6 Registration/Ack Number Link
     if "acknowledgment number" in user_query or "acknowledgement number" in user_query or "ack number" in user_query or "ack no" in user_query:
         if "what is" in user_query or "download" in user_query or "get" in user_query:
-            return {
-                "response": "📥 **Download Acknowledgment:**\n\nYou can find and download your Acknowledgment Number from the official website:\n\n👉 [Download Enrollment Acknowledgment](https://satg.telangana.gov.in/cmcup/downloadack)",
-                "source": "static_rule"
-            }
+            return create_api_response(
+                "📥 **Download Acknowledgment:**\n\nYou can find and download your Acknowledgment Number from the official website:\n\n👉 [Download Enrollment Acknowledgment](https://satg.telangana.gov.in/cmcup/downloadack)",
+                "static_rule",
+                session_id
+            )
 
     # 1. Phone Number match - PRIVACY GUARD & VENUE FLOW
     original_query = raw_query.strip() # Keep casing for Reg IDs if needed
@@ -1164,7 +1075,7 @@ async def process_user_query(raw_query: str, session_id: str = None):
         registrations = get_player_venues_by_phone(phone)
         
         if not registrations:
-             return {"response": f"ℹ️ No registrations found for **{phone}**. Please check the number or register at the official site.", "source": "sql_database"}
+             return create_api_response(f"ℹ️ No registrations found for **{phone}**. Please check the number or register at the official site.", "sql_database", session_id)
         
         # Logic: 1 Record vs Multi
         if len(registrations) == 1:
@@ -1182,7 +1093,7 @@ async def process_user_query(raw_query: str, session_id: str = None):
                 txt += f"👤 **{rec.get('cluster_incharge', 'N/A')}**\n"
                 txt += f"📞 **{rec.get('incharge_mobile', 'N/A')}**\n"
             
-            return {"response": txt, "source": "sql_database"}
+            return create_api_response(txt, "sql_database", session_id)
             
         else:
             # Multiple Records
@@ -1192,10 +1103,7 @@ async def process_user_query(raw_query: str, session_id: str = None):
                 txt += f"- {s}\n"
             
             txt += "\nSince you have multiple events, please provide your **Acknowledgment Number** (e.g., SATGCMC-...) to get specific venue details."
-            return {"response": txt, "source": "sql_database"}
-
-            txt += "\nSince you have multiple events, please provide your **Acknowledgment Number** (e.g., SATGCMC-...) to get specific venue details."
-            return {"response": txt, "source": "sql_database"}
+            return create_api_response(txt, "sql_database", session_id)
     
     # 1C. Venue Intent BUT NO Phone -> Prompt
     # If user mentions venue/status/game but didn't provide phone, prompt them.
@@ -1290,9 +1198,7 @@ async def process_user_query(raw_query: str, session_id: str = None):
                     txt += f"**Contact:** {incharge_contact or 'N/A'}\n"
                 
                 
-                final_response = {"response": txt, "source": "sql_database"}
-                print(f"DEBUG RESPONSE ({ack_no}):\n{txt}")
-                return final_response
+                return create_api_response(txt, "sql_database", session_id)
              else:
                  # Fallthrough to RAG if not found? Or explicit error?
                  pass 
@@ -1317,9 +1223,9 @@ async def process_user_query(raw_query: str, session_id: str = None):
                 txt += f"**Teams:** {res.get('team1_name', 'TBD')} vs {res.get('team2_name', 'TBD')}\n"
                 txt += f"**Date:** {res['match_date']} ({res['match_day']}) @ {res['match_time']}\n"
                 txt += f"**Round:** {res['round_name']}"
-                return {"response": txt, "source": "sql_database"}
+                return create_api_response(txt, "sql_database", session_id)
             else:
-                 return {"response": f"❌ No match found with ID **{fid}**.", "source": "sql_database"}
+                 return create_api_response(f"❌ No match found with ID **{fid}**.", "sql_database", session_id)
         except Exception as e:
             print(f"SQL Error: {e}")
 
@@ -1346,7 +1252,7 @@ async def process_user_query(raw_query: str, session_id: str = None):
                      txt = f"### 📅 {clean_sport.title()} Schedule (Next 5)\n"
                      for m in schedules[:5]:
                          txt += f"- **{m.get('event_name')}**: {m.get('team1_name')} vs {m.get('team2_name')} @ {m.get('venue')}\n"
-                     return {"response": txt, "source": "sql_database"}
+                     return create_api_response(txt, "sql_database", session_id)
              except Exception as e:
                  print(f"SQL Error (Schedule): {e}")
 
@@ -1379,9 +1285,9 @@ async def process_user_query(raw_query: str, session_id: str = None):
                         txt += f"**District:** {d.get('parent_district')}"
                     elif t == 'Mandal':
                         txt += f"**District:** {d.get('parent_district')}"
-                    return {"response": txt, "source": "sql_database"}
+                    return create_api_response(txt, "sql_database", session_id)
                 else:
-                    return {"response": f"🚫 **{clean_name}** could not be found in our Village/Mandal/District database.", "source": "sql_database"}
+                    return create_api_response(f"🚫 **{clean_name}** could not be found in our Village/Mandal/District database.", "sql_database", session_id)
             except Exception as e:
                 print(f"SQL Error: {e}")
 
@@ -1422,7 +1328,7 @@ async def process_user_query(raw_query: str, session_id: str = None):
             if "state" in level_keyword: response_txt = schedule_data["state"]
 
         if response_txt:
-             return {"response": f"{response_txt}\n\n*Note: Dates are subject to official guidelines.*", "source": "static_rule_engine"}
+             return create_api_response(f"{response_txt}\n\n*Note: Dates are subject to official guidelines.*", "static_rule_engine", session_id)
 
     # 5.5 Discipline/Level Lookup
     level_pattern = r"(disciplines?|sports?|games?|events?).*?\b(cluster|mandal|district|state)\b\s*(?:level)?"
@@ -1437,7 +1343,7 @@ async def process_user_query(raw_query: str, session_id: str = None):
                 txt = f"### 🏅 Sports at {level_name.title()} Level\n"
                 for g in games:
                     txt += f"- {g}\n"
-                return {"response": txt, "source": "sql_database"}
+                return create_api_response(txt, "sql_database", session_id)
             else:
                  # If SQL doesn't have data (e.g. new disciplines not in DB), Fallback to RAG
                  print(f"ℹ️ SQL found no disciplines for {level_name}. Falling back to RAG.")
@@ -1467,10 +1373,10 @@ async def process_user_query(raw_query: str, session_id: str = None):
                     txt += f"**District:** {res.get('district_name')}\n"
                     txt += f"**Mobile:** {res.get('mobile_no', 'N/A')}\n\n"
                     txt += "Type another Mandal Name or 'Back'."
-                    return {"response": txt, "source": "logic_interceptor"}
+                    return create_api_response(txt, "logic_interceptor", session_id)
                  else:
                      # If specific lookup fails, we can let it fall through or return not found.
-                     return {"response": f"ℹ️ I couldn't find a Mandal In-Charge for **{clean_mandal}**.\nPlease check the spelling (e.g., 'Jainad', 'Bela').", "source": "logic_interceptor"}
+                     return create_api_response(f"ℹ️ I couldn't find a Mandal In-Charge for **{clean_mandal}**.\nPlease check the spelling (e.g., 'Jainad', 'Bela').", "logic_interceptor", session_id)
              except Exception as e:
                  print(f"Error in MEO Interceptor: {e}")
 
@@ -1486,7 +1392,7 @@ async def process_user_query(raw_query: str, session_id: str = None):
         try:
              sql_response = run_sql_agent(original_query)
              if "I try to query" not in sql_response and "error" not in sql_response.lower():
-                 return {"response": sql_response, "source": "sql_agent"}
+                 return create_api_response(sql_response, "sql_agent", session_id)
         except Exception as e:
              print(f"SQL Agent Failed: {e}")
 
@@ -1499,7 +1405,7 @@ async def process_user_query(raw_query: str, session_id: str = None):
             # if agent fails to understand, it might return a generic error.
             # We can check specific error strings if we want to fallback to RAG.
             if "I try to query" not in sql_response and "error" not in sql_response.lower():
-                return {"response": sql_response, "source": "sql_agent"}
+                return create_api_response(sql_response, "sql_agent", session_id)
         except Exception as e:
             print(f"SQL Agent Failed: {e}")
             # Fallthrough to RAG if SQL agent fails
@@ -1512,7 +1418,7 @@ async def process_user_query(raw_query: str, session_id: str = None):
         # Use Lazy Loaded Chain
         rag = get_or_init_rag_chain()
         if not rag:
-             return {"response": "The AI Brain is initializing. Please try again in 10 seconds.", "source": "system"}
+             return create_api_response("The AI Brain is initializing. Please try again in 10 seconds.", "system", session_id)
         
         # Memory Management
         # session_id passed in args
@@ -1521,7 +1427,14 @@ async def process_user_query(raw_query: str, session_id: str = None):
             chat_history = CHAT_SESSIONS.get(session_id, [])
         
         # Invoke Chain with History
-        input_payload = {"question": original_query, "chat_history": chat_history}
+        # Inject Language Instruction
+        lang_code = SESSION_DATA.get(session_id, {}).get('language', 'en')
+        lang_map = {"en": "English", "te": "Telugu", "hi": "Hindi"}
+        lang_name = lang_map.get(lang_code, "English")
+        
+        final_query = f"{original_query} (Answer in {lang_name} language)"
+                     
+        input_payload = {"question": final_query, "chat_history": chat_history}
         
         # rag.invoke now expects a dict because we updated chain.py
         response_data = rag.invoke(input_payload)
@@ -1529,10 +1442,10 @@ async def process_user_query(raw_query: str, session_id: str = None):
         # response_data is a dictionary from ask_llm {"response", "model_used"}
         if isinstance(response_data, dict):
             final_answer = response_data.get("response", "No response")
-            model = response_data.get("model_used", "rag")
+            # model = response_data.get("model_used", "rag") # Logic moved to wrapper
         else:
              final_answer = str(response_data)
-             model = "rag"
+             # model = "rag"
 
         # Update Memory
         if session_id:
@@ -1542,10 +1455,10 @@ async def process_user_query(raw_query: str, session_id: str = None):
             # Keep last 10 turns (20 items)
             CHAT_SESSIONS[session_id] = chat_history[-20:]
 
-        return {"response": final_answer, "source": "rag_knowledge_base", "model_used": model}
+        return create_api_response(final_answer, "rag_knowledge_base", session_id)
     except Exception as e:
         print(f"RAG Crash: {e}")
-        return {"response": f"I encountered an error accessing the knowledge base. Error: {str(e)}", "source": "error_handler"}
+        return create_api_response(f"I encountered an error accessing the knowledge base. Error: {str(e)}", "error_handler", session_id)
 
 @app.post("/chat")
 async def chat_endpoint(request: ChatRequest):

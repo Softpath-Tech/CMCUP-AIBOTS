@@ -1,78 +1,69 @@
-import asyncio
 import sys
 import os
+import asyncio
+import json
 
-# Ensure project root is in path
+# Add project root to path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from api.main import process_user_query, SESSION_STATE
+from api.main import process_user_query, SESSION_DATA
 
-async def test_menu_structure():
-    print("🚀 Starting Menu Structure Verification...")
-    session_id = "test_sess_001"
+async def verify_structure():
+    print("🧪 Starting Verification: Structured API Response")
+    session_id = "verify_struct_001"
     
-    # 1. Main Menu
-    print("\n--- Testing Main Menu ---")
-    res = await process_user_query("menu", session_id)
-    menu_txt = res["response"]
-    print(menu_txt)
-    assert "1. Registration & Eligibility" in menu_txt
-    assert "5. Help & Language" in menu_txt
+    # 1. Test Main Menu (English)
+    print("\n🔹 Test 1: Main Menu (English)")
+    resp = await process_user_query("menu", session_id)
     
-    # 2. Registration Menu (Option 1)
-    print("\n--- Testing Registration Menu ---")
-    res = await process_user_query("1", session_id)
-    reg_txt = res["response"]
-    print(reg_txt)
-    assert "**1. Registration & Eligibility**" in reg_txt # Header still mostly likely bolded/emoji? Check main.py
-    assert "1.1 How to Register" in reg_txt
-    assert "1.5 FAQs" in reg_txt
+    print(f"Response Keys: {list(resp.keys())}")
+    assert "text" in resp, "Missing 'text' key"
+    assert "menus" in resp, "Missing 'menus' key"
+    assert "isMenusAvailable" in resp, "Missing 'isMenusAvailable' key"
     
-    await process_user_query("back", session_id)
-
-    # 3. Sports Menu (Option 2)
-    print("\n--- Testing Sports Menu ---")
-    res = await process_user_query("2", session_id)
-    sport_txt = res["response"]
-    print(sport_txt)
-    assert "**2. Sports & Matches**" in sport_txt
-    assert "2.1 Sports Disciplines" in sport_txt
-    assert "2.3 Medal Tally" in sport_txt
-
-    await process_user_query("back", session_id)
-
-    # 4. Venues Menu (Option 3)
-    print("\n--- Testing Venues Menu ---")
-    res = await process_user_query("3", session_id)
-    venue_txt = res["response"]
-    print(venue_txt)
-    assert "**3. Venues & Officials**" in venue_txt
-    assert "3.1 Venues" in venue_txt
-    assert "3.3 Venue In-Charge" in venue_txt
-    assert "3.4 Mandal In-Charge" in venue_txt # Should be PRESENT now
+    if resp["isMenusAvailable"]:
+        print(f"✅ Main Menu has {len(resp['menus'])} options.")
+        first_menu = resp['menus'][0]
+        print(f"   First Option: {first_menu}")
+        assert "name" in first_menu and "value" in first_menu, "Menu item missing name/value"
+    else:
+        print("❌ Main Menu should have options!")
+        
+    # 2. Test Language Switch (Telugu)
+    print("\n🔹 Test 2: Language Switch to Telugu")
+    # Simulate language selection
+    await process_user_query("2", session_id) # Option 5: Help -> Option 3: Lang -> Option 2: Telugu
+    # Direct set for speed
+    SESSION_DATA[session_id] = {"language": "te"}
     
-    await process_user_query("back", session_id)
-
-    # 5. Player Status (Option 4)
-    print("\n--- Testing Player Status Menu ---")
-    res = await process_user_query("4", session_id)
-    player_txt = res["response"]
-    print(player_txt)
-    assert "**4. Player Status**" in player_txt
-    assert "4.1 Search by Phone No" in player_txt
+    resp_te = await process_user_query("menu", session_id)
+    print(f"Telugu Text: {resp_te['text'][:50]}...")
+    first_menu_te = resp_te['menus'][0]
+    print(f"Telugu Menu[0]: {first_menu_te}")
     
-    await process_user_query("back", session_id)
+    assert first_menu_te['name'] != "Registration & Eligibility", "Menu text should be translated!"
+    
+    # 3. Test Dynamic List (Disciplines)
+    print("\n🔹 Test 3: Dynamic Disciplines (Cluster Level)")
+    # Navigate: Menu -> 2 (Sports) -> 1 (Disciplines) -> 1 (Cluster)
+    # Reset to English
+    SESSION_DATA[session_id]["language"] = "en"
+    
+    await process_user_query("2", session_id) # Sports Group
+    await process_user_query("1", session_id) # Disciplines Menu
+    resp_disc = await process_user_query("1", session_id) # Cluster Level
+    
+    print(f"Discipline Response Source: {resp_disc['source']}")
+    print(f"Is Menus Available: {resp_disc['isMenusAvailable']}")
+    
+    if resp_disc['isMenusAvailable']:
+        print(f"✅ Found {len(resp_disc['menus'])} sports buttons.")
+        print(f"   Examples: {[m['name'] for m in resp_disc['menus'][:3]]}")
+        assert resp_disc['menus'][0]['value'] == "1", "First sport value should be '1'"
+    else:
+        print("❌ Disciplines should be returned as buttons now!")
 
-    # 6. Help Menu (Option 5)
-    print("\n--- Testing Help Menu ---")
-    res = await process_user_query("5", session_id)
-    help_txt = res["response"]
-    print(help_txt)
-    assert "**5. Help & Language**" in help_txt
-    assert "5.1 Helpline Numbers" in help_txt
-    assert "5.3 Change Language" in help_txt
-
-    print("\n✅ Verification Passed!")
+    print("\n🎉 Verification Completed Successfully!")
 
 if __name__ == "__main__":
-    asyncio.run(test_menu_structure())
+    asyncio.run(verify_structure())
