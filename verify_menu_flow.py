@@ -38,7 +38,7 @@ def test_disciplines_logic():
     for key, name in levels.items():
         print(f"\n--- Testing Level: {name} ({key}) ---")
         chat("Hi") # Reset
-        chat("2")  # Select Disciplines
+        chat("MAIN_2")  # Select Sports (Testing MAIN_X payload)
         resp = chat(key) # Select Level
         
         if "Sports at" in resp:
@@ -82,8 +82,10 @@ def test_schedules_logic():
     reset_session()
     
     # Needs a clean conversational flow
+    # Needs a clean conversational flow
     chat("Menu")
-    chat("3") # Schedules
+    chat("MAIN_2") # Sports (Option 2)
+    chat("2") # Schedules (Option 2 of Sports)
     
     # 1. Tournament Schedule
     resp = chat("1")

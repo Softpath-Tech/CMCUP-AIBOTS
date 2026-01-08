@@ -59,9 +59,18 @@ async def verify_structure():
     if resp_disc['isMenusAvailable']:
         print(f"✅ Found {len(resp_disc['menus'])} sports buttons.")
         print(f"   Examples: {[m['name'] for m in resp_disc['menus'][:3]]}")
+        # Submenu items should still be "1", "2" etc.
         assert resp_disc['menus'][0]['value'] == "1", "First sport value should be '1'"
-    else:
+        
+
         print("❌ Disciplines should be returned as buttons now!")
+
+    # 4. Verify Main Menu Keys
+    print("\n🔹 Test 4: Main Menu Keys")
+    resp_main = await process_user_query("menu", session_id)
+    first_main = resp_main['menus'][0]
+    print(f"Main Menu Option 1: {first_main}")
+    assert first_main['value'] == "MAIN_1", f"Expected MAIN_1, got {first_main['value']}"
 
     print("\n🎉 Verification Completed Successfully!")
 

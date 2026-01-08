@@ -375,10 +375,30 @@ async def process_user_query(raw_query: str, session_id: str = None):
          return create_api_response("👋 Chat Session Ended. Type 'Hi' to start again.", "menu_system", session_id)
 
     # Global Reset (Home) Commands
-    if user_query in ["hi", "hello", "menu", "start", "restart", "home", "cmcup"]:
-        if session_id:``
+    if user_query in ["hi", "hello", "menu", "start", "restart", "home", "cmcup"] or user_query.startswith("main_"):
+        if session_id:
             SESSION_STATE[session_id] = MENU_MAIN
-        return create_api_response(get_menu_data(MENU_MAIN, session_id), "menu_system", session_id)
+            
+        # Handle MAIN_X payloads specifically (if user clicked a button from history)
+        if user_query.startswith("main_"):
+            try:
+                # If valid MAIN_X, we might want to let it fall through to the digit logic below?
+                # But digit logic expects "1" not "MAIN_1".
+                # So we must parse it here or transform it.
+                # Transform: split identifiers
+                 choice_idx = int(user_query.split("_")[1])
+                 user_query = str(choice_idx)
+                 # We already reset state to MENU_MAIN above.
+                 # So now user_query="1", state=MENU_MAIN -> will fall through to logic below!
+            except:
+                pass
+
+        # If it's just a reset command, return menu immediately.
+        if user_query in ["hi", "hello", "menu", "start", "restart", "home", "cmcup"]:
+            return create_api_response(get_menu_data(MENU_MAIN, session_id), "menu_system", session_id)
+            
+    # Get Current State
+    current_state = SESSION_STATE.get(session_id, MENU_MAIN) if session_id else MENU_MAIN
         
     # Get Current State
     current_state = SESSION_STATE.get(session_id, MENU_MAIN) if session_id else MENU_MAIN
@@ -698,28 +718,40 @@ async def process_user_query(raw_query: str, session_id: str = None):
         # --- SUB MENU: LANGUAGE ---
         elif current_state == MENU_LANGUAGE:
             resp_text = ""
+            lang_set = False
+            
             if choice == 1:
                 # Set to English
                 if session_id: 
                     if session_id not in SESSION_DATA: SESSION_DATA[session_id] = {}
                     SESSION_DATA[session_id]["language"] = "en"
-                resp_text = "✅ **Language set to English**.\n\nType 'Menu' to go back to main menu."
+                resp_text = "✅ **Language set to English**."
+                lang_set = True
             elif choice == 2:
                 # Set to Telugu
                 if session_id:
                     if session_id not in SESSION_DATA: SESSION_DATA[session_id] = {}
                     SESSION_DATA[session_id]["language"] = "te"
-                resp_text = "✅ **భాష తెలుగుకి మార్చబడింది** (Language set to Telugu).\n\nప్రధాన మెనూకి వెళ్లడానికి 'Menu' అని టైప్ చేయండి."
+                resp_text = "✅ **భాష తెలుగుకి మార్చబడింది** (Language set to Telugu)."
+                lang_set = True
             elif choice == 3:
                 # Set to Hindi
                 if session_id:
                     if session_id not in SESSION_DATA: SESSION_DATA[session_id] = {}
                     SESSION_DATA[session_id]["language"] = "hi"
-                resp_text = "✅ **भाषा हिंदी में सेट की गई है** (Language set to Hindi).\n\nमुख्य मेनू पर जाने के लिए 'Menu' टाइप करें."
+                resp_text = "✅ **भाषा हिंदी में सेट की गई है** (Language set to Hindi)."
+                lang_set = True
             else:
-                resp_text = "❌ Invalid Option. Please select 1, 2, or 3."
+                return create_api_response("❌ Invalid Option. Please select 1, 2, or 3.", "menu_system", session_id)
             
-            return create_api_response(resp_text, "menu_system", session_id)
+            # Auto-Redirect to Main Menu if language changed
+            if lang_set:
+                if session_id: SESSION_STATE[session_id] = MENU_MAIN
+                # Get Main Menu Data in new language
+                menu_data = get_menu_data(MENU_MAIN, session_id)
+                # Prepend the confirmation message
+                menu_data["text"] = resp_text + "\n\n" + menu_data["text"]
+                return create_api_response(menu_data, "menu_system", session_id)
 
         
         # --- SUB MENU: DISCIPLINES (LEVEL Selection) ---

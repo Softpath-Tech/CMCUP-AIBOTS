@@ -243,6 +243,9 @@
         const chatHistory = document.getElementById('chat-history');
         const sendBtn = document.getElementById('send-btn');
 
+        // Store session ID to maintain state (Language, Menu, etc.)
+        let currentSessionId = null;
+
         input.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') sendMessage();
         });
@@ -258,21 +261,27 @@
             sendBtn.disabled = true;
 
             try {
-                // Determine endpoint based on input type (simple heuristic)
-                // If it looks like a phone number, use /chat (which handles sql lookup)
-                // Otherwise use /ask (direct rag)
-                // Actually, let's just use /chat for everything as it's the main router
+                const payload = {
+                    query: query,
+                    session_id: currentSessionId // Send back the session ID
+                };
 
                 const response = await fetch('/chat', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ query: query })
+                    body: JSON.stringify(payload)
                 });
 
                 if (!response.ok) throw new Error('Network error');
 
                 const data = await response.json();
-                addMessage(data.response, 'bot');
+
+                // Update Session ID from server response
+                if (data.session_id) {
+                    currentSessionId = data.session_id;
+                }
+
+                addMessage(data.response || data.text, 'bot'); // Handle both 'response' and 'text' keys
 
             } catch (error) {
                 console.error(error);
@@ -298,7 +307,8 @@
             }
 
             chatHistory.appendChild(div);
-            chatHistory.scrollTop = chatHistory.scrollHeight;
+            // Smooth scroll to bottom
+            chatHistory.scrollTo({ top: chatHistory.scrollHeight, behavior: 'smooth' });
         }
     </script>
 </body>
