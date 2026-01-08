@@ -375,8 +375,8 @@ async def process_user_query(raw_query: str, session_id: str = None):
          return create_api_response("👋 Chat Session Ended. Type 'Hi' to start again.", "menu_system", session_id)
 
     # Global Reset (Home) Commands
-    if user_query in ["hi", "hello", "menu", "start", "restart", "home"]:
-        if session_id:
+    if user_query in ["hi", "hello", "menu", "start", "restart", "home", "cmcup"]:
+        if session_id:``
             SESSION_STATE[session_id] = MENU_MAIN
         return create_api_response(get_menu_data(MENU_MAIN, session_id), "menu_system", session_id)
         
