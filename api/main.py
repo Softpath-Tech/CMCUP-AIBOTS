@@ -555,15 +555,21 @@ async def process_user_query(raw_query: str, session_id: str = None):
     # State: WAITING FOR DISTRICT OFFICER
     if current_state == STATE_WAIT_DIST_OFFICER:
         district_name = user_query
-        print(f"⚡ Intent: District Officer Lookup ({district_name})")
+        # Strip NLQ keywords for better match
+        clean_dist = district_name.lower().replace("incharge", "").replace("officer", "").replace("district", "").strip()
+        print(f"⚡ Intent: District Officer Lookup ({clean_dist})")
         
         try:
              # Lazy import for safety
             from rag.location_search import search_district_officer
-            officer = search_district_officer(district_name)
+            officer = search_district_officer(clean_dist)
             
             if officer:
-                if session_id: SESSION_STATE[session_id] = MENU_OFFICERS_DISTRICT
+                # IMPORTANT: Keep state in WAITING mode to allow sequential lookups (Issue 1)
+                # But we might want to allow "Back" to work. 
+                # If we keep STATE_WAIT_DIST_OFFICER, "Back" needs to be handled in main loop or here.
+                # "Back" is usually handled at top of process_user_query.
+                if session_id: SESSION_STATE[session_id] = STATE_WAIT_DIST_OFFICER # Fix for Sequential Lookup
                 
                 # Format output properly
                 txt = f"### 👮‍♂️ District Sports Officer - {officer.get('district_name')}\n\n"
@@ -573,7 +579,9 @@ async def process_user_query(raw_query: str, session_id: str = None):
                 txt += "Type another District Name or 'Back'."
                 return create_api_response(txt, "file_search", session_id)
             else:
-                return create_api_response(f"ℹ️ No District Sports Officer found for **{district_name}**. Please check the spelling or try another district.\n\nType another district or 'Back'.", "file_search", session_id)
+                 # Keep state to try again
+                 if session_id: SESSION_STATE[session_id] = STATE_WAIT_DIST_OFFICER
+                 return create_api_response(f"ℹ️ No District Sports Officer found for **{clean_dist}**. Please check the spelling or try another district.\n\nType another district or 'Back'.", "file_search", session_id)
         except Exception as e:
             return create_api_response(f"Error searching for district officer: {str(e)}", "error", session_id)
 
@@ -811,16 +819,18 @@ async def process_user_query(raw_query: str, session_id: str = None):
                      SESSION_STATE[session_id] = MENU_GAME_OPTIONS
                      SESSION_DATA[session_id]["selected_sport"] = selected_sport
                 
-                return {
-                    "response": (
-                        f"🏅 **{selected_sport}** - Options\n\n"
-                        "1️⃣ Age Criteria\n"
-                        "2️⃣ Events of the Game\n"
-                        "3️⃣ Rules of Game\n\n"
-                        "🔙 *Type 'Back' to list sports again*"
-                    ),
-                    "source": "menu_system"
-                }
+                # Dynamic Buttons for Game Options
+                buttons = [
+                    {"name": "Age Criteria", "value": "1"},
+                    {"name": "Events of the Game", "value": "2"},
+                    {"name": "Rules of Game", "value": "3"},
+                    {"name": "Back", "value": "Back"}
+                ]
+                
+                return create_api_response({
+                    "text": f"🏅 **{selected_sport}** - Options\n\nSelect an option below:",
+                    "buttons": buttons
+                }, "menu_system", session_id)
             else:
                  return {"response": "❌ Invalid Option. Please select a number from the list above.", "source": "validation_error"}
 
@@ -1012,6 +1022,8 @@ async def process_user_query(raw_query: str, session_id: str = None):
     # 0.4 Age / Rules Lookup Interceptor
     # ...
     # ...
+    # Fix for Crash: Ensure variable exists
+    detected_sport = None
     if detected_sport and detected_sport not in ignored_sports and len(detected_sport) > 2:
         try:
             rules = get_sport_rules(detected_sport)
