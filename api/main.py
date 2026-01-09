@@ -905,17 +905,18 @@ async def process_user_query(raw_query: str, session_id: str = None):
         
         # --- SUB MENU: REG FAQ ---
         elif current_state == MENU_REG_FAQ:
+            lang = SESSION_DATA.get(session_id, {}).get("language", "en")
+            
             if choice == 1: # How to Register
-                return create_api_response("**To Register:**\nVisit [https://satg.telangana.gov.in/cmcup](https://satg.telangana.gov.in/cmcup) and select 'New Registration'.", "static", session_id)
+                return create_api_response(get_translation("TXT_REG_HOWTO", lang), "static", session_id)
             elif choice == 2: # Eligibility Rules
-                # Reuse Age/Rules logic? Or static text? Using static summary + prompt for specifics.
-                return create_api_response("📋 **Eligibility Rules:**\n\n- Age: 15-35 Years.\n- Must be a resident of Telangana.\n- Cannot represent multiple units.\n\nType 'Back' to return.", "static", session_id)
+                return create_api_response(get_translation("TXT_REG_RULES", lang), "static", session_id)
             elif choice == 3: # Documents
-                return create_api_response("**Documents Required:**\nAadhar Card, Photo, and Address Proof.", "static", session_id)
+                return create_api_response(get_translation("TXT_REG_DOCS", lang), "static", session_id)
             elif choice == 4: # Registration Status
-                 return create_api_response("🔍 **Check Registration Status:**\n\nPlease use **Option 4 (Player Status)** from the Main Menu to search by Phone or Acknowledgment Number.\n\nType 'Back' for Main Menu.", "redirect", session_id)
+                 return create_api_response(get_translation("TXT_REG_STATUS", lang), "redirect", session_id)
             elif choice == 5: # FAQs
-                 return create_api_response("❓ **General FAQs:**\n\n- *Is it free?* Yes.\n- *Can I play multiple sports?* Yes, if schedules allow.\n- *Where to report?* Check Venue details.\n\nType 'Back' to return.", "static", session_id)
+                 return create_api_response(get_translation("TXT_REG_FKQ", lang), "static", session_id)
 
         
 
