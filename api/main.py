@@ -358,6 +358,40 @@ def read_root():
 # --------------------------------------------------
 # 8. Main Chat Endpoint (Hybrid Router)
 # --------------------------------------------------
+def get_discipline_response(level_num, session_id):
+    level_map = {1: "cluster", 2: "mandal", 3: "assembly", 4: "district", 5: "state"}
+    if level_num in level_map:
+        from rag.sql_queries import get_disciplines_by_level
+        level_name = level_map[level_num]
+        try:
+            games = get_disciplines_by_level(level_name)
+            
+            titles = {
+                "cluster": "Cluster / Gram Panchayat Level",
+                "mandal": "Mandal Level",
+                "assembly": "Assembly Constituency Level",
+                "district": "District Level",
+                "state": "State Level"
+            }
+            display_title = titles.get(level_name, level_name.title() + " Level")
+
+            if games:
+                if session_id:
+                    SESSION_STATE[session_id] = MENU_SELECT_SPORT
+                    SESSION_DATA[session_id] = {"sports": games, "level_title": display_title}
+
+                buttons = [{"name": g, "value": str(i)} for i, g in enumerate(games, 1)]
+                buttons.append({"name": "Back", "value": "Back"})
+                
+                txt = f"### 🏅 Sports at {display_title}\n\nSelect a sport below:"
+                return create_api_response({"text": txt, "buttons": buttons}, "sql_database", session_id)
+            else:
+                 return create_api_response(f"ℹ️ No sports found specifically for **{display_title}** in the database.", "sql_database", session_id)
+        except Exception as e:
+            print(f"Error fetching disciplines: {e}")
+            return create_api_response("❌ An error occurred while fetching disciplines. Please try again.", "error_handler", session_id)
+    return None
+
 async def process_user_query(raw_query: str, session_id: str = None):
     """
     Unified Logic Handler: Menu -> SQL -> RAG
@@ -403,6 +437,18 @@ async def process_user_query(raw_query: str, session_id: str = None):
     # Get Current State
     current_state = SESSION_STATE.get(session_id, MENU_MAIN) if session_id else MENU_MAIN
     
+    # Global Interceptor for Level Switching (Fix for Cross-Menu Navigation)
+    if user_query.startswith("level_"):
+        try:
+            lvl_num = int(user_query.split("_")[1].strip())
+            # Directly handle logic
+            resp = get_discipline_response(lvl_num, session_id)
+            if resp:
+                if session_id: SESSION_STATE[session_id] = MENU_DISCIPLINES # Update state to reflect we *were* here, though logic moves us to SELECT_SPORT
+                return resp
+        except:
+            pass
+
     # Global Back Command
     if user_query in ["back", "previous", "return", "exit"]:
         # Logic to return to parent
@@ -669,6 +715,7 @@ async def process_user_query(raw_query: str, session_id: str = None):
                 if session_id: SESSION_STATE[session_id] = MENU_GROUP_HELP
                 return create_api_response(get_menu_data(MENU_GROUP_HELP, session_id), "menu_system", session_id)
         
+
         # --- INTERMEDIATE GROUPS ---
         elif current_state == MENU_GROUP_SPORTS:
             if choice == 1:
@@ -762,48 +809,6 @@ async def process_user_query(raw_query: str, session_id: str = None):
                 return create_api_response(menu_data, "menu_system", session_id)
 
         
-        # --- SUB MENU: DISCIPLINES (LEVEL Selection) ---
-        elif current_state == MENU_DISCIPLINES:
-            level_map = {
-                1: "cluster",
-                2: "mandal",
-                3: "assembly",
-                4: "district",
-                5: "state"
-            }
-            if choice in level_map:
-                level_name = level_map[choice]
-                try:
-                    from rag.sql_queries import get_disciplines_by_level
-                    games = get_disciplines_by_level(level_name)
-                    
-                    # Display titles mapping
-                    titles = {
-                        "cluster": "Cluster / Gram Panchayat Level",
-                        "mandal": "Mandal Level",
-                        "assembly": "Assembly Constituency Level",
-                        "district": "District Level",
-                        "state": "State Level"
-                    }
-                    display_title = titles.get(level_name, level_name.title() + " Level")
-
-                    if games:
-                        # Store in Session Data
-                        if session_id:
-                            SESSION_STATE[session_id] = MENU_SELECT_SPORT
-                            SESSION_DATA[session_id] = {"sports": games, "level_title": display_title}
-
-                        # Dynamic Buttons
-                        buttons = [{"name": g, "value": str(i)} for i, g in enumerate(games, 1)]
-                        buttons.append({"name": "Back", "value": "Back"})
-                        
-                        txt = f"### 🏅 Sports at {display_title}\n\nSelect a sport below:"
-                        return create_api_response({"text": txt, "buttons": buttons}, "sql_database", session_id)
-                    else:
-                         return create_api_response(f"ℹ️ No sports found specifically for **{display_title}** in the database.", "sql_database", session_id)
-                except Exception as e:
-                    print(f"Error fetching disciplines: {e}")
-                    return {"response": "❌ An error occurred while fetching disciplines. Please try again.", "source": "error_handler"}
 
         # --- SUB MENU: SELECT SPORT (Drill Down) ---
         elif current_state == MENU_SELECT_SPORT:
@@ -1041,7 +1046,8 @@ async def process_user_query(raw_query: str, session_id: str = None):
             print(f"Error in Age Interceptor: {e}")
 
     # 0.5 Participation Stats (New)
-    # ...
+    stats_keywords = ["how many", "participation", "players", "registered", "total count", "status"]
+    rule_exclusions = ["rule", "age", "criteria", "terms", "condition"]
     
     if any(k in user_query for k in stats_keywords) and not any(e in user_query for e in rule_exclusions):
         from rag.sql_queries import get_participation_stats
