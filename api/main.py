@@ -362,7 +362,12 @@ async def process_user_query(raw_query: str, session_id: str = None):
     """
     Unified Logic Handler: Menu -> SQL -> RAG
     """
+    detected_sport = None
+
     user_query = raw_query.strip().lower()
+    stats_keywords = ["stats", "statistics", "score", "points", "runs", "goals", "matches"]
+    rule_exclusions = ["rules", "eligibility", "age", "criteria"]
+
     # session_id passed as argument
     
     # ------------------------------------------------
@@ -376,7 +381,7 @@ async def process_user_query(raw_query: str, session_id: str = None):
 
     # Global Reset (Home) Commands
     if user_query in ["hi", "hello", "menu", "start", "restart", "home", "cmcup"]:
-        if session_id:``
+        if session_id:
             SESSION_STATE[session_id] = MENU_MAIN
         return create_api_response(get_menu_data(MENU_MAIN, session_id), "menu_system", session_id)
         
