@@ -194,18 +194,45 @@ def get_geo_details(name):
 def get_sport_schedule(sport_name):
     """
     Get all matches/events for a specific sport.
-    Join tb_events and tb_fixtures.
+    1. Lookup game_id from tb_discipline.
+    2. Query tb_fixtures by disc_id.
     """
     ds = get_datastore()
     if not ds.initialized: ds.init_db()
     
-    # 1. Find Discipline ID from tb_discipline or guess based on name?
-    # Actually tb_events has discipline_id.
-    # Let's search tb_events for event_name or sport name.
+    # 1. Get Game ID
+    info = get_discipline_info(sport_name)
+    if not info:
+        return []
     
-    # Check tb_events for matches
-    # tb_events: id, event_name, event_description, discipline_id...
-    # tb_fixtures: fixture_id, disc_id, venue...
+    game_id = info['game_id']
+    game_name = info['dist_game_nm']
+    
+    # 2. Query Fixtures
+    query = """
+    SELECT 
+        f.fixture_id,
+        f.match_no,
+        f.venue,
+        f.match_date,
+        f.match_time,
+        f.round_name,
+        d1.districtname as team1_name,
+        d2.districtname as team2_name,
+        e.event_name,
+        ? as sport_name
+    FROM tb_fixtures f
+    LEFT JOIN tb_events e ON f.disc_id = e.discipline_id AND (f.gender = e.cat_gend OR e.cat_gend IS NULL) 
+    LEFT JOIN districtmaster d1 ON f.team1_dist_id = d1.districtno
+    LEFT JOIN districtmaster d2 ON f.team2_dist_id = d2.districtno
+    WHERE f.disc_id = ?
+    LIMIT 10
+    """
+    # Note: Joining tb_events here is tricky because many events map to one discipline. 
+    # Without a specific event_id in fixtures, we might get duplicates if we just join on disc_id.
+    # tb_fixtures DOES NOT seem to have event_id. It has disc_id.
+    # So we should probably NOT join tb_events unless we are sure.
+    # Revised Query: Just get fixtures for the sport.
     
     query = """
     SELECT 
@@ -217,17 +244,16 @@ def get_sport_schedule(sport_name):
         f.round_name,
         d1.districtname as team1_name,
         d2.districtname as team2_name,
-        e.event_name
+        ? as sport_name
     FROM tb_fixtures f
-    JOIN tb_events e ON f.disc_id = e.discipline_id
     LEFT JOIN districtmaster d1 ON f.team1_dist_id = d1.districtno
     LEFT JOIN districtmaster d2 ON f.team2_dist_id = d2.districtno
-    WHERE LOWER(e.event_name) LIKE ? OR LOWER(f.venue) LIKE ?
-    LIMIT 10
+    WHERE f.disc_id = ?
+    ORDER BY f.match_date, f.match_time
+    LIMIT 15
     """
-    # Simple fuzzy search on event name or venue
-    q_str = f"%{sport_name.strip().lower()}%"
-    df = ds.query(query, (q_str, q_str))
+    
+    df = ds.query(query, (game_name, game_id))
     
     if df.empty:
         return []

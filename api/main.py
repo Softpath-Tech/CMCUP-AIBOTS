@@ -124,7 +124,7 @@ GLOBAL_NAV_MAP = {
     "2.3": {"type": "menu", "target": MENU_MEDALS},
     
     # 2.2 Schedule Sub-menu
-    "2.2.1": {"type": "text", "msg": "**Tournament Schedule:**\nComing soon! Please check the official website."}, # Placeholder
+    "2.2.1": {"type": "text", "msg": "🗓️ **Tournament Schedule**\n\n🔸 **Gram Panchayat / Cluster:** 17 Jan - 22 Jan 2026\n🔸 **Mandal Level:** 28 Jan - 31 Jan 2026\n🔸 **Assembly Constituency:** 03 Feb - 07 Feb 2026\n🔸 **District Level:** 10 Feb - 14 Feb 2026\n🔸 **State Level:** 19 Feb - 26 Feb 2026\n\n🔙 *Type 'Back' to return to Main Menu*"},
     "2.2.2": {"type": "state_prompt", "target": STATE_WAIT_SPORT_SCHEDULE, "msg": "🏀 **Game Schedule Lookup**\n\nPlease enter the **Sport Name** (e.g., Cricket, Kabaddi)."},
 
     # 3. Venues
@@ -414,7 +414,8 @@ def get_discipline_response(level_num, session_id):
             if games:
                 if session_id:
                     SESSION_STATE[session_id] = MENU_SELECT_SPORT
-                    SESSION_DATA[session_id] = {"sports": games, "level_title": display_title}
+                    if session_id not in SESSION_DATA: SESSION_DATA[session_id] = {}
+                    SESSION_DATA[session_id].update({"sports": games, "level_title": display_title})
 
                 buttons = [{"name": g, "value": str(i)} for i, g in enumerate(games, 1)]
                 buttons.append({"name": "Back", "value": "Back"})
@@ -504,7 +505,7 @@ async def process_user_query(raw_query: str, session_id: str = None):
             # Directly handle logic
             resp = get_discipline_response(lvl_num, session_id)
             if resp:
-                if session_id: SESSION_STATE[session_id] = MENU_DISCIPLINES # Update state to reflect we *were* here, though logic moves us to SELECT_SPORT
+                # SESSION_STATE is updated inside get_discipline_response
                 return resp
         except:
             pass
@@ -512,6 +513,32 @@ async def process_user_query(raw_query: str, session_id: str = None):
     # ------------------------------------------------
     # GLOBAL NUMERIC INTERCEPTOR (1.1, 2.1, etc.)
     # ------------------------------------------------
+    
+    # MANUAL OVERRIDE FOR VENUES (3.1) - Dynamic Data
+    if user_query == "3.1":
+        from rag.data_store import get_datastore
+        ds = get_datastore()
+        if not ds.initialized: ds.init_db()
+        
+        # Query distinct venues
+        df = ds.query("SELECT DISTINCT venue FROM tb_fixtures WHERE venue IS NOT NULL AND venue != ''")
+        
+        if not df.empty:
+            venues = [v['venue'] for v in df.to_dict(orient="records")]
+            venues = sorted(list(set([v.strip() for v in venues if v and str(v).lower() != 'nan'])))
+            
+            if not venues:
+                 return create_api_response("ℹ️ No specific venue names are currently listed in the schedule.", "sql_database", session_id)
+                 
+            txt = "### 🏟️ Tournament Venues\n\nThe following venues are hosting matches:\n\n"
+            for v in venues[:50]:
+                txt += f"• **{v}**\n"
+            
+            txt += "\nType a **Venue Name** or 'Back'."
+            return create_api_response(txt, "sql_database", session_id)
+        else:
+            return create_api_response("ℹ️ No venue information found in the schedule database.", "sql_database", session_id)
+
     if user_query in GLOBAL_NAV_MAP:
         print(f"⚡ Global Navigation Triggered: {user_query}")
         nav = GLOBAL_NAV_MAP[user_query]
@@ -826,8 +853,30 @@ async def process_user_query(raw_query: str, session_id: str = None):
         elif current_state == MENU_GROUP_VENUES:
             # 1. Venues, 2. Dist Officers, 3. Cluster In-Charge
             if choice == 1:
-                 if session_id: SESSION_STATE[session_id] = MENU_VENUES
-                 return create_api_response(get_menu_data(MENU_VENUES, session_id), "menu_system", session_id)
+                # LIST VENUES (Menu 3.1) - Dynamic Data
+                from rag.data_store import get_datastore
+                ds = get_datastore()
+                if not ds.initialized: ds.init_db()
+                
+                # Query distinct venues
+                lang = SESSION_DATA.get(session_id, {}).get("language", "en")
+                df = ds.query("SELECT DISTINCT venue FROM tb_fixtures WHERE venue IS NOT NULL AND venue != ''")
+                
+                if not df.empty:
+                    venues = [v['venue'] for v in df.to_dict(orient="records")]
+                    venues = sorted(list(set([v.strip() for v in venues if v and str(v).lower() != 'nan'])))
+                    
+                    if not venues:
+                         return create_api_response("ℹ️ No specific venue names are currently listed in the schedule.", "sql_database", session_id)
+                         
+                    txt = get_translation("TXT_VENUE_LIST_HEADER", lang)["text"]
+                    for v in venues[:50]:
+                        txt += f"• **{v}**\n"
+                    
+                    txt += "\nType a **Venue Name** or 'Back'."
+                    return create_api_response(txt, "sql_database", session_id)
+                else:
+                    return create_api_response("ℹ️ No venue information found in the schedule database.", "sql_database", session_id)
             elif choice == 2:
                  try:
                      if session_id: SESSION_STATE[session_id] = STATE_WAIT_DIST_OFFICER
@@ -977,31 +1026,25 @@ async def process_user_query(raw_query: str, session_id: str = None):
         # --- SUB MENU: REGISTRATION (PLAYER DETAILS) ---
         # --- SUB MENU: PLAYER STATUS ---
         elif current_state == MENU_PLAYER_STATUS:
+            lang = SESSION_DATA.get(session_id, {}).get("language", "en")
             if choice == 1:
                 # Search by Phone No
                 if session_id: SESSION_STATE[session_id] = STATE_WAIT_PHONE
-                return create_api_response("📱 **Search by Phone No**\n\nPlease enter your registered **Mobile Number** (10 digits).", "menu_system", session_id)
+                return create_api_response(get_translation("TXT_PLAYER_STATUS_PHONE_PROMPT", lang), "menu_system", session_id)
             elif choice == 2:
                 # Search by Acknowledgment No
                 if session_id: SESSION_STATE[session_id] = STATE_WAIT_ACK
-                return create_api_response("🔢 **Search by Acknowledgment No**\n\nPlease enter your **Acknowledgment Number** (e.g., SATGCMC-...).", "menu_system", session_id)
+                return create_api_response(get_translation("TXT_PLAYER_STATUS_ACK_PROMPT", lang), "menu_system", session_id)
 
         # --- SUB MENU: DISCIPLINES ---
         elif current_state == MENU_DISCIPLINES:
             level_map = {1: "cluster", 2: "mandal", 3: "assembly", 4: "district", 5: "state"}
             if choice in level_map:
-                from rag.sql_queries import get_disciplines_by_level
-                lvl_name = level_map[choice]
-                discs = get_disciplines_by_level(lvl_name)
-                
-                txt = f"🏆 **Disciplines at {lvl_name.title()} Level:**\n\n"
-                if discs:
-                    for d in discs:
-                        txt += f"• {d.get('dist_game_nm')}\n"
-                    txt += "\nType a **Sport Name** for rules or schedule."
+                resp = get_discipline_response(choice, session_id)
+                if resp:
+                    return resp
                 else:
-                    txt += "ℹ️ No specific disciplines listed for this level yet."
-                return create_api_response(txt, "sql_database", session_id)
+                     return create_api_response("ℹ️ No sports found for this level.", "sql_database", session_id)
         
         # --- SUB MENU: REG FAQ ---
         elif current_state == MENU_REG_FAQ:
@@ -1023,16 +1066,11 @@ async def process_user_query(raw_query: str, session_id: str = None):
         # --- SUB MENU: SCHEDULE ---
         # --- SUB MENU: SCHEDULE ---
         elif current_state == MENU_SCHEDULE:
+            lang = SESSION_DATA.get(session_id, {}).get("language", "en")
             if choice == 1:
-                # Tournament Schedule (Static)
+                # Tournament Schedule (Localized)
                 return create_api_response(
-                    "🗓️ **Tournament Schedule**\n\n"
-                    "🔸 **Gram Panchayat / Cluster:** 17 Jan - 22 Jan 2026\n"
-                    "🔸 **Mandal Level:** 28 Jan - 31 Jan 2026\n"
-                    "🔸 **Assembly Constituency:** 03 Feb - 07 Feb 2026\n"
-                    "🔸 **District Level:** 10 Feb - 14 Feb 2026\n"
-                    "🔸 **State Level:** 19 Feb - 26 Feb 2026\n\n"
-                    "🔙 *Type 'Back' to return to Main Menu*",
+                    get_translation("TXT_TOURNAMENT_SCHEDULE", lang),
                     "static_data",
                     session_id
                 )
@@ -1040,9 +1078,7 @@ async def process_user_query(raw_query: str, session_id: str = None):
                 # Games Schedule (Game Search)
                 if session_id: SESSION_STATE[session_id] = MENU_SCHEDULE_GAME_SEARCH
                 return create_api_response(
-                    "🏅 **Games Schedule**\n\n"
-                    "Please enter the Name of the Game you are looking for.\n"
-                    "Example: *Kabaddi, Athletics, Cricket*",
+                    get_translation("TXT_SCHEDULE_GAME_SEARCH_PROMPT", lang),
                     "menu_system",
                     session_id
                 )
@@ -1053,7 +1089,14 @@ async def process_user_query(raw_query: str, session_id: str = None):
              
         # --- SUB MENU: OFFICERS ---
         elif current_state == MENU_OFFICERS:
-            pass
+            if choice == 1:
+                 if session_id: SESSION_STATE[session_id] = STATE_WAIT_DIST_OFFICER
+                 return create_api_response(get_menu_data("MENU_OFFICERS_DISTRICT", session_id), "menu_system", session_id)
+            elif choice == 2:
+                 if session_id: SESSION_STATE[session_id] = STATE_WAIT_CLUSTER_INCHARGE
+                 return create_api_response(get_menu_data("MENU_OFFICERS_CLUSTER", session_id), "menu_system", session_id)
+
+
 
 
         # Catch-all for invalid numbers in a menu context
@@ -1063,28 +1106,54 @@ async def process_user_query(raw_query: str, session_id: str = None):
     # END MENU MACHINE (DIGIT HANDLING)
     # ------------------------------------------------
 
+    if current_state == MENU_REG_FAQ and not user_query.isdigit():
+        # Check for sport rules lookup
+
+        rules = get_sport_rules(user_query)
+        if rules:
+            txt = f"### 🎂 Age Criteria for {rules.get('sport_name')}\n\n"
+            txt += f"**Min Age:** {rules.get('min_age')} years\n"
+            txt += f"**Max Age:** {rules.get('max_age')} years\n"
+            txt += f"**Team Size:** {rules.get('team_size') or 'Individual'}\n"
+            txt += f"**Para Event:** {'Yes' if rules.get('is_para')=='1' else 'No'}\n\n"
+            txt += "Type another sport to check, or 'Back'."
+            return create_api_response(txt, "sql_database", session_id)
+        else:
+             pass 
+
     # --- TEXT INPUT HANDLING FOR MENUS ---
     if current_state == MENU_SCHEDULE_GAME_SEARCH and not user_query.isdigit():
-        from rag.sql_queries import get_discipline_info
-        info = get_discipline_info(user_query)
+
+        matches = get_sport_schedule(user_query)
         
-        if info:
-             game_id = info['game_id']
-             game_name = info['dist_game_nm']
-             url = f"https://satg.telangana.gov.in/cmcup/viewschedulegames/{game_id}"
-             return create_api_response(
-                 f"🗓️ **Schedule for {game_name}**\n\n"
-                 f"You can view the specific schedule and fixtures here:\n"
-                 f"👉 [View {game_name} Schedule]({url})",
-                 "sql_database",
-                 session_id
-             )
+        if matches:
+             sport_name = matches[0].get('sport_name', user_query)
+             txt = f"🗓️ **Schedule for {sport_name}**\n\n"
+             for m in matches:
+                 date_str = m.get('match_date') or "TBD"
+                 time_str = m.get('match_time') or ""
+                 venue_str = m.get('venue') or "TBD"
+                 team1 = m.get('team1_name') or "Team A"
+                 team2 = m.get('team2_name') or "Team B"
+                 row = f"🔸 **{team1} vs {team2}**\n   📅 {date_str} {time_str} | 🏟️ {venue_str}\n"
+                 txt += row
+             
+             txt += "\nType another sport to check, or 'Back'."
+             return create_api_response(txt, "sql_database", session_id)
         else:
              return create_api_response(
-                 f"❌ Could not find a game named '**{user_query}**'.\nPlease check the spelling (e.g., 'Athletics', 'Kabaddi') and try again.", 
+                 f"❌ Could not find specific matches for '**{user_query}**'.\nPlease check the spelling (e.g., 'Athletics', 'Kabaddi') or it might not be scheduled yet.", 
                  "sql_database",
                  session_id
              )
+
+    # --- SUB MENU: VENUES (Text Input or Direct) ---
+    # Note: If MENU_VENUES was entered via button and has no further input state, it might fall through here.
+    # But usually MENU_VENUES is handled in the digit section if it has sub-options.
+    # If it's a leaf node that just displays info, it should be handled in the digit section above.
+    # Let's check where MENU_VENUES (Menu 3.1) is handled.
+    # It is currently handled in the digit section? No, it was just a PLACEHOLDER in previous code.
+    # We need to find the block for MENU_GROUP_VENUES -> Choice 1 (Venues).
 
     if current_state == MENU_OFFICERS and not user_query.isdigit():
         # User entered cluster name?
@@ -1145,7 +1214,7 @@ async def process_user_query(raw_query: str, session_id: str = None):
     rule_exclusions = ["rule", "age", "criteria", "terms", "condition"]
     
     if any(k in user_query for k in stats_keywords) and not any(e in user_query for e in rule_exclusions):
-        from rag.sql_queries import get_participation_stats
+
         count = get_participation_stats()
         return create_api_response(
             f"📊 **Participation Status:**\n\nA total of **{count} players** have registered for the Chief Minister's Cup (CM Cup) 2025 so far!",
@@ -1378,9 +1447,6 @@ async def process_user_query(raw_query: str, session_id: str = None):
                  return create_api_response(f"❌ No match found with ID **{fid}**.", "sql_database", session_id)
         except Exception as e:
             print(f"SQL Error: {e}")
-
-    # 4. Sport Schedule (New)
-    # Supports "Schedule for Cricket" AND "Cricket Schedule"
     sport_pattern_1 = r'(?:schedule|events|matches)\s*(?:for|of|in)?\s*([a-zA-Z\s]+)'
     sport_pattern_2 = r'([a-zA-Z\s]+?)\s*(?:schedule|events|matches)'
     
