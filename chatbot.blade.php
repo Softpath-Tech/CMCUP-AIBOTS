@@ -1,0 +1,656 @@
+<style>
+    /* Chatbot Container Styles */
+    #chat-icon {
+        position: fixed;
+        bottom: 30px;
+        right: 30px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        width: 65px;
+        height: 65px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 28px;
+        cursor: pointer;
+        z-index: 9999;
+        box-shadow: 0 8px 24px rgba(102, 126, 234, 0.4);
+        transition: all 0.3s ease;
+    }
+
+    #chat-icon:hover {
+        transform: scale(1.1);
+        box-shadow: 0 12px 32px rgba(102, 126, 234, 0.6);
+    }
+
+    #chat-icon img {
+        width: 35px;
+        height: 35px;
+        filter: brightness(0) invert(1);
+    }
+
+    #chat-box {
+        position: fixed;
+        bottom: 110px;
+        right: 30px;
+        width: 380px;
+        height: 550px;
+        background: #ffffff;
+        border-radius: 20px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        display: none;
+        flex-direction: column;
+        z-index: 9999;
+        overflow: hidden;
+        animation: slideIn 0.3s ease-out;
+    }
+
+    @keyframes slideIn {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    #chat-box.show {
+        display: flex;
+    }
+
+    #chat-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 20px;
+        font-weight: 600;
+        font-size: 18px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    #chat-header .close-btn {
+        cursor: pointer;
+        font-size: 24px;
+        transition: transform 0.2s;
+        width: 30px;
+        height: 30px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+    }
+
+    #chat-header .close-btn:hover {
+        transform: rotate(90deg);
+        background: rgba(255, 255, 255, 0.2);
+    }
+
+    #chat-body {
+        flex: 1;
+        padding: 20px;
+        overflow-y: auto;
+        background: #f8f9fa;
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+    }
+
+    #chat-body::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    #chat-body::-webkit-scrollbar-track {
+        background: #f1f1f1;
+    }
+
+    #chat-body::-webkit-scrollbar-thumb {
+        background: #667eea;
+        border-radius: 3px;
+    }
+
+    .message {
+        display: flex;
+        align-items: flex-end;
+        gap: 8px;
+        animation: messageSlide 0.3s ease-out;
+    }
+
+    @keyframes messageSlide {
+        from {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    /* Wrap content to allow stacking options below bubble */
+    .message-content {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+        max-width: 80%;
+    }
+
+    .message.user {
+        flex-direction: row-reverse;
+    }
+
+    .message.user .message-content {
+        align-items: flex-end;
+    }
+
+    .message-bubble {
+        padding: 12px 16px;
+        border-radius: 18px;
+        font-size: 14px;
+        line-height: 1.5;
+        word-wrap: break-word;
+        white-space: pre-wrap;
+        /* Preserve newlines */
+    }
+
+    .message.user .message-bubble {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-bottom-right-radius: 4px;
+    }
+
+    .message.bot .message-bubble {
+        background: white;
+        color: #333;
+        border-bottom-left-radius: 4px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    /* Message Options (Buttons) */
+    .message-options {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+        margin-top: 5px;
+        width: 100%;
+    }
+
+    .option-btn {
+        background: white;
+        border: 1px solid #667eea;
+        color: #667eea;
+        padding: 8px 12px;
+        border-radius: 12px;
+        cursor: pointer;
+        font-size: 13px;
+        transition: all 0.2s;
+        text-align: left;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    }
+
+    .option-btn:hover {
+        background: #f0f4ff;
+        transform: translateX(2px);
+    }
+
+    .typing-indicator {
+        display: flex;
+        gap: 4px;
+        padding: 12px 16px;
+        background: white;
+        border-radius: 18px;
+        width: fit-content;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .typing-indicator span {
+        width: 8px;
+        height: 8px;
+        background: #667eea;
+        border-radius: 50%;
+        animation: typing 1.4s infinite;
+    }
+
+    .typing-indicator span:nth-child(2) {
+        animation-delay: 0.2s;
+    }
+
+    .typing-indicator span:nth-child(3) {
+        animation-delay: 0.4s;
+    }
+
+    @keyframes typing {
+
+        0%,
+        60%,
+        100% {
+            transform: translateY(0);
+            opacity: 0.7;
+        }
+
+        30% {
+            transform: translateY(-10px);
+            opacity: 1;
+        }
+    }
+
+    #chat-footer {
+        display: flex;
+        border-top: 1px solid #e0e0e0;
+        background: white;
+        padding: 15px;
+        gap: 10px;
+    }
+
+    #chat-input {
+        flex: 1;
+        padding: 12px 16px;
+        border: 2px solid #e0e0e0;
+        border-radius: 25px;
+        font-size: 14px;
+        outline: none;
+        transition: border-color 0.3s;
+    }
+
+    #chat-input:focus {
+        border-color: #667eea;
+    }
+
+    #send-btn {
+        padding: 12px 24px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        border-radius: 25px;
+        cursor: pointer;
+        font-weight: 600;
+        font-size: 14px;
+        transition: all 0.3s;
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+    }
+
+    #send-btn:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+    }
+
+    #send-btn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+
+    .error-message {
+        background: #fee;
+        color: #c33;
+        padding: 12px 16px;
+        border-radius: 18px;
+        font-size: 14px;
+        text-align: center;
+    }
+
+    /* Mobile Responsive */
+    @media (max-width: 480px) {
+        #chat-box {
+            width: calc(100vw - 40px);
+            height: calc(100vh - 140px);
+            right: 20px;
+            bottom: 100px;
+        }
+
+        #chat-icon {
+            right: 20px;
+            bottom: 20px;
+        }
+    }
+
+    /* Reset Button Style */
+    #chat-header .refresh-btn {
+        cursor: pointer;
+        font-size: 20px;
+        transition: transform 0.2s;
+        width: 30px;
+        height: 30px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        margin-right: 5px;
+    }
+
+    #chat-header .refresh-btn:hover {
+        transform: rotate(180deg);
+        background: rgba(255, 255, 255, 0.2);
+    }
+</style>
+
+<!-- Chat Icon -->
+<div id="chat-icon" onclick="toggleChat()">
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+        style="width: 32px; height: 32px;">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+    </svg>
+</div>
+
+<!-- Chat Box -->
+<div id="chat-box">
+    <div id="chat-header">
+        <div>
+            <div style="font-size: 18px; font-weight: 600;">CM Cup Support</div>
+            <div style="font-size: 12px; opacity: 0.9; margin-top: 2px;">We're here to help!</div>
+        </div>
+        <div style="display: flex; align-items: center;">
+            <span class="refresh-btn" onclick="resetChatSession(event)" title="Reset Chat">🔄</span>
+            <span class="close-btn" onclick="toggleChat()" title="Close">✖</span>
+        </div>
+    </div>
+
+    <div id="chat-body">
+    </div>
+
+    <div id="chat-footer">
+        <input type="text" id="chat-input" placeholder="Type your message..." onkeypress="handleKeyPress(event)" />
+        <button id="send-btn" onclick="sendMessage()">Send</button>
+    </div>
+</div>
+
+<script>
+    let currentSessionId = null;
+    let isChatInitialized = false;
+
+    function toggleChat() {
+        const chatBox = document.getElementById('chat-box');
+        chatBox.classList.toggle('show');
+
+        if (chatBox.classList.contains('show')) {
+            document.getElementById('chat-input').focus();
+            if (!isChatInitialized) {
+                isChatInitialized = true;
+                sendMessage('Hi', true);
+            }
+        }
+    }
+
+    function resetChatSession(event) {
+        if (event) event.stopPropagation();
+        currentSessionId = null;
+        const chatBody = document.getElementById('chat-body');
+        // Clear chat history
+        chatBody.innerHTML = '';
+
+        // Clear input
+        document.getElementById('chat-input').value = '';
+
+        // Reset controls state
+        document.getElementById('send-btn').disabled = false;
+        document.getElementById('chat-input').disabled = false;
+        document.getElementById('chat-input').focus();
+
+        // Trigger Hi
+        isChatInitialized = true;
+        sendMessage('Hi', true);
+    }
+
+    function handleKeyPress(event) {
+        if (event.key === 'Enter') {
+            sendMessage();
+        }
+    }
+
+    function processMessageText(text) {
+        const lines = text.split('\n');
+        const options = [];
+        const cleanLines = [];
+        // Regex to match lines starting with a number, followed by optional non-word chars (emojis, dots), then space, then text
+        // This handles "1️⃣ Player", "1. Player", "1 Player" etc.
+        const regex = /^(\d+)[^\w\s]*\s+(.+)$/;
+
+        lines.forEach(line => {
+            const trimmedLine = line.trim();
+            const match = trimmedLine.match(regex);
+            if (match) {
+                options.push({
+                    value: match[1], // The number (e.g., "1")
+                    label: trimmedLine // Keep the full line as label e.g., "1️⃣ Player Registration..."
+                });
+            } else {
+                cleanLines.push(line);
+            }
+        });
+        let cleanText = cleanLines.join('\n').trim();
+        // Remove excessive newlines (more than 2) caused by removing option lines
+        cleanText = cleanText.replace(/\n{3,}/g, '\n\n');
+
+        return {
+            options: options,
+            cleanText: cleanText
+        };
+    }
+
+    function formatMessage(text) {
+        // Escape HTML special characters to prevent XSS
+        let formatted = text.replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+
+        // Convert ### text to Heading 3
+        formatted = formatted.replace(/^### (.*$)/gm, '<h3 style="margin: 5px 0; font-size: 16px; font-weight: 700;">$1</h3>');
+
+        // Convert ## text to Heading 2
+        formatted = formatted.replace(/^## (.*$)/gm, '<h2 style="margin: 6px 0; font-size: 17px; font-weight: 700;">$1</h2>');
+
+        // Convert # text to Heading 1
+        formatted = formatted.replace(/^# (.*$)/gm, '<h1 style="margin: 8px 0; font-size: 18px; font-weight: 700;">$1</h1>');
+
+        // Convert **text** to Extra Bold (font-weight: 800)
+        formatted = formatted.replace(/\*\*(.*?)\*\*/g, '<strong style="font-weight: 800;">$1</strong>');
+
+        // Convert *text* to Semi Bold (font-weight: 600)
+        formatted = formatted.replace(/\*(.*?)\*/g, '<span style="font-weight: 600;">$1</span>');
+
+        // Convert Markdown links [text](url) to clickable links
+        formatted = formatted.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" style="color: #667eea; text-decoration: underline; font-weight: 500;">$1</a>');
+
+        // Convert plain URLs (starting with http/https) that aren't already part of a link
+        formatted = formatted.replace(/(?<!href="|">)(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" style="color: #667eea; text-decoration: underline;">$1</a>');
+
+        return formatted;
+    }
+
+    function addMessage(text, isUser = false, explicitOptions = []) {
+        const chatBody = document.getElementById('chat-body');
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message ${isUser ? 'user' : 'bot'}`;
+
+        const contentDiv = document.createElement('div');
+        contentDiv.className = 'message-content';
+
+        let displayText = text;
+        let options = explicitOptions;
+
+        if (!isUser && options.length === 0) {
+            const processed = processMessageText(text);
+            displayText = processed.cleanText;
+            options = processed.options;
+        }
+
+        const bubbleDiv = document.createElement('div');
+        bubbleDiv.className = 'message-bubble';
+        // Use innerHTML to render links, but ensure text is properly escaped in formatMessage
+        bubbleDiv.innerHTML = formatMessage(displayText);
+        contentDiv.appendChild(bubbleDiv);
+
+        if (!isUser) {
+
+            const optionsDiv = document.createElement('div');
+            optionsDiv.className = 'message-options';
+            let hasButtons = false;
+
+            if (options.length > 0) {
+                options.forEach(option => {
+                    const btn = document.createElement('button');
+                    btn.className = 'option-btn';
+                    btn.textContent = option.label;
+                    btn.onclick = () => {
+                        sendMessage(option.value, false, option.label);
+                    };
+                    optionsDiv.appendChild(btn);
+                    hasButtons = true;
+                });
+            }
+
+            // Add persistent Main Menu button to every bot message, EXCEPT the welcome message
+            const isWelcomeMessage = text.includes("Welcome to Telangana Sports Authority");
+
+            if (!isWelcomeMessage) {
+                const resetBtn = document.createElement('button');
+                resetBtn.className = 'option-btn';
+                resetBtn.innerHTML = 'Main Menu';
+                resetBtn.style.color = '#d9534f';
+                resetBtn.style.borderColor = '#d9534f';
+                resetBtn.onclick = () => sendMessage('Hi', true);
+                optionsDiv.appendChild(resetBtn);
+                hasButtons = true;
+            }
+
+            contentDiv.appendChild(optionsDiv);
+        }
+
+        messageDiv.appendChild(contentDiv);
+        chatBody.appendChild(messageDiv);
+
+        // Auto scroll to bottom
+        chatBody.scrollTop = chatBody.scrollHeight;
+    }
+
+    function showTypingIndicator() {
+        const chatBody = document.getElementById('chat-body');
+        const typingDiv = document.createElement('div');
+        typingDiv.className = 'message bot';
+        typingDiv.id = 'typing-indicator';
+
+        const indicator = document.createElement('div');
+        indicator.className = 'typing-indicator';
+        indicator.innerHTML = '<span></span><span></span><span></span>';
+
+        typingDiv.appendChild(indicator);
+        chatBody.appendChild(typingDiv);
+        chatBody.scrollTop = chatBody.scrollHeight;
+    }
+
+    function hideTypingIndicator() {
+        const indicator = document.getElementById('typing-indicator');
+        if (indicator) {
+            indicator.remove();
+        }
+    }
+
+    function showError(message) {
+        const chatBody = document.getElementById('chat-body');
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'error-message';
+        errorDiv.textContent = message;
+        chatBody.appendChild(errorDiv);
+        chatBody.scrollTop = chatBody.scrollHeight;
+    }
+
+    async function sendMessage(text = null, silent = false, explicitParams = null) {
+        const input = document.getElementById('chat-input');
+        const sendBtn = document.getElementById('send-btn');
+        
+        // Determine the text to send (query) and the text to display (label)
+        // explicitParams can be a string (displayLabel) for backward compatibility or better naming
+        const displayLabel = (typeof explicitParams === 'string') ? explicitParams : null;
+        
+        const message = text !== null ? text : input.value.trim();
+        const displayMessage = displayLabel || message;
+
+        if (!message) return;
+
+        // Add user message to chat UI
+        if (!silent) {
+            addMessage(displayMessage, true);
+        }
+
+        // Clear input if we used it
+        if (text === null) {
+            input.value = '';
+        }
+
+        // Disable input while processing
+        sendBtn.disabled = true;
+        input.disabled = true;
+
+        // Show typing indicator
+        showTypingIndicator();
+
+        try {
+            // Reset session if user types "Hi" (case-insensitive)
+            if (message.trim().toLowerCase() === 'hi') {
+                currentSessionId = null;
+            }
+
+            const payload = { query: message };
+            if (currentSessionId) {
+                payload.session_id = currentSessionId;
+            }
+
+            const response = await fetch('http://127.0.0.1:8000/chat', {
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(payload)
+            });
+            hideTypingIndicator();
+
+            if (!response.ok) {
+                throw new Error('Failed to get response from server');
+            }
+
+            const data = await response.json(); if (data.session_id) {
+                currentSessionId = data.session_id;
+            }
+            // Handle the response - adjust based on your API response structure
+            if (data.text) {
+                let options = [];
+                if (data.menus && Array.isArray(data.menus)) {
+                    options = data.menus.map(menu => ({
+                        label: menu.name,
+                        value: menu.value
+                    }));
+                }
+                addMessage(data.text, false, options);
+            } else if (data.response || data.answer || data.reply) {
+                const botReply = data.response || data.answer || data.reply;
+                addMessage(botReply, false);
+            } else if (typeof data === 'string') {
+                addMessage(data, false);
+            } else {
+                showError('Sorry, I couldn\'t process that request.');
+            }
+
+        } catch (error) {
+            hideTypingIndicator();
+            console.error('Chat error:', error);
+            showError('Sorry, something went wrong. Please try again later.');
+        } finally {
+            // Re-enable input
+            sendBtn.disabled = false;
+            input.disabled = false;
+            input.focus();
+        }
+    }
+
+
+
+</script>
