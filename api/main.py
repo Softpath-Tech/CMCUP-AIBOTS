@@ -108,6 +108,42 @@ STATE_WAIT_SPORT_SCHEDULE = "STATE_WAIT_SPORT_SCHEDULE"
 STATE_WAIT_SPORT_RULES = "STATE_WAIT_SPORT_RULES"
 STATE_WAIT_SPORT_AGE = "STATE_WAIT_SPORT_AGE"
 STATE_WAIT_DIST_OFFICER = "STATE_WAIT_DIST_OFFICER"
+
+# GLOBAL NAVIGATION MAP
+GLOBAL_NAV_MAP = {
+    # 1. Registration
+    "1.1": {"type": "text", "key": "TXT_REG_HOWTO"},
+    "1.2": {"type": "text", "key": "TXT_REG_RULES"},
+    "1.3": {"type": "text", "key": "TXT_REG_DOCS"},
+    "1.4": {"type": "text", "key": "TXT_REG_STATUS"},
+    "1.5": {"type": "text", "key": "TXT_REG_FKQ"},
+    
+    # 2. Sports
+    "2.1": {"type": "menu", "target": MENU_DISCIPLINES},
+    "2.2": {"type": "menu", "target": MENU_SCHEDULE},
+    "2.3": {"type": "menu", "target": MENU_MEDALS},
+    
+    # 2.2 Schedule Sub-menu
+    "2.2.1": {"type": "text", "msg": "**Tournament Schedule:**\nComing soon! Please check the official website."}, # Placeholder
+    "2.2.2": {"type": "state_prompt", "target": STATE_WAIT_SPORT_SCHEDULE, "msg": "🏀 **Game Schedule Lookup**\n\nPlease enter the **Sport Name** (e.g., Cricket, Kabaddi)."},
+
+    # 3. Venues
+    "3.1": {"type": "menu", "target": MENU_VENUES}, 
+    "3.2": {"type": "menu_with_state", "target": "MENU_OFFICERS_DISTRICT", "state": STATE_WAIT_DIST_OFFICER},
+    "3.3": {"type": "menu_with_state", "target": "MENU_OFFICERS_CLUSTER", "state": "STATE_WAIT_CLUSTER_INCHARGE"},
+    "3.4": {"type": "menu_with_state", "target": "MENU_OFFICERS_MANDAL", "state": "STATE_WAIT_MANDAL_INCHARGE"},
+
+    # 4. Player Status
+
+    # 4. Player Status
+    "4.1": {"type": "state_prompt", "target": STATE_WAIT_PHONE, "msg": "📱 **Search by Phone No**\n\nPlease enter your registered **Mobile Number** (10 digits)."},
+    "4.2": {"type": "state_prompt", "target": STATE_WAIT_ACK, "msg": "🔢 **Search by Acknowledgment No**\n\nPlease enter your **Acknowledgment Number** (e.g., SATGCMC-...)."},
+
+    # 5. Help
+    "5.1": {"type": "text", "msg": "📞 **Helpline Numbers:**\n\n- General Enquiry: 040-23232323\n- Tech Support: 040-12341234"},
+    "5.2": {"type": "text", "msg": "📧 **Email Support:**\n\n- cmcup-help@telangana.gov.in\n- info@sats.gov.in"},
+    "5.3": {"type": "menu", "target": MENU_LANGUAGE},
+}
 STATE_WAIT_CLUSTER_INCHARGE = "STATE_WAIT_CLUSTER_INCHARGE"
 STATE_WAIT_MANDAL_INCHARGE = "STATE_WAIT_MANDAL_INCHARGE"
 
@@ -437,7 +473,7 @@ async def process_user_query(raw_query: str, session_id: str = None):
     # Get Current State
     current_state = SESSION_STATE.get(session_id, MENU_MAIN) if session_id else MENU_MAIN
     
-    # Global Interceptor for Level Switching (Fix for Cross-Menu Navigation)
+     # Global Interceptor for Level Switching (Fix for Cross-Menu Navigation)
     if user_query.startswith("level_"):
         try:
             lvl_num = int(user_query.split("_")[1].strip())
@@ -448,6 +484,41 @@ async def process_user_query(raw_query: str, session_id: str = None):
                 return resp
         except:
             pass
+
+    # ------------------------------------------------
+    # GLOBAL NUMERIC INTERCEPTOR (1.1, 2.1, etc.)
+    # ------------------------------------------------
+    if user_query in GLOBAL_NAV_MAP:
+        print(f"⚡ Global Navigation Triggered: {user_query}")
+        nav = GLOBAL_NAV_MAP[user_query]
+        n_type = nav.get("type")
+        
+        if n_type == "text":
+            # Return static text (either from key or msg)
+            if "key" in nav:
+                return create_api_response(get_translation(nav["key"], session_id), "global_nav", session_id)
+            else:
+                return create_api_response(nav["msg"], "global_nav", session_id)
+                
+        elif n_type == "menu":
+            # set state and return menu data
+            target = nav["target"]
+            if session_id: SESSION_STATE[session_id] = target
+            return create_api_response(get_menu_data(target, session_id), "menu_system", session_id)
+            
+        elif n_type == "state_prompt":
+            # set state and return prompt msg
+            target = nav["target"]
+            msg = nav["msg"]
+            if session_id: SESSION_STATE[session_id] = target
+            return create_api_response(msg, "menu_system", session_id)
+            
+        elif n_type == "menu_with_state":
+            # set state AND return menu (which acts as prompt)
+            target = nav["target"]
+            state = nav["state"]
+            if session_id: SESSION_STATE[session_id] = state
+            return create_api_response(get_menu_data(target, session_id), "menu_system", session_id)
 
     # Global Back Command
     if user_query in ["back", "previous", "return", "exit"]:
@@ -1251,8 +1322,12 @@ async def process_user_query(raw_query: str, session_id: str = None):
                 
                 return create_api_response(txt, "sql_database", session_id)
              else:
-                 # Fallthrough to RAG if not found? Or explicit error?
-                 pass 
+                 # Explicit fallback if ID not found in DB
+                 return create_api_response(
+                     f"ℹ️ We couldn't find any details for Acknowledgment Number **{ack_no}**.\n\nPlease check the number and try again, or contact your District Sports Officer if you believe this is an error.", 
+                     "sql_database_fallback", 
+                     session_id
+                 )
 
 
     # 2. Registration ID - REMOVED

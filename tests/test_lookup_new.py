@@ -6,7 +6,7 @@ import pandas as pd
 # Add project root to path
 sys.path.append(os.getcwd())
 
-from rag.lookup import get_player_by_phone, get_player_by_reg_id
+from rag.sql_queries import get_player_venues_by_phone, get_player_venue_by_ack
 
 def test_lookup():
     print("=== TESTING LOOKUP LOGIC ===")
@@ -35,22 +35,22 @@ def test_lookup():
         
         # 2. Test Phone Lookup
         print("\n--- PHONE LOOKUP ---")
-        res_phone = get_player_by_phone(phone)
+        res_phone = get_player_venues_by_phone(phone)
         print(res_phone)
         
-        if "No Record" in res_phone:
-            print("❌ Phone Lookup Failed (Unexpected)")
+        if not res_phone:
+            print("❌ Phone Lookup Failed (Unexpected - No Data Found)")
         else:
             print("✅ Phone Lookup Success")
 
         # 3. Test Reg ID Lookup
         if reg_id != 'N/A':
             print("\n--- REG ID LOOKUP ---")
-            res_reg = get_player_by_reg_id(reg_id)
+            res_reg = get_player_venue_by_ack(reg_id)
             print(res_reg)
             
-            if "No Record" in res_reg:
-                 print("❌ Reg ID Lookup Failed (Unexpected)")
+            if not res_reg:
+                 print("❌ Reg ID Lookup Failed (Unexpected - No Data Found)")
             else:
                  print("✅ Reg ID Lookup Success")
         else:
