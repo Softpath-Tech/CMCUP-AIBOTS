@@ -730,7 +730,15 @@ async def process_user_query(raw_query: str, session_id: str = None):
         try:
              # Lazy import for safety
             from rag.location_search import search_district_officer
-            officer = search_district_officer(clean_dist)
+            from rag.sql_queries import extract_district_from_query
+
+            # 1. Smart Extraction (Full Sentence Support)
+            extracted_dist = extract_district_from_query(user_query)
+            target_dist = extracted_dist if extracted_dist else clean_dist
+            
+            print(f"⚡ Intent: District Officer Lookup (Extracted: {extracted_dist}, Final: {target_dist})")
+
+            officer = search_district_officer(target_dist)
             
             if officer:
                 # IMPORTANT: Keep state in WAITING mode to allow sequential lookups (Issue 1)
@@ -766,7 +774,8 @@ async def process_user_query(raw_query: str, session_id: str = None):
             res = search_cluster_incharge(cluster_name)
             
             if res:
-                if session_id: SESSION_STATE[session_id] = MENU_OFFICERS_CLUSTER
+                # Keep state in WAITING mode to allow sequential lookups
+                if session_id: SESSION_STATE[session_id] = STATE_WAIT_CLUSTER_INCHARGE
                 
                 t = res.get('type', 'Cluster')
                 d = res.get('data', {})
@@ -798,7 +807,8 @@ async def process_user_query(raw_query: str, session_id: str = None):
             res = search_mandal_incharge(mandal_name)
             
             if res:
-                if session_id: SESSION_STATE[session_id] = "MENU_OFFICERS_MANDAL"
+                # Keep state in WAITING mode to allow sequential lookups
+                if session_id: SESSION_STATE[session_id] = STATE_WAIT_MANDAL_INCHARGE
                 
                 txt = f"### 🏫 Mandal In-Charge (MEO) - {res.get('mandal_name')}\n\n"
                 txt += f"**Name:** {res.get('incharge_name')}\n"

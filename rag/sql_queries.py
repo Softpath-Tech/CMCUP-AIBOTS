@@ -486,3 +486,32 @@ def get_sport_rules(sport_name):
         "team_size": "Details in Rules PDF",
         "is_para": '0'
     }
+
+def extract_district_from_query(user_query):
+    """
+    Extracts a valid district name from a natural language query.
+    """
+    ds = get_datastore()
+    if not ds.initialized: ds.init_db()
+    
+    # Get all valid districts
+    df = ds.query("SELECT districtname FROM districtmaster")
+    if df.empty:
+        return None
+        
+    valid_districts = [d.lower() for d in df['districtname'].tolist()]
+    
+    # Normalize query
+    query_lower = user_query.lower()
+    
+    # Find matches - Prioritize longest match to avoid substring issues (e.g. 'Warangal' vs 'Warangal Urban' if exists)
+    # Sort districts by length descending
+    valid_districts.sort(key=len, reverse=True)
+    
+    for dist in valid_districts:
+        # Check exact word match or if it's part of the string
+        # Using word boundary check is safer but simple substring is often enough for unique names
+        if dist in query_lower:
+            return dist # Return the first (longest) match found
+            
+    return None
