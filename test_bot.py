@@ -56,18 +56,26 @@ def main():
                     latency = round(time.time() - start, 2)
                     
                     if response.status_code == 200:
-                        data = response.json()
-                        ans = data.get("response", "No response text")
+                        ans = data.get("text") or data.get("response") or "No response text"
                         src = data.get("source", "Unknown")
+                        menus = data.get("menus", [])
                         
                         # Handle Encoding for Console
                         try:
                             print(f"\n🤖 Bot ({latency}s) [{src}]:\n{'-'*40}")
                             print(ans)
+                            if menus:
+                                print("\n[Options]:")
+                                for btn in menus:
+                                    print(f" {btn.get('value')}. {btn.get('name')}")
                             print(f"{'-'*40}\n")
                         except UnicodeEncodeError:
                             print(f"\n🤖 Bot ({latency}s) [{src}]:\n{'-'*40}")
                             print(ans.encode('utf-8', errors='ignore').decode('ascii'))
+                            if menus:
+                                print("\n[Options]:")
+                                for btn in menus:
+                                    print(f" {btn.get('value', '')}. {btn.get('name', '').encode('utf-8', errors='ignore').decode('ascii')}")
                             print(f"{'-'*40}\n")
                     else:
                         print(f"\n❌ Error {response.status_code}:\n{response.text}\n")

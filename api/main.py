@@ -445,7 +445,8 @@ async def process_user_query(raw_query: str, session_id: str = None):
          return create_api_response("👋 Chat Session Ended. Type 'Hi' to start again.", "menu_system", session_id)
 
     # Global Reset (Home) Commands
-    if user_query in ["hi", "hello", "menu", "start", "restart", "home", "cmcup"] or user_query.startswith("main_"):
+    reset_cmds = ["hi", "hello", "menu", "start", "restart", "home", "cmcup", "main menu", "menu main", "main", "go to main menu"]
+    if user_query in reset_cmds or user_query.startswith("main_"):
         if session_id:
             SESSION_STATE[session_id] = MENU_MAIN
             
@@ -464,7 +465,7 @@ async def process_user_query(raw_query: str, session_id: str = None):
                 pass
 
         # If it's just a reset command, return menu immediately.
-        if user_query in ["hi", "hello", "menu", "start", "restart", "home", "cmcup"]:
+        if user_query in reset_cmds:
             return create_api_response(get_menu_data(MENU_MAIN, session_id), "menu_system", session_id)
             
     # Get Current State
@@ -472,6 +473,29 @@ async def process_user_query(raw_query: str, session_id: str = None):
         
     # Get Current State
     current_state = SESSION_STATE.get(session_id, MENU_MAIN) if session_id else MENU_MAIN
+
+    # ------------------------------------------------
+    # KEYWORD SHORTCUTS (Direct Jumps)
+    # ------------------------------------------------
+    if any(k in user_query for k in ["registration", "register", "eligibility", "documents"]):
+         if session_id: SESSION_STATE[session_id] = MENU_REG_FAQ
+         return create_api_response(get_menu_data(MENU_REG_FAQ, session_id), "menu_system", session_id)
+
+    if any(k in user_query for k in ["sports", "sport", "game", "games", "schedule", "fixture", "medal"]):
+         if session_id: SESSION_STATE[session_id] = MENU_GROUP_SPORTS
+         return create_api_response(get_menu_data(MENU_GROUP_SPORTS, session_id), "menu_system", session_id)
+
+    if any(k in user_query for k in ["venue", "stadium", "ground", "officer", "incharge"]):
+         if session_id: SESSION_STATE[session_id] = MENU_GROUP_VENUES
+         return create_api_response(get_menu_data(MENU_GROUP_VENUES, session_id), "menu_system", session_id)
+
+    if any(k in user_query for k in ["player", "status", "application", "ack no"]):
+         if session_id: SESSION_STATE[session_id] = MENU_PLAYER_STATUS
+         return create_api_response(get_menu_data(MENU_PLAYER_STATUS, session_id), "menu_system", session_id)
+
+    if any(k in user_query for k in ["help", "support", "language", "telugu", "hindi", "english"]):
+         if session_id: SESSION_STATE[session_id] = MENU_GROUP_HELP
+         return create_api_response(get_menu_data(MENU_GROUP_HELP, session_id), "menu_system", session_id)
     
      # Global Interceptor for Level Switching (Fix for Cross-Menu Navigation)
     if user_query.startswith("level_"):
