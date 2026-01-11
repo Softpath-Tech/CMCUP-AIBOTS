@@ -261,6 +261,54 @@ def get_sport_schedule(sport_name):
     return df.to_dict(orient="records")
 
 
+def get_venues_by_level(level_name):
+    """
+    Get venue details for all sports at a specific level.
+    Returns list of dicts: {sport, venue, date, time, contact_name, contact_no}
+    """
+    ds = get_datastore()
+    if not ds.initialized: ds.init_db()
+    
+    # 1. Identify Games at this level
+    games = get_disciplines_by_level(level_name)
+    if not games:
+        return []
+        
+    # 2. Query Fixtures for these games to find Venues
+    # Note: We want UNIQUE venues per sport
+    
+    placeholders = ",".join("?" * len(games))
+    
+    query = f"""
+    SELECT 
+        d.dist_game_nm as sport,
+        f.venue,
+        f.match_date,
+        f.match_time,
+        -- Hypothetical Contact Info (Not in Fixtures, usually in Cluster/Officer tables)
+        -- For now, we return basic venue info
+        '' as contact_name,
+        '' as contact_no
+    FROM tb_fixtures f
+    JOIN tb_discipline d ON f.disc_id = d.game_id 
+    WHERE d.dist_game_nm IN ({placeholders}) 
+      AND f.venue IS NOT NULL 
+      AND f.venue != ''
+    GROUP BY d.dist_game_nm, f.venue
+    """
+    
+    try:
+        df = ds.query(query, tuple(games))
+        if df.empty:
+            return []
+        
+        # Post-processing to group by sport or just return list
+        return df.to_dict(orient="records")
+    except Exception as e:
+        print(f"Venue Query Error: {e}")
+        return []
+
+
 def get_disciplines_by_level(level_name):
     """
     Get list of disciplines (games) played at a specific level.

@@ -101,6 +101,7 @@ MENU_OFFICERS_DISTRICT = "MENU_OFFICERS_DISTRICT"
 MENU_OFFICERS_CLUSTER = "MENU_OFFICERS_CLUSTER"
 
 # SUB-INTERACTION STATES (Waiting for input)
+# SUB-INTERACTION STATES (Waiting for input)
 STATE_WAIT_PHONE = "STATE_WAIT_PHONE"
 STATE_WAIT_ACK = "STATE_WAIT_ACK"
 STATE_WAIT_LOCATION = "STATE_WAIT_LOCATION"
@@ -108,6 +109,38 @@ STATE_WAIT_SPORT_SCHEDULE = "STATE_WAIT_SPORT_SCHEDULE"
 STATE_WAIT_SPORT_RULES = "STATE_WAIT_SPORT_RULES"
 STATE_WAIT_SPORT_AGE = "STATE_WAIT_SPORT_AGE"
 STATE_WAIT_DIST_OFFICER = "STATE_WAIT_DIST_OFFICER"
+
+# SESSION PERSISTENCE
+import json
+SESSION_FILE = "session_store.json"
+
+def save_sessions():
+    """Persist session state to disk to survive restarts."""
+    try:
+        data = {
+            "states": SESSION_STATE,
+            "data": SESSION_DATA
+        }
+        with open(SESSION_FILE, 'w') as f:
+            json.dump(data, f)
+    except Exception as e:
+        print(f"Session Save Error: {e}")
+
+def load_sessions():
+    """Load session state from disk on startup."""
+    global SESSION_STATE, SESSION_DATA
+    try:
+        if os.path.exists(SESSION_FILE):
+             with open(SESSION_FILE, 'r') as f:
+                data = json.load(f)
+                SESSION_STATE.update(data.get("states", {}))
+                SESSION_DATA.update(data.get("data", {}))
+                print(f"📦 Loaded {len(SESSION_STATE)} sessions from disk.")
+    except Exception as e:
+        print(f"Session Load Error: {e}")
+
+# Load immediately on import
+load_sessions()
 
 # GLOBAL NAVIGATION MAP
 GLOBAL_NAV_MAP = {
@@ -416,12 +449,18 @@ def get_discipline_response(level_num, session_id):
                     SESSION_STATE[session_id] = MENU_SELECT_SPORT
                     if session_id not in SESSION_DATA: SESSION_DATA[session_id] = {}
                     SESSION_DATA[session_id].update({"sports": games, "level_title": display_title})
-
-                buttons = [{"name": g, "value": str(i)} for i, g in enumerate(games, 1)]
+                
+                # Dynamic Buttons
+                buttons = []
+                for idx, g in enumerate(games, 1):
+                    buttons.append({"name": g, "value": str(idx)})
+                
                 buttons.append({"name": "Back", "value": "Back"})
                 
-                txt = f"### 🏅 Sports at {display_title}\n\nSelect a sport below:"
-                return create_api_response({"text": txt, "buttons": buttons}, "sql_database", session_id)
+                return create_api_response({
+                    "text": f"### 🏅 SPORTS LIST: {display_title.upper()}\n\nHere are the **{len(games)} sports** available at this level.\nSelect a sport below to see details:",
+                    "buttons": buttons
+                }, "menu_system", session_id)
             else:
                  return create_api_response(f"ℹ️ No sports found specifically for **{display_title}** in the database.", "sql_database", session_id)
         except Exception as e:
@@ -476,38 +515,52 @@ async def process_user_query(raw_query: str, session_id: str = None):
     current_state = SESSION_STATE.get(session_id, MENU_MAIN) if session_id else MENU_MAIN
 
     # ------------------------------------------------
-    # KEYWORD SHORTCUTS (Direct Jumps)
+    # KEYWORD SHORTCUTS (Direct Jumps) - RESTRICTED TO SHORT HELP COMMANDS
     # ------------------------------------------------
-    if any(k in user_query for k in ["registration", "register", "eligibility", "documents"]):
-         if session_id: SESSION_STATE[session_id] = MENU_REG_FAQ
-         return create_api_response(get_menu_data(MENU_REG_FAQ, session_id), "menu_system", session_id)
-
-    if any(k in user_query for k in ["sports", "sport", "game", "games", "schedule", "fixture", "medal"]):
-         if session_id: SESSION_STATE[session_id] = MENU_GROUP_SPORTS
-         return create_api_response(get_menu_data(MENU_GROUP_SPORTS, session_id), "menu_system", session_id)
-
-    if any(k in user_query for k in ["venue", "stadium", "ground", "officer", "incharge"]):
-         if session_id: SESSION_STATE[session_id] = MENU_GROUP_VENUES
-         return create_api_response(get_menu_data(MENU_GROUP_VENUES, session_id), "menu_system", session_id)
-
-    if any(k in user_query for k in ["player", "status", "application", "ack no"]):
-         if session_id: SESSION_STATE[session_id] = MENU_PLAYER_STATUS
-         return create_api_response(get_menu_data(MENU_PLAYER_STATUS, session_id), "menu_system", session_id)
-
-    if any(k in user_query for k in ["help", "support", "language", "telugu", "hindi", "english"]):
-         if session_id: SESSION_STATE[session_id] = MENU_GROUP_HELP
-         return create_api_response(get_menu_data(MENU_GROUP_HELP, session_id), "menu_system", session_id)
+    tokens = user_query.split()
+    
+    # Only allow shortcuts if the query is very short (likely a command)
+    # This matching prevents "Kabaddi Schedule" from being swallowed by "schedule" shortcut
+    if len(tokens) <= 2:
+        if any(k in user_query for k in ["registration", "register", "eligibility", "documents"]):
+             if session_id: SESSION_STATE[session_id] = MENU_REG_FAQ
+             return create_api_response(get_menu_data(MENU_REG_FAQ, session_id), "menu_system", session_id)
+    
+        if user_query in ["sports", "sport", "game", "games", "schedule", "fixtures", "matches", "medals", "medal", "discipline", "disciplines"]:
+             if session_id: SESSION_STATE[session_id] = MENU_GROUP_SPORTS
+             return create_api_response(get_menu_data(MENU_GROUP_SPORTS, session_id), "menu_system", session_id)
+    
+        if user_query in ["venue", "venues", "stadium", "ground", "officer", "officers", "incharge", "contact"]:
+             if session_id: SESSION_STATE[session_id] = MENU_GROUP_VENUES
+             return create_api_response(get_menu_data(MENU_GROUP_VENUES, session_id), "menu_system", session_id)
+    
+        if user_query in ["player", "status", "application", "ack no", "acknowledgment"]:
+             if session_id: SESSION_STATE[session_id] = MENU_PLAYER_STATUS
+             return create_api_response(get_menu_data(MENU_PLAYER_STATUS, session_id), "menu_system", session_id)
+    
+        if any(k in user_query for k in ["help", "support", "language", "telugu", "hindi", "english"]):
+             if session_id: SESSION_STATE[session_id] = MENU_GROUP_HELP
+             return create_api_response(get_menu_data(MENU_GROUP_HELP, session_id), "menu_system", session_id)
     
      # Global Interceptor for Level Switching (Fix for Cross-Menu Navigation)
-    if user_query.startswith("level_"):
+    # Handles: "LEVEL_1", "level 2", "Level_3"
+    norm_q = user_query.replace(" ", "_").lower()
+    if norm_q.startswith("level_"):
         try:
-            lvl_num = int(user_query.split("_")[1].strip())
+            parts = norm_q.split("_")
+            # Handle "level__2" or "level_2"
+            lvl_str = parts[1] if parts[1] else parts[2]
+            lvl_num = int(lvl_str)
+            
+            print(f"⚡ Interceptor: Switching to Level {lvl_num}")
+            
             # Directly handle logic
             resp = get_discipline_response(lvl_num, session_id)
             if resp:
                 # SESSION_STATE is updated inside get_discipline_response
                 return resp
-        except:
+        except Exception as e:
+            print(f"Interceptor Error: {e}")
             pass
 
     # ------------------------------------------------
@@ -622,13 +675,25 @@ async def process_user_query(raw_query: str, session_id: str = None):
                 return create_api_response(txt, "sql_database", session_id)
                 
             else:
-                # Multiple Records
-                txt = f"found **{len(registrations)} registrations** for this number:\n"
-                for r in registrations:
-                    s = r.get('sport_name') or r.get('event_name')
-                    txt += f"- {s}\n"
+                # Multiple Records - Show details for ALL
+                txt = f"### 🔍 Found {len(registrations)} Registrations\n"
                 
-                txt += "\nSince you have multiple events, please provide your **Acknowledgment Number** (e.g., SATGCMC-...) to get specific venue details."
+                for idx, rec in enumerate(registrations, 1):
+                    sport = rec.get('sport_name') or rec.get('event_name')
+                    venue = rec.get('venue')
+                    match_date = rec.get('match_date') or 'Check Schedule'
+                    
+                    txt += f"\n**{idx}. {sport}**\n"
+                    if venue:
+                        txt += f"   📍 **Venue:** {venue}\n"
+                        txt += f"   📅 **Date:** {match_date}\n"
+                    else:
+                        txt += "   ⚠️ **Status:** Venue details pending/TBD.\n"
+                    
+                    # In-Charge Info
+                    if rec.get('cluster_incharge'):
+                         txt += f"   👤 **In-Charge:** {rec.get('cluster_incharge')} ({rec.get('incharge_mobile', 'N/A')})\n"
+                
                 return create_api_response(txt, "sql_database", session_id)
         else:
              return create_api_response("❌ Invalid Phone Number. Please enter a 10-digit mobile number starting with 6-9.\n\nType 'Back' to cancel.", "validation_error", session_id)
@@ -860,56 +925,7 @@ async def process_user_query(raw_query: str, session_id: str = None):
                 if session_id: SESSION_STATE[session_id] = MENU_MEDALS
                 return create_api_response(get_menu_data(MENU_MEDALS, session_id), "menu_system", session_id)
 
-        elif current_state == MENU_GROUP_VENUES:
-            # 1. Venues, 2. Dist Officers, 3. Cluster In-Charge
-            if choice == 1:
-                # LIST VENUES (Menu 3.1) - Dynamic Data
-                from rag.data_store import get_datastore
-                ds = get_datastore()
-                if not ds.initialized: ds.init_db()
-                
-                # Query distinct venues
-                lang = SESSION_DATA.get(session_id, {}).get("language", "en")
-                df = ds.query("SELECT DISTINCT venue FROM tb_fixtures WHERE venue IS NOT NULL AND venue != ''")
-                
-                if not df.empty:
-                    venues = [v['venue'] for v in df.to_dict(orient="records")]
-                    venues = sorted(list(set([v.strip() for v in venues if v and str(v).lower() != 'nan'])))
-                    
-                    if not venues:
-                         return create_api_response("ℹ️ No specific venue names are currently listed in the schedule.", "sql_database", session_id)
-                         
-                    txt = get_translation("TXT_VENUE_LIST_HEADER", lang)["text"]
-                    for v in venues[:50]:
-                        txt += f"• **{v}**\n"
-                    
-                    txt += "\nType a **Venue Name** or 'Back'."
-                    return create_api_response(txt, "sql_database", session_id)
-                else:
-                    return create_api_response("ℹ️ No venue information found in the schedule database.", "sql_database", session_id)
-            elif choice == 2:
-                 try:
-                     if session_id: SESSION_STATE[session_id] = STATE_WAIT_DIST_OFFICER
-                     return create_api_response(get_menu_data("MENU_OFFICERS_DISTRICT", session_id), "menu_system", session_id)
-                 except Exception as e:
-                     print(f"CRASH in Option 2: {e}")
-                     return create_api_response(f"❌ Error loading District Officers menu: {str(e)}", "error_handler", session_id)
-            elif choice == 3:
-                 try:
-                     if session_id: SESSION_STATE[session_id] = STATE_WAIT_CLUSTER_INCHARGE
-                     return create_api_response(get_menu_data("MENU_OFFICERS_CLUSTER", session_id), "menu_system", session_id)
-                 except Exception as e:
-                     print(f"CRASH in Option 3: {e}")
-                     return create_api_response(f"❌ Error loading Venue In-Charge menu: {str(e)}", "error_handler", session_id)
-            elif choice == 4:
-                 try:
-                     if session_id: SESSION_STATE[session_id] = STATE_WAIT_MANDAL_INCHARGE
-                     return create_api_response(get_menu_data("MENU_OFFICERS_MANDAL", session_id), "menu_system", session_id)
-                 except Exception as e:
-                     print(f"CRASH in Option 4: {e}")
-                     return create_api_response(f"❌ Error loading Mandal In-Charge menu: {str(e)}", "error_handler", session_id)
-        
-        elif current_state == MENU_GROUP_HELP:
+        if current_state == MENU_GROUP_HELP:
              if choice == 1:
                  # Helpline Numbers
                  return create_api_response("📞 **Helpline Numbers:**\n\nState Control Room: **040-12345678**\nWhatsApp Support: **+91-9876543210**", "static_info", session_id)
@@ -919,6 +935,42 @@ async def process_user_query(raw_query: str, session_id: str = None):
              elif choice == 3:
                  if session_id: SESSION_STATE[session_id] = MENU_LANGUAGE
                  return create_api_response(get_menu_data(MENU_LANGUAGE, session_id), "menu_system", session_id)
+
+    # --- HANDLE NON-DIGIT MENU RESPONSES (e.g., VENUE_LEVEL_X) ---
+    if "VENUE_LEVEL_" in user_query:
+        try:
+            level_num = int(user_query.split("_")[-1])
+            level_map = {1: "cluster", 2: "mandal", 3: "assembly", 4: "district", 5: "state"}
+            level_name = level_map.get(level_num, "district")
+            
+            # 1. Search for Venues
+            from rag.sql_queries import get_venues_by_level
+            venues = get_venues_by_level(level_name)
+            
+            if venues:
+                txt = f"### 🏟️ Venues for {level_name.title()} Level\n\n"
+                for v in venues[:10]: # Limit output
+                    txt += f"**Game:** {v['sport']}\n"
+                    txt += f"**Venue:** {v['venue']}\n"
+                    txt += f"**Time:** {v['match_date']} {v['match_time']}\n"
+                    if v.get('contact_name'):
+                        txt += f"**Contact:** {v['contact_name']} ({v['contact_no']})\n"
+                    txt += "---\n"
+                return create_api_response(txt, "sql_database", session_id)
+            else:
+                # 2. Fallback: No Data -> Ask for District
+                if session_id: SESSION_STATE[session_id] = STATE_WAIT_DIST_OFFICER
+                
+                # Prompt specific to fallback
+                msg = f"ℹ️ We don't have specific venue details for **{level_name.title()} Level** yet.\n\n"
+                msg += "However, we can provide the **District Sports Officer's** contact details.\n"
+                msg += "👉 Please enter your **District Name** (e.g., Warangal, Hyderabad):"
+                
+                return create_api_response(msg, "fallback_flow", session_id)
+                
+        except Exception as e:
+            print(f"Venue Handler Error: {e}")
+            return create_api_response("❌ Error processing venue request.", "error", session_id) 
 
         if current_state == MENU_OFFICERS:
             # Deprecated direct access but keeping compliant just in case
@@ -1095,7 +1147,18 @@ async def process_user_query(raw_query: str, session_id: str = None):
 
         # --- SUB MENU: SCHEDULE GAME SEARCH (TEXT INPUT) ---
         elif current_state == MENU_SCHEDULE_GAME_SEARCH:
-             pass 
+             sched = get_sport_schedule(user_query)
+             if sched:
+                 txt = f"### 🗓️ Schedule for {user_query.title()}\n\n"
+                 for m in sched:
+                     txt += f"**Match {m['match_no']}:** {m['team1_name']} vs {m['team2_name']}\n"
+                     txt += f"   📅 {m['match_date']} ⏰ {m['match_time']}\n"
+                     txt += f"   📍 {m['venue']}\n\n"
+                 
+                 txt += "Type another **Game Name** or 'Back'."
+                 return create_api_response(txt, "sql_database", session_id)
+             else:
+                 return create_api_response(f"❌ No schedule found for **{user_query}**. Check spelling or try a different sport.", "sql_database", session_id) 
              
         # --- SUB MENU: OFFICERS ---
         elif current_state == MENU_OFFICERS:
@@ -1237,7 +1300,8 @@ async def process_user_query(raw_query: str, session_id: str = None):
     # --- NLQ INTERCEPTOR: DISTRICT INCHARGE ---
     # Detects: "incharge for warangal", "khammam district officer", "who is ... for nalgonda"
     officer_keywords = ["incharge", "in-charge", "officer", "dso", "district sports officer"]
-    if any(kw in user_query for kw in officer_keywords) and ("for" in user_query or "of" in user_query or "district" in user_query):
+    officer_keywords = ["incharge", "in-charge", "officer", "dso", "district sports officer"]
+    if any(kw in user_query for kw in officer_keywords):
         # Extract potential location name
         # Strategy: Look for words that are NOT keywords. 
         # Simple heuristic: Split by 'for', 'of', 'in' and take the noun.
@@ -1697,12 +1761,17 @@ async def chat_endpoint(request: ChatRequest):
     # Inject session_id into response so client knows what to send back
     if isinstance(response_data, dict):
         response_data["session_id"] = current_session_id
+    
+    # Persist Session 
+    save_sessions()
         
     return response_data
 
 @app.post("/ask")
 async def ask_endpoint(request: ChatRequest):
-    return await process_user_query(request.query, request.session_id)
+    resp = await process_user_query(request.query, request.session_id)
+    save_sessions()
+    return resp
 
 # --------------------------------------------------
 # 9. WhatsApp Endpoint
@@ -1721,7 +1790,9 @@ async def whatsapp_chat_endpoint(request: WhatsAppChatRequest):
 
     try:
         # Call the unified logic
-        return await process_user_query(user_message, session_id)
+        resp = await process_user_query(user_message, session_id)
+        save_sessions()
+        return resp
     except Exception as e:
         import traceback
         traceback.print_exc()
