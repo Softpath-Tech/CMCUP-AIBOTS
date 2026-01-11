@@ -140,8 +140,8 @@ GLOBAL_NAV_MAP = {
     "4.2": {"type": "state_prompt", "target": STATE_WAIT_ACK, "msg": "🔢 **Search by Acknowledgment No**\n\nPlease enter your **Acknowledgment Number** (e.g., SATGCMC-...)."},
 
     # 5. Help
-    "5.1": {"type": "text", "msg": "📞 **Helpline Numbers:**\n\n- General Enquiry: 040-23232323\n- Tech Support: 040-12341234"},
-    "5.2": {"type": "text", "msg": "📧 **Email Support:**\n\n- cmcup-help@telangana.gov.in\n- info@sats.gov.in"},
+    "5.1": {"type": "text", "msg": "📞 **Helpline Numbers:**\n\n- General Enquiry: 7286851734"},
+    "5.2": {"type": "text", "msg": "📧 **Email Support:**\n\n satgcmcup2026@gmail.com"},
     "5.3": {"type": "menu", "target": MENU_LANGUAGE},
 }
 STATE_WAIT_CLUSTER_INCHARGE = "STATE_WAIT_CLUSTER_INCHARGE"
