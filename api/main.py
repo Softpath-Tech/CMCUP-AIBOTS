@@ -2,11 +2,19 @@ import sys
 import os
 import re
 import uuid
+import logging
 from fastapi import FastAPI, HTTPException, Response
 from pydantic import BaseModel
 from typing import Optional
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+
+# Setup logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
 # --------------------------------------------------
 # 1. Ensure Python can find project root (Render-safe)
@@ -171,7 +179,6 @@ PARENT_MAP = {
     STATE_WAIT_SPORT_SCHEDULE: MENU_SCHEDULE,
     STATE_WAIT_SPORT_RULES: MENU_MAIN, # Or relevant parent
     STATE_WAIT_DIST_OFFICER: MENU_OFFICERS,
-    STATE_WAIT_DIST_OFFICER: MENU_OFFICERS,
     STATE_WAIT_CLUSTER_INCHARGE: MENU_OFFICERS,
     STATE_WAIT_MANDAL_INCHARGE: MENU_OFFICERS,
     
@@ -198,9 +205,9 @@ def get_or_init_rag_chain():
     """
     global rag_chain
     if rag_chain is None:
-        print("🧠 Initializing RAG chain (lazy)...")
+        logger.info("Initializing RAG chain (lazy)...")
         rag_chain = get_rag_chain()
-        print("✅ RAG chain initialized")
+        logger.info("RAG chain initialized")
     return rag_chain
 
 # --------------------------------------------------
@@ -283,7 +290,7 @@ def get_menu_data(menu_name, session_id=None):
     if session_id:
         lang = SESSION_DATA.get(session_id, {}).get("language", "en")
     
-    print(f"DEBUG: get_menu_data called with {menu_name} [Lang: {lang}]")
+    logger.debug(f"get_menu_data called with {menu_name} [Lang: {lang}]")
     
     # 2. Return Translation Dict
     return get_translation(menu_name, lang)
@@ -425,7 +432,7 @@ def get_discipline_response(level_num, session_id):
             else:
                  return create_api_response(f"ℹ️ No sports found specifically for **{display_title}** in the database.", "sql_database", session_id)
         except Exception as e:
-            print(f"Error fetching disciplines: {e}")
+            logger.error(f"Error fetching disciplines: {e}", exc_info=True)
             return create_api_response("❌ An error occurred while fetching disciplines. Please try again.", "error_handler", session_id)
     return None
 
@@ -471,9 +478,6 @@ async def process_user_query(raw_query: str, session_id: str = None):
             
     # Get Current State
     current_state = SESSION_STATE.get(session_id, MENU_MAIN) if session_id else MENU_MAIN
-        
-    # Get Current State
-    current_state = SESSION_STATE.get(session_id, MENU_MAIN) if session_id else MENU_MAIN
 
     # ------------------------------------------------
     # KEYWORD SHORTCUTS (Direct Jumps)
@@ -499,15 +503,20 @@ async def process_user_query(raw_query: str, session_id: str = None):
          return create_api_response(get_menu_data(MENU_GROUP_HELP, session_id), "menu_system", session_id)
     
      # Global Interceptor for Level Switching (Fix for Cross-Menu Navigation)
-    if user_query.startswith("level_"):
+    # Handle both "LEVEL_X" (from buttons) and "level_x" (from text input)
+    if user_query.startswith("level_") or user_query.startswith("LEVEL_"):
         try:
-            lvl_num = int(user_query.split("_")[1].strip())
-            # Directly handle logic
-            resp = get_discipline_response(lvl_num, session_id)
-            if resp:
-                # SESSION_STATE is updated inside get_discipline_response
-                return resp
-        except:
+            # Extract number from "LEVEL_1" or "level_1"
+            parts = user_query.split("_")
+            if len(parts) >= 2:
+                lvl_num = int(parts[1].strip())
+                # Directly handle logic
+                resp = get_discipline_response(lvl_num, session_id)
+                if resp:
+                    # SESSION_STATE is updated inside get_discipline_response
+                    return resp
+        except (ValueError, IndexError) as e:
+            logger.warning(f"Error parsing level number from '{user_query}': {e}")
             pass
 
     # ------------------------------------------------
@@ -540,7 +549,7 @@ async def process_user_query(raw_query: str, session_id: str = None):
             return create_api_response("ℹ️ No venue information found in the schedule database.", "sql_database", session_id)
 
     if user_query in GLOBAL_NAV_MAP:
-        print(f"⚡ Global Navigation Triggered: {user_query}")
+        logger.info(f"Global Navigation Triggered: {user_query}")
         nav = GLOBAL_NAV_MAP[user_query]
         n_type = nav.get("type")
         
@@ -590,7 +599,7 @@ async def process_user_query(raw_query: str, session_id: str = None):
         if re.search(r'\b[6-9]\d{9}\b', user_query):
             # Direct Lookup Logic
             phone = re.search(r'\b[6-9]\d{9}\b', user_query).group(0)
-            print(f"⚡ Intent: Menu Phone Lookup ({phone})")
+            logger.info(f"Intent: Menu Phone Lookup ({phone})")
             
             # Reset state
             if session_id: SESSION_STATE[session_id] = MENU_PLAYER_STATUS
@@ -636,7 +645,7 @@ async def process_user_query(raw_query: str, session_id: str = None):
     # State: WAITING FOR LOCATION
     if current_state == STATE_WAIT_LOCATION:
         loc_name = user_query
-        print(f"⚡ Intent: Menu Location Lookup ({loc_name})")
+        logger.info(f"Intent: Menu Location Lookup ({loc_name})")
         # Keep state to allow checking another location
         
         try:
@@ -662,7 +671,7 @@ async def process_user_query(raw_query: str, session_id: str = None):
     # State: WAITING FOR SPORT (SCHEDULE)
     if current_state == STATE_WAIT_SPORT_SCHEDULE:
         sport_name = user_query
-        print(f"⚡ Intent: Menu Sport Schedule ({sport_name})")
+        logger.info(f"Intent: Menu Sport Schedule ({sport_name})")
         # REMOVED RESET: Allow continuous querying (e.g. Cricket then Kabaddi)
         # if session_id: SESSION_STATE[session_id] = MENU_SCHEDULE
         
@@ -681,7 +690,7 @@ async def process_user_query(raw_query: str, session_id: str = None):
     # State: WAITING FOR SPORT (AGE CRITERIA)
     if current_state == STATE_WAIT_SPORT_AGE:
         sport_input = user_query
-        print(f"⚡ Intent: Age Criteria Lookup ({sport_input})")
+        logger.info(f"Intent: Age Criteria Lookup ({sport_input})")
         
         try:
             rules = get_sport_rules(sport_input)
@@ -702,7 +711,7 @@ async def process_user_query(raw_query: str, session_id: str = None):
     # State: WAITING FOR SPORT (RULES)
     if current_state == STATE_WAIT_SPORT_RULES:
         sport_name = user_query
-        print(f"⚡ Intent: Menu Sport Rules ({sport_name})")
+        logger.info(f"Intent: Menu Sport Rules ({sport_name})")
         
         try:
             rag_bot = get_or_init_rag_chain()
@@ -725,7 +734,7 @@ async def process_user_query(raw_query: str, session_id: str = None):
         district_name = user_query
         # Strip NLQ keywords for better match
         clean_dist = district_name.lower().replace("incharge", "").replace("officer", "").replace("district", "").strip()
-        print(f"⚡ Intent: District Officer Lookup ({clean_dist})")
+        logger.info(f"Intent: District Officer Lookup ({clean_dist})")
         
         try:
              # Lazy import for safety
@@ -736,7 +745,7 @@ async def process_user_query(raw_query: str, session_id: str = None):
             extracted_dist = extract_district_from_query(user_query)
             target_dist = extracted_dist if extracted_dist else clean_dist
             
-            print(f"⚡ Intent: District Officer Lookup (Extracted: {extracted_dist}, Final: {target_dist})")
+            logger.info(f"Intent: District Officer Lookup (Extracted: {extracted_dist}, Final: {target_dist})")
 
             officer = search_district_officer(target_dist)
             
@@ -764,7 +773,7 @@ async def process_user_query(raw_query: str, session_id: str = None):
     # State: WAITING FOR CLUSTER INCHARGE
     if current_state == STATE_WAIT_CLUSTER_INCHARGE:
         cluster_name = user_query
-        print(f"⚡ Intent: Cluster In-Charge Lookup ({cluster_name})")
+        logger.info(f"Intent: Cluster In-Charge Lookup ({cluster_name})")
         
         try:
             # Lazy import for safety
@@ -798,7 +807,7 @@ async def process_user_query(raw_query: str, session_id: str = None):
     # State: WAITING FOR MANDAL INCHARGE
     if current_state == STATE_WAIT_MANDAL_INCHARGE:
         mandal_name = user_query
-        print(f"⚡ Intent: Mandal In-Charge Lookup ({mandal_name})")
+        logger.info(f"Intent: Mandal In-Charge Lookup ({mandal_name})")
         
         try:
             # Lazy import
@@ -892,21 +901,21 @@ async def process_user_query(raw_query: str, session_id: str = None):
                      if session_id: SESSION_STATE[session_id] = STATE_WAIT_DIST_OFFICER
                      return create_api_response(get_menu_data("MENU_OFFICERS_DISTRICT", session_id), "menu_system", session_id)
                  except Exception as e:
-                     print(f"CRASH in Option 2: {e}")
+                     logger.error(f"CRASH in Option 2: {e}", exc_info=True)
                      return create_api_response(f"❌ Error loading District Officers menu: {str(e)}", "error_handler", session_id)
             elif choice == 3:
                  try:
                      if session_id: SESSION_STATE[session_id] = STATE_WAIT_CLUSTER_INCHARGE
                      return create_api_response(get_menu_data("MENU_OFFICERS_CLUSTER", session_id), "menu_system", session_id)
                  except Exception as e:
-                     print(f"CRASH in Option 3: {e}")
+                     logger.error(f"CRASH in Option 3: {e}", exc_info=True)
                      return create_api_response(f"❌ Error loading Venue In-Charge menu: {str(e)}", "error_handler", session_id)
             elif choice == 4:
                  try:
                      if session_id: SESSION_STATE[session_id] = STATE_WAIT_MANDAL_INCHARGE
                      return create_api_response(get_menu_data("MENU_OFFICERS_MANDAL", session_id), "menu_system", session_id)
                  except Exception as e:
-                     print(f"CRASH in Option 4: {e}")
+                     logger.error(f"CRASH in Option 4: {e}", exc_info=True)
                      return create_api_response(f"❌ Error loading Mandal In-Charge menu: {str(e)}", "error_handler", session_id)
         
         elif current_state == MENU_GROUP_HELP:
@@ -1202,22 +1211,8 @@ async def process_user_query(raw_query: str, session_id: str = None):
     # 0.4 Age / Rules Lookup Interceptor
     # ...
     # ...
-    # Fix for Crash: Ensure variable exists
-    detected_sport = None
-    if detected_sport and detected_sport not in ignored_sports and len(detected_sport) > 2:
-        try:
-            rules = get_sport_rules(detected_sport)
-            if rules:
-                txt = f"### 🎂 Age Criteria for {rules.get('sport_name')}\n\n"
-                txt += f"**Min Age:** {rules.get('min_age')} years\n"
-                txt += f"**Max Age:** {rules.get('max_age')} years\n"
-                txt += f"**Team Size:** {rules.get('team_size') or 'Individual'}\n"
-                txt += f"**Level:** {rules.get('level', 'N/A')}\n"
-                txt += f"**Para Event:** {'Yes' if rules.get('is_para')=='1' else 'No'}\n\n"
-                txt += "Type 'Rules' for more details or another sport name."
-                return create_api_response(txt, "sql_interceptor", session_id)
-        except Exception as e:
-            print(f"Error in Age Interceptor: {e}")
+    # Note: Age/Rules interceptor code removed - handled elsewhere in the flow
+    # This was dead code that referenced undefined variables
 
     # 0.5 Participation Stats (New)
     stats_keywords = ["how many", "participation", "players", "registered", "total count", "status"]
@@ -1294,7 +1289,7 @@ async def process_user_query(raw_query: str, session_id: str = None):
     
     if phone_match:
         phone = phone_match.group(0)
-        print(f"⚡ Intent: Venue Lookup via Phone ({phone})")
+        logger.info(f"Intent: Venue Lookup via Phone ({phone})")
         
         # SQL Lookup
         registrations = get_player_venues_by_phone(phone)
@@ -1350,7 +1345,7 @@ async def process_user_query(raw_query: str, session_id: str = None):
     if ack_match:
         ack_no = ack_match.group(1).upper()
         if venue_intent or True: # Always treat Ack No as a lookup request now? Or only if venue intent? User said "Venue Details - Based on Acknowledgement Details". Let's assume lookup.
-             print(f"⚡ Intent: Ack No Lookup ({ack_no})")
+             logger.info(f"Intent: Ack No Lookup ({ack_no})")
              rec = get_player_venue_by_ack(ack_no)
              if rec:
                 venue = rec.get('venue')
@@ -1394,7 +1389,7 @@ async def process_user_query(raw_query: str, session_id: str = None):
                 incharge_contact = rec.get('incharge_mobile')
                 
                 if not incharge_name and rec.get('districtname'):
-                    print("⚠️ Hybrid Trigger: SQL missing Incharge. Asking RAG...")
+                    logger.warning("Hybrid Trigger: SQL missing Incharge. Asking RAG...")
                     try:
                         rag_bot = get_or_init_rag_chain()
                         sport_detail = rec.get('sport_name') or rec.get('event_name') or "sports"
@@ -1416,7 +1411,7 @@ async def process_user_query(raw_query: str, session_id: str = None):
                              txt += f"*(Retrieved via AI)*: {rag_text}\n"
 
                     except Exception as e:
-                        print(f"Hybrid RAG Failed: {e}")
+                        logger.error(f"Hybrid RAG Failed: {e}")
                         txt += "**Status:** Contact District Helpdesk.\n"
                 else:
                     txt += f"**Name:** {incharge_name or 'N/A'}\n"
@@ -1442,7 +1437,7 @@ async def process_user_query(raw_query: str, session_id: str = None):
     match_match = re.search(r'(?:match|fixture)\s*(?:id|no)?\s*[:#-]?\s*(\d+)', original_query, re.IGNORECASE)
     if match_match:
         fid = match_match.group(1)
-        print(f"⚡ Intent: Fixture Lookup (ID: {fid})")
+        logger.info(f"Intent: Fixture Lookup (ID: {fid})")
         try:
             res = get_fixture_details(fid)
             if res:
@@ -1471,7 +1466,7 @@ async def process_user_query(raw_query: str, session_id: str = None):
         raw_sport = sport_match.group(1).strip()
         clean_sport = re.sub(r'\s+(matches|events|schedule|today|tomorrow)\b', '', raw_sport, flags=re.IGNORECASE).strip()
         if clean_sport.lower() not in ["the", "this"] and len(clean_sport) > 3:
-             print(f"⚡ Intent: Sport Schedule ({clean_sport})")
+             logger.info(f"Intent: Sport Schedule ({clean_sport})")
              try:
                  schedules = get_sport_schedule(clean_sport)
                  if schedules:
@@ -1480,7 +1475,7 @@ async def process_user_query(raw_query: str, session_id: str = None):
                          txt += f"- **{m.get('event_name')}**: {m.get('team1_name')} vs {m.get('team2_name')} @ {m.get('venue')}\n"
                      return create_api_response(txt, "sql_database", session_id)
              except Exception as e:
-                 print(f"SQL Error (Schedule): {e}")
+                 logger.error(f"SQL Error (Schedule): {e}", exc_info=True)
 
 
     # 5. Geo Query
@@ -1498,7 +1493,7 @@ async def process_user_query(raw_query: str, session_id: str = None):
         clean_name = re.sub(r'\s+(district|mandal|village|zila|jilla)\b', '', raw_name, flags=re.IGNORECASE).strip()
         
         if len(clean_name) > 3 and clean_name.lower() not in ["the", "this", "that"]:
-            print(f"⚡ Intent: Geo Lookup ({clean_name})")
+            logger.info(f"Intent: Geo Lookup ({clean_name})")
             try:
                 res = get_geo_details(clean_name)
                 if res:
@@ -1515,7 +1510,7 @@ async def process_user_query(raw_query: str, session_id: str = None):
                 else:
                     return create_api_response(f"🚫 **{clean_name}** could not be found in our Village/Mandal/District database.", "sql_database", session_id)
             except Exception as e:
-                print(f"SQL Error: {e}")
+                logger.error(f"SQL Error: {e}", exc_info=True)
 
 
     # 5.4 Level Schedule Lookup (Deterministic)
@@ -1523,7 +1518,7 @@ async def process_user_query(raw_query: str, session_id: str = None):
     schedule_match = re.search(schedule_pattern, original_query, re.IGNORECASE)
     if schedule_match:
         level_keyword = schedule_match.group(1).lower()
-        print(f"⚡ Intent: Level Schedule Lookup (Level: {level_keyword})")
+        logger.info(f"Intent: Level Schedule Lookup (Level: {level_keyword})")
         
         # Hardcoded Schedule from 'CM_Cup_2025_RAG_Knowledge.txt'
         # This ensures 100% accuracy vs RAG hallucinations
@@ -1561,7 +1556,7 @@ async def process_user_query(raw_query: str, session_id: str = None):
     level_match = re.search(level_pattern, original_query, re.IGNORECASE)
     if level_match:
         level_name = level_match.group(2).lower()
-        print(f"⚡ Intent: Discipline Lookup (Level: {level_name})")
+        logger.info(f"Intent: Discipline Lookup (Level: {level_name})")
         try:
             from rag.sql_queries import get_disciplines_by_level
             games = get_disciplines_by_level(level_name)
@@ -1572,7 +1567,7 @@ async def process_user_query(raw_query: str, session_id: str = None):
                 return create_api_response(txt, "sql_database", session_id)
             else:
                  # If SQL doesn't have data (e.g. new disciplines not in DB), Fallback to RAG
-                 print(f"ℹ️ SQL found no disciplines for {level_name}. Falling back to RAG.")
+                 logger.info(f"SQL found no disciplines for {level_name}. Falling back to RAG.")
                  pass 
         except Exception as e:
             print(f"SQL Error: {e}")
@@ -1589,7 +1584,7 @@ async def process_user_query(raw_query: str, session_id: str = None):
         clean_mandal = re.sub(r'\b(details|number|contact|name|who|is|the)\b', '', raw_mandal, flags=re.IGNORECASE).strip()
         
         if len(clean_mandal) > 3:
-             print(f"⚡ Intent: Mandal Incharge Lookup ({clean_mandal})")
+             logger.info(f"Intent: Mandal Incharge Lookup ({clean_mandal})")
              try:
                  from rag.location_search import search_mandal_incharge
                  res = search_mandal_incharge(clean_mandal)
@@ -1604,7 +1599,7 @@ async def process_user_query(raw_query: str, session_id: str = None):
                      # If specific lookup fails, we can let it fall through or return not found.
                      return create_api_response(f"ℹ️ I couldn't find a Mandal In-Charge for **{clean_mandal}**.\nPlease check the spelling (e.g., 'Jainad', 'Bela').", "logic_interceptor", session_id)
              except Exception as e:
-                 print(f"Error in MEO Interceptor: {e}")
+                 logger.error(f"Error in MEO Interceptor: {e}", exc_info=True)
 
     # 6. Complex SQL Queries (Agentic)
     # Detects questions about counts, lists, specific aggregations (Agentic)
@@ -1614,18 +1609,18 @@ async def process_user_query(raw_query: str, session_id: str = None):
     # 1. Strong Rule Keywords (Born, Birth) - Trigger SQL immediately
     # NOTE: Removed 'rules', 'age', 'limit' to let RAG handle them.
     if re.search(r"\b(born|birth)\b", original_query, re.IGNORECASE):
-        print(f"🤖 Intent: Rule/Age Query (Triggering SQL Agent)")
+        logger.info("Intent: Rule/Age Query (Triggering SQL Agent)")
         try:
              sql_response = run_sql_agent(original_query)
              if "I try to query" not in sql_response and "error" not in sql_response.lower():
                  return create_api_response(sql_response, "sql_agent", session_id)
         except Exception as e:
-             print(f"SQL Agent Failed: {e}")
+             logger.error(f"SQL Agent Failed: {e}", exc_info=True)
 
     # 2. General SQL Intents (Count, List, Who is) - Require a target object (player, sport, etc.)
     sql_intent_pattern = r"(how many|count|total|list|show|who is|what is|find).*(player|registration|venue|match|game|sport|cluster|incharge|hockey|cricket|kabaddi|kho|athletics|volleyball|ball|tennis|cycling|wrestling|karate|taekwondo|gymnastics|swimming|yoga|particip)"
     if re.search(sql_intent_pattern, original_query, re.IGNORECASE):
-        print(f"🤖 Intent: Complex/Agentic SQL Query")
+        logger.info("Intent: Complex/Agentic SQL Query")
         try:
             sql_response = run_sql_agent(original_query)
             # if agent fails to understand, it might return a generic error.
@@ -1633,12 +1628,12 @@ async def process_user_query(raw_query: str, session_id: str = None):
             if "I try to query" not in sql_response and "error" not in sql_response.lower():
                 return create_api_response(sql_response, "sql_agent", session_id)
         except Exception as e:
-            print(f"SQL Agent Failed: {e}")
+            logger.error(f"SQL Agent Failed: {e}", exc_info=True)
             # Fallthrough to RAG if SQL agent fails
             pass
 
     # 7. RAG Fallback
-    print(f"🧠 Intent: General Query")
+    logger.info("Intent: General Query")
     
     try:
         # Use Lazy Loaded Chain
@@ -1683,7 +1678,7 @@ async def process_user_query(raw_query: str, session_id: str = None):
 
         return create_api_response(final_answer, "rag_knowledge_base", session_id)
     except Exception as e:
-        print(f"RAG Crash: {e}")
+        logger.error(f"RAG Crash: {e}", exc_info=True)
         return create_api_response(f"I encountered an error accessing the knowledge base. Error: {str(e)}", "error_handler", session_id)
 
 @app.post("/chat")

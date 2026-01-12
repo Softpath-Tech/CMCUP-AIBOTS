@@ -140,13 +140,30 @@ def run_sql_agent(user_query: str):
         
     sql_query = raw_sql.strip()
     
-    print(f"🤖 AI Generated SQL: {sql_query}")
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.info(f"AI Generated SQL: {sql_query}")
     
     # 5. Execute SQL
     try:
-        # Sanity Check
-        if "drop" in sql_query.lower() or "delete" in sql_query.lower() or "update" in sql_query.lower():
-             return "I cannot execute modification queries."
+        # Enhanced Security Checks - Whitelist only SELECT queries
+        sql_lower = sql_query.lower().strip()
+        
+        # Block dangerous operations
+        dangerous_keywords = ["drop", "delete", "update", "insert", "alter", "create", "truncate", "exec", "execute", "grant", "revoke"]
+        if any(keyword in sql_lower for keyword in dangerous_keywords):
+            return "I cannot execute modification or administrative queries. Only SELECT queries are allowed."
+        
+        # Ensure query starts with SELECT
+        if not sql_lower.startswith("select"):
+            return "Only SELECT queries are allowed for security reasons."
+        
+        # Additional check: Block queries that might expose sensitive data in bulk
+        # (This is a basic check - more sophisticated validation could be added)
+        if "mobile_no" in sql_lower and "count" not in sql_lower and "limit" not in sql_lower:
+            # Allow if it's a specific lookup (has WHERE clause with value)
+            if "where" not in sql_lower or "=" not in sql_lower:
+                return "For privacy reasons, I cannot return lists of mobile numbers."
              
         df = ds.query(sql_query)
         result_str = ""
@@ -174,6 +191,6 @@ def run_sql_agent(user_query: str):
         return final_answer
         
     except Exception as e:
-        print(f"SQL Agent Error: {e}")
+        logger.error(f"SQL Agent Error: {e}", exc_info=True)
         return "I tried to query the database but encountered an error. Please try a simpler query."
 

@@ -210,7 +210,6 @@ MENU_TRANSLATIONS = {
             {"name": "Mandal Level", "value": "LEVEL_2"},
             {"name": "Assembly Constituency Level", "value": "LEVEL_3"},
             {"name": "District Level", "value": "LEVEL_4"},
-            {"name": "State Level", "value": "LEVEL_5"},
             {"name": "State Level", "value": "LEVEL_5"}
         ]
     },
@@ -221,7 +220,6 @@ MENU_TRANSLATIONS = {
             {"name": "మండల స్థాయి", "value": "LEVEL_2"},
             {"name": "అసెంబ్లీ నియోజకవర్గ స్థాయి", "value": "LEVEL_3"},
             {"name": "జిల్లా స్థాయి", "value": "LEVEL_4"},
-            {"name": "రాష్ట్ర స్థాయి", "value": "LEVEL_5"},
             {"name": "రాష్ట్ర స్థాయి", "value": "LEVEL_5"}
         ]
     },
@@ -232,7 +230,6 @@ MENU_TRANSLATIONS = {
             {"name": "मंडल स्तर", "value": "LEVEL_2"},
             {"name": "विधानसभा क्षेत्र स्तर", "value": "LEVEL_3"},
             {"name": "जिला स्तर", "value": "LEVEL_4"},
-            {"name": "राज्य स्तर", "value": "LEVEL_5"},
             {"name": "राज्य स्तर", "value": "LEVEL_5"}
         ]
     },

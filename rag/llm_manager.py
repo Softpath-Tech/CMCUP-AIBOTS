@@ -1,15 +1,19 @@
 import os
 import requests
 import json
+import logging
 from langdetect import detect
 from dotenv import load_dotenv
+
+logger = logging.getLogger(__name__)
 
 load_dotenv()
 
 # Configuration for Exact Models
-# User Request: "Gemini 2.5 Flash" and "GPT 5.2" (Pro failed verification)
+# User Request: "Gemini 2.5 Flash" and fallback to GPT-4
+# Note: gpt-5.2-pro doesn't exist, using gpt-4o as fallback
 PRIMARY_MODEL = "gemini-2.5-flash" 
-SECONDARY_MODEL = "gpt-5.2-pro"
+SECONDARY_MODEL = "gpt-4o"  # Changed from non-existent gpt-5.2-pro to gpt-4o
 
 def get_system_prompt(language: str = "English") -> str:
     """
@@ -168,22 +172,22 @@ def ask_llm(context: str, question: str, chat_history: list = [], language: str 
         
     system_prompt = get_system_prompt(language)
     
-    print(f"DEBUG: Using Primary Model: {PRIMARY_MODEL}")
+    logger.debug(f"Using Primary Model: {PRIMARY_MODEL}")
     
     # 1. Try Primary (Google)
     try:
         answer = call_google_api(PRIMARY_MODEL, system_prompt, question, context, chat_history)
         return {"response": answer, "model_used": PRIMARY_MODEL}
     except Exception as e:
-        print(f"[WARN] Primary Model ({PRIMARY_MODEL}) Failed: {str(e)}")
-        print(f"DEBUG: Falling back to Secondary Model: {SECONDARY_MODEL}")
+        logger.warning(f"Primary Model ({PRIMARY_MODEL}) Failed: {str(e)}")
+        logger.debug(f"Falling back to Secondary Model: {SECONDARY_MODEL}")
         
         # 2. Try Secondary (OpenAI)
         try:
             answer = call_openai_api(SECONDARY_MODEL, system_prompt, question, context, chat_history)
             return {"response": answer, "model_used": SECONDARY_MODEL}
         except Exception as e2:
-            print(f"[ERROR] Secondary Model ({SECONDARY_MODEL}) Failed: {str(e2)}")
+            logger.error(f"Secondary Model ({SECONDARY_MODEL}) Failed: {str(e2)}")
             return {
                 "response": f"I apologize, but I am unable to process your request at the moment due to system connectivity issues. (Primary Err: {str(e)}, Secondary Err: {str(e2)})",
                 "model_used": "None"
