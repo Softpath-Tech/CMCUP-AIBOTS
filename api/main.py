@@ -953,7 +953,6 @@ async def process_user_query(raw_query: str, session_id: str = None):
         
         # --- SUB MENU: LANGUAGE ---
         elif current_state == MENU_LANGUAGE:
-            resp_text = ""
             lang_set = False
             
             if choice == 1:
@@ -961,21 +960,18 @@ async def process_user_query(raw_query: str, session_id: str = None):
                 if session_id: 
                     if session_id not in SESSION_DATA: SESSION_DATA[session_id] = {}
                     SESSION_DATA[session_id]["language"] = "en"
-                resp_text = "✅ **Language set to English**."
                 lang_set = True
             elif choice == 2:
                 # Set to Telugu
                 if session_id:
                     if session_id not in SESSION_DATA: SESSION_DATA[session_id] = {}
                     SESSION_DATA[session_id]["language"] = "te"
-                resp_text = "✅ **భాష తెలుగుకి మార్చబడింది** (Language set to Telugu)."
                 lang_set = True
             elif choice == 3:
                 # Set to Hindi
                 if session_id:
                     if session_id not in SESSION_DATA: SESSION_DATA[session_id] = {}
                     SESSION_DATA[session_id]["language"] = "hi"
-                resp_text = "✅ **भाषा हिंदी में सेट की गई है** (Language set to Hindi)."
                 lang_set = True
             else:
                 return create_api_response("❌ Invalid Option. Please select 1, 2, or 3.", "menu_system", session_id)
@@ -985,8 +981,6 @@ async def process_user_query(raw_query: str, session_id: str = None):
                 if session_id: SESSION_STATE[session_id] = MENU_MAIN
                 # Get Main Menu Data in new language
                 menu_data = get_menu_data(MENU_MAIN, session_id)
-                # Prepend the confirmation message
-                menu_data["text"] = resp_text + "\n\n" + menu_data["text"]
                 return create_api_response(menu_data, "menu_system", session_id)
 
         
