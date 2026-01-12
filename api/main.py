@@ -36,7 +36,8 @@ from rag.sql_queries import (
     get_disciplines_by_level,
     get_player_venues_by_phone,
     get_player_venue_by_ack,
-    get_sport_rules
+    get_sport_rules,
+    get_fixture_sports
 )
 from rag.location_search import search_district_officer, search_cluster_incharge
 # Also importing get_player_by_phone from lookup (which uses SQL now)
@@ -683,7 +684,18 @@ async def process_user_query(raw_query: str, session_id: str = None):
                      txt += f"- **{m.get('event_name')}**: {m.get('team1_name')} vs {m.get('team2_name')} @ {m.get('venue')}\n"
                  return create_api_response(txt, "sql_database", session_id)
              else:
-                 return create_api_response(f"ℹ️ No specific schedule found for **{sport_name}**. It might not be scheduled yet or check spelling.\n\nType another sport or 'Back'.", "sql_database", session_id)
+                available = get_fixture_sports()
+                suggestion = ""
+                if available:
+                    # show up to 8 sports for brevity
+                    suggestion_list = ", ".join(available[:8])
+                    suggestion = f"\n\n📋 Schedules currently available for: {suggestion_list}"
+                return create_api_response(
+                    f"ℹ️ No specific schedule found for **{sport_name}**. It might not be published yet.\n"
+                    f"Please check later or try another sport.{suggestion}",
+                    "sql_database",
+                    session_id
+                )
         except Exception as e:
              return create_api_response(f"Error retrieving schedule: {str(e)}", "error", session_id)
 
@@ -1474,6 +1486,17 @@ async def process_user_query(raw_query: str, session_id: str = None):
                      for m in schedules[:5]:
                          txt += f"- **{m.get('event_name')}**: {m.get('team1_name')} vs {m.get('team2_name')} @ {m.get('venue')}\n"
                      return create_api_response(txt, "sql_database", session_id)
+                 else:
+                     available = get_fixture_sports()
+                     suggestion = ""
+                     if available:
+                         suggestion_list = ", ".join(available[:8])
+                         suggestion = f"\n\n📋 Schedules currently available for: {suggestion_list}"
+                     return create_api_response(
+                         f"ℹ️ No schedule found for **{clean_sport}** yet. Please check later or try another sport.{suggestion}",
+                         "sql_database",
+                         session_id
+                     )
              except Exception as e:
                  logger.error(f"SQL Error (Schedule): {e}", exc_info=True)
 
