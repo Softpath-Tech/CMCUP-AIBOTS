@@ -1,0 +1,94 @@
+Initializing DataStore...
+[*] Initializing SQLite Data Store...
+   -> Loaded table: clustermaster (1000 rows)
+   -> Loaded table: districtmaster (34 rows)
+   -> Loaded table: mandalmaster (716 rows)
+   -> Loaded table: player_details (1000 rows)
+   -> Loaded table: tb_category (123 rows)
+   -> Loaded table: tb_discipline (44 rows)
+   -> Loaded table: tb_district_officers (34 rows)
+   -> Loaded table: tb_events (361 rows)
+   -> Loaded table: tb_fixtures (635 rows)
+   -> Loaded table: tb_player_results (18 rows)
+   -> Loaded table: tb_selected_players (55 rows)
+   -> Loaded table: villagemaster (1000 rows)
+[*] Creating Secure SQL Views for AI...
+   -> Created View: view_player_unified
+   -> Created View: view_sport_rules
+[OK] DataStore Ready!
+
+Searching for a mobile number with multiple registrations...
+Found number 6232329294 with 4 registrations.
+
+Testing get_player_venues_by_phone('6232329294')...
+
+Results found: 6
+
+--- Result 1 ---
+sport_name: Athletics
+event_name: 200M
+player_reg_id: SATGCMC-01161300004
+venue: None
+match_date: None
+clustername: ADILABAD
+cluster_incharge: 0
+incharge_mobile: None
+
+--- Result 2 ---
+sport_name: Athletics
+event_name: 400M
+player_reg_id: SATGCMC-01161300005
+venue: None
+match_date: None
+clustername: ADILABAD
+cluster_incharge: 0
+incharge_mobile: None
+
+--- Result 3 ---
+sport_name: Kho-Kho
+event_name: None
+player_reg_id: SATGCMC-01161300006
+venue: None
+match_date: None
+clustername: ADILABAD
+cluster_incharge: 0
+incharge_mobile: None
+
+--- Result 4 ---
+sport_name: Kho-Kho
+event_name: None
+player_reg_id: SATGCMC-01161300006
+venue: None
+match_date: None
+clustername: ADILABAD
+cluster_incharge: 0
+incharge_mobile: None
+
+--- Result 5 ---
+sport_name: Kho-Kho
+event_name: None
+player_reg_id: SATGCMC-01161300006
+venue: None
+match_date: None
+clustername: ADILABAD
+cluster_incharge: 0
+incharge_mobile: None
+
+--- Result 6 ---
+sport_name: Badminton
+event_name: Singles
+player_reg_id: SATGCMC-01161300007
+venue: None
+match_date: None
+clustername: ADILABAD
+cluster_incharge: 0
+incharge_mobile: None
+
+--- Simulated API Response Logic ---
+found **4 registrations** for this number:
+- **Athletics** (200M) [`SATGCMC-01161300004`]
+- **Athletics** (400M) [`SATGCMC-01161300005`]
+- **Kho-Kho** [`SATGCMC-01161300006`]
+- **Badminton** (Singles) [`SATGCMC-01161300007`]
+
+Since you have multiple events, please COPY the **Acknowledgment Number** (e.g., SATGCMC-...) above and paste it here to get venue details.

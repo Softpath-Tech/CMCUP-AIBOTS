@@ -430,24 +430,20 @@ def get_discipline_info(sport_name):
     Get basic info including ID for a sport from tb_discipline.
     """
     try:
-    ds = get_datastore()
+        ds = get_datastore()
         if not ds.initialized: 
             ds.init_db()
     
-    query = "SELECT game_id, dist_game_nm, rules_pdf FROM tb_discipline WHERE LOWER(dist_game_nm) LIKE ?"
-    # Fuzzy match or exact? Let's try exact first, then fuzzy.
-    # The stored session name comes from the DB list so it should be exact.
-    
-    df = ds.query(query, (sport_name.lower(),))
-    
-    if df.empty:
-        # Try fuzzy
-        df = ds.query(query, (f"%{sport_name.lower()}%",))
+        query = "SELECT game_id, dist_game_nm, rules_pdf FROM tb_discipline WHERE LOWER(dist_game_nm) LIKE ?"
+        df = ds.query(query, (sport_name.lower(),))
         
-    if df.empty:
-        return None
-        
-    return df.to_dict(orient="records")[0]
+        if df.empty:
+            df = ds.query(query, (f"%{sport_name.lower()}%",))
+            
+        if df.empty:
+            return None
+            
+        return df.to_dict(orient="records")[0]
     except Exception as e:
         print(f"Error in get_discipline_info for '{sport_name}': {e}")
         return None
@@ -457,26 +453,26 @@ def get_categories_by_sport(game_id):
     Get age criteria/categories for a sport ID from tb_category.
     """
     try:
-    ds = get_datastore()
+        ds = get_datastore()
         if not ds.initialized: 
             ds.init_db()
     
-    query = """
-    SELECT 
-        c.cat_name, 
-        c.gender, 
-        c.from_age, 
-        c.to_age 
-    FROM tb_category c 
-    WHERE c.discipline_id = ? AND c.status = 1
-    """
-    
-    df = ds.query(query, (game_id,))
-    
-    if df.empty:
-        return []
+        query = """
+        SELECT 
+            c.cat_name, 
+            c.gender, 
+            c.from_age, 
+            c.to_age 
+        FROM tb_category c 
+        WHERE c.discipline_id = ? AND c.status = 1
+        """
         
-    return df.to_dict(orient="records")
+        df = ds.query(query, (game_id,))
+        
+        if df.empty:
+            return []
+            
+        return df.to_dict(orient="records")
     except Exception as e:
         print(f"Error in get_categories_by_sport for game_id '{game_id}': {e}")
         return []

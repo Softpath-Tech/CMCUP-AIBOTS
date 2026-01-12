@@ -693,13 +693,31 @@ async def process_user_query(raw_query: str, session_id: str = None):
                 return create_api_response(txt, "sql_database", session_id)
                 
             else:
-                # Multiple Records
-                txt = f"found **{len(registrations)} registrations** for this number:\n"
+                # Multiple Records - Deduplicate by player_reg_id
+                unique_map = {}
                 for r in registrations:
-                    s = r.get('sport_name') or r.get('event_name')
-                    txt += f"- {s}\n"
+                    rid = r.get('player_reg_id')
+                    # Use existing dict if no ID (shouldn't happen) or key by ID
+                    key = rid if rid else f"unknown_{len(unique_map)}"
+                    if key not in unique_map:
+                        unique_map[key] = r
                 
-                txt += "\nSince you have multiple events, please provide your **Acknowledgment Number** (e.g., SATGCMC-...) to get specific venue details."
+                unique_recs = list(unique_map.values())
+                
+                txt = f"found **{len(unique_recs)} registrations** for this number:\n"
+                for r in unique_recs:
+                    s = r.get('sport_name') or r.get('event_name')
+                    e = r.get('event_name')
+                    ack = r.get('player_reg_id')
+                    
+                    # Format: - Sport (Event) [Ack: ...]
+                    entry = f"- **{s}**"
+                    if e and s != e: entry += f" ({e})"
+                    if ack: entry += f" [`{ack}`]"
+                    
+                    txt += f"{entry}\n"
+                
+                txt += "\nSince you have multiple events, please COPY the **Acknowledgment Number** (e.g., SATGCMC-...) above and paste it here to get venue details."
                 return create_api_response(txt, "sql_database", session_id)
         else:
              return create_api_response("❌ Invalid Phone Number. Please enter a 10-digit mobile number starting with 6-9.\n\nType 'Back' to cancel.", "validation_error", session_id)
