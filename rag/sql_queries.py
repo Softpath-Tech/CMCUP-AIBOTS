@@ -314,16 +314,28 @@ def get_player_venues_by_phone(phone):
     # Reusing the logic from search_players_sql but optimized for venue/contact info
     query = """
     SELECT 
+        p.player_nm,
+        p.player_reg_id,
+        p.gender,
         d.dist_game_nm as sport_name,
         e.event_name,
-        p.player_reg_id,
         
+        -- Location Hierarchy
+        v.villagename,
+        m.mandalname,
+        dist.districtname,
+        c.clustername,
+        
+        -- Selection Level
+        sp.is_mandal_level,
+        sp.is_district_level,
+        sp.is_state_level,
+
         -- Venue Info (from Fixtures)
         f.venue,
         f.match_date,
         
         -- Cluster Incharge Info
-        c.clustername,
         c.incharge_name as cluster_incharge,
         c.mobile_no as incharge_mobile
 
@@ -331,14 +343,18 @@ def get_player_venues_by_phone(phone):
     
     -- Link Village -> Cluster
     LEFT JOIN villagemaster v ON p.village_id = v.id
+    LEFT JOIN mandalmaster m ON p.mandal_id = m.id
+    LEFT JOIN districtmaster dist ON p.district_id = dist.districtno
     LEFT JOIN clustermaster c ON v.cluster_id = c.cluster_id
     
     -- Link Game/Event
     LEFT JOIN tb_discipline d ON p.game_id = d.game_id
     LEFT JOIN tb_events e ON p.event_id = e.id
 
+    -- Selection Level
+    LEFT JOIN tb_selected_players sp ON p.id = sp.player_id
+
     -- Link Fixtures (Try to find a match for this player's gender/district/game)
-    -- Note: This is best-effort mapping since checking individual participation in a team fixture is complex.
     LEFT JOIN tb_fixtures f ON 
         p.game_id = f.disc_id 
         AND p.gender = f.gender

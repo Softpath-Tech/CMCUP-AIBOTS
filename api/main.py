@@ -311,6 +311,57 @@ def create_api_response(content, source="menu_system", session_id=None):
         "session_id": session_id
     }
 
+def format_registrations(registrations):
+    """
+    Standardized formatting for player registration details.
+    """
+    if not registrations:
+        return None
+    
+    txt = "👤 **Player Details Found**\n\n"
+    
+    for idx, rec in enumerate(registrations):
+        name = rec.get('player_nm', 'N/A')
+        reg_id = rec.get('player_reg_id', 'N/A')
+        sport = rec.get('sport_name') or rec.get('event_name') or "Unknown Sport"
+        
+        # Location
+        loc_parts = [rec.get('villagename'), rec.get('mandalname'), rec.get('districtname')]
+        loc_str = ", ".join([p for p in loc_parts if p]) or "N/A"
+        
+        # Status
+        status = "Cluster/Village Level"
+        if rec.get('is_state_level') == 1: status = "State Level"
+        elif rec.get('is_district_level') == 1: status = "District Level"
+        elif rec.get('is_mandal_level') == 1: status = "Mandal Level"
+
+        venue = rec.get('venue') or "Venue 2" # Defaulting to User's example if missing? Actually using pendning/TBD is safer.
+        # However, the user example said: Venue: Venue 2
+        venue = rec.get('venue') or "Venue details pending/TBD"
+        
+        date = rec.get('match_date') or "Check Schedule"
+        incharge = rec.get('cluster_incharge') or "0" # User example said Name: 0
+        contact = rec.get('incharge_mobile') or "N/A"
+
+        entry = (
+            f"**Name:** {name}\n"
+            f"**Reg ID:** {reg_id}\n\n"
+            f"📍 **Location:** {loc_str}\n"
+            f"🏅 **Status:** {status}\n\n"
+            f"🏟️ **Venue Details:**\n"
+            f"Sport: {sport}\n"
+            f"Venue: {venue}\n"
+            f"Date: {date}\n\n"
+            f"👤 **Coach/Incharge:**\n"
+            f"Name: {incharge}\n"
+            f"Contact: {contact}"
+        )
+        
+        if idx > 0:
+            txt += "\n---\n\n"
+        txt += entry
+    return txt
+
 def extract_plain_text(resp) -> str:
     """Try to extract a single answer string from various response shapes."""
     if resp is None:
@@ -418,7 +469,6 @@ def get_discipline_response(level_num, session_id):
                     SESSION_DATA[session_id].update({"sports": games, "level_title": display_title})
 
                 buttons = [{"name": g, "value": str(i)} for i, g in enumerate(games, 1)]
-                buttons.append({"name": "Back", "value": "Back"})
                 
                 txt = f"### 🏅 Sports at {display_title}\n\nSelect a sport below:"
                 return create_api_response({"text": txt, "buttons": buttons}, "sql_database", session_id)
@@ -598,38 +648,11 @@ async def process_user_query(raw_query: str, session_id: str = None):
             # SQL Lookup
             registrations = get_player_venues_by_phone(phone)
             
-            if not registrations:
-                 return create_api_response(f"ℹ️ No registrations found for **{phone}**. Please check the number or register at the official site.", "sql_database", session_id)
-            
-            # Logic: 1 Record vs Multi
-            if len(registrations) == 1:
-                rec = registrations[0]
-                venue = rec.get('venue')
-                sport = rec.get('sport_name') or rec.get('event_name')
-                
-                txt = f"### 🏟️ Venue Details for {sport}\n"
-                if venue:
-                    txt += f"**Venue:** {venue}\n"
-                    txt += f"**Date:** {rec.get('match_date') or 'Check Schedule'}\n"
-                else:
-                    txt += "**Status:** Venue details pending/TBD.\n"
-                
-                # Always show In-Charge if available
-                if rec.get('cluster_incharge'):
-                     txt += f"\n👤 **Venue In-Charge:** {rec.get('cluster_incharge')}\n"
-                     txt += f"📞 **Contact:** {rec.get('incharge_mobile', 'N/A')}\n"
-                
+            if registrations:
+                txt = format_registrations(registrations)
                 return create_api_response(txt, "sql_database", session_id)
-                
             else:
-                # Multiple Records
-                txt = f"found **{len(registrations)} registrations** for this number:\n"
-                for r in registrations:
-                    s = r.get('sport_name') or r.get('event_name')
-                    txt += f"- {s}\n"
-                
-                txt += "\nSince you have multiple events, please provide your **Acknowledgment Number** (e.g., SATGCMC-...) to get specific venue details."
-                return create_api_response(txt, "sql_database", session_id)
+                return create_api_response(f"ℹ️ No registrations found for **{phone}**. Please check the number or register at the official site.", "sql_database", session_id)
         else:
              return create_api_response("❌ Invalid Phone Number. Please enter a 10-digit mobile number starting with 6-9.\n\nType 'Back' to cancel.", "validation_error", session_id)
     
@@ -987,7 +1010,6 @@ async def process_user_query(raw_query: str, session_id: str = None):
                     {"name": "Age Criteria", "value": "1"},
                     {"name": "Events of the Game", "value": "2"},
                     {"name": "Rules of Game", "value": "3"},
-                    {"name": "Back", "value": "Back"}
                 ]
                 
                 return create_api_response({
@@ -1297,36 +1319,11 @@ async def process_user_query(raw_query: str, session_id: str = None):
         # SQL Lookup
         registrations = get_player_venues_by_phone(phone)
         
-        if not registrations:
-             return create_api_response(f"ℹ️ No registrations found for **{phone}**. Please check the number or register at the official site.", "sql_database", session_id)
-        
-        # Logic: 1 Record vs Multi
-        if len(registrations) == 1:
-            rec = registrations[0]
-            venue = rec.get('venue')
-            sport = rec.get('sport_name') or rec.get('event_name')
-            
-            txt = f"### 🏟️ Venue Details for {sport}\n"
-            if venue:
-                txt += f"**Venue:** {venue}\n"
-                txt += f"**Date:** {rec.get('match_date') or 'Check Schedule'}\n"
-            else:
-                txt += "**Status:** There are no Venue Details available yet.\n"
-                txt += f"You can contact your cluster Incharge:\n"
-                txt += f"👤 **{rec.get('cluster_incharge', 'N/A')}**\n"
-                txt += f"📞 **{rec.get('incharge_mobile', 'N/A')}**\n"
-            
+        if registrations:
+            txt = format_registrations(registrations)
             return create_api_response(txt, "sql_database", session_id)
-            
         else:
-            # Multiple Records
-            txt = f"found **{len(registrations)} registrations** for this number:\n"
-            for r in registrations:
-                s = r.get('sport_name') or r.get('event_name')
-                txt += f"- {s}\n"
-            
-            txt += "\nSince you have multiple events, please provide your **Acknowledgment Number** (e.g., SATGCMC-...) to get specific venue details."
-            return create_api_response(txt, "sql_database", session_id)
+             return create_api_response(f"ℹ️ No registrations found for **{phone}**. Please check the number or register at the official site.", "sql_database", session_id)
     
     # 1C. Venue Intent BUT NO Phone -> Prompt
     # If user mentions venue/status/game but didn't provide phone, prompt them.
