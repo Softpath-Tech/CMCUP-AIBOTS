@@ -667,11 +667,15 @@ async def process_user_query(raw_query: str, session_id: str = None):
         # if session_id: SESSION_STATE[session_id] = MENU_SCHEDULE
         
         try:
-             schedules = get_sport_schedule(sport_name)
-             if schedules:
-                 txt = f"### 📅 {sport_name.title()} Schedule (Next 5)\n"
-                 for m in schedules[:5]:
-                     txt += f"- **{m.get('event_name')}**: {m.get('team1_name')} vs {m.get('team2_name')} @ {m.get('venue')}\n"
+             from rag.sql_queries import get_discipline_info
+             info = get_discipline_info(sport_name)
+             if info:
+                 game_id = info['game_id']
+                 disp_name = info['dist_game_nm']
+                 url = f"https://satg.telangana.gov.in/cmcup/viewschedulegames/{game_id}"
+                 txt = f"🗓️ **Schedule for {disp_name}**\n\n"
+                 txt += f"You can view the specific schedule and fixtures here:\n"
+                 txt += f"👉 [View {disp_name} Schedule]({url})"
                  return create_api_response(txt, "sql_database", session_id)
              else:
                  return create_api_response(f"ℹ️ No specific schedule found for **{sport_name}**. It might not be scheduled yet or check spelling.\n\nType another sport or 'Back'.", "sql_database", session_id)
@@ -1133,22 +1137,16 @@ async def process_user_query(raw_query: str, session_id: str = None):
 
     # --- TEXT INPUT HANDLING FOR MENUS ---
     if current_state == MENU_SCHEDULE_GAME_SEARCH and not user_query.isdigit():
-
-        matches = get_sport_schedule(user_query)
+        from rag.sql_queries import get_discipline_info
+        info = get_discipline_info(user_query)
         
-        if matches:
-             sport_name = matches[0].get('sport_name', user_query)
-             txt = f"🗓️ **Schedule for {sport_name}**\n\n"
-             for m in matches:
-                 date_str = m.get('match_date') or "TBD"
-                 time_str = m.get('match_time') or ""
-                 venue_str = m.get('venue') or "TBD"
-                 team1 = m.get('team1_name') or "Team A"
-                 team2 = m.get('team2_name') or "Team B"
-                 row = f"🔸 **{team1} vs {team2}**\n   📅 {date_str} {time_str} | 🏟️ {venue_str}\n"
-                 txt += row
-             
-             txt += "\nType another sport to check, or 'Back'."
+        if info:
+             game_id = info['game_id']
+             game_name = info['dist_game_nm']
+             url = f"https://satg.telangana.gov.in/cmcup/viewschedulegames/{game_id}"
+             txt = f"🗓️ **Schedule for {game_name}**\n\n"
+             txt += f"You can view the specific schedule and fixtures here:\n"
+             txt += f"👉 [View {game_name} Schedule]({url})"
              return create_api_response(txt, "sql_database", session_id)
         else:
              return create_api_response(
@@ -1473,11 +1471,15 @@ async def process_user_query(raw_query: str, session_id: str = None):
         if clean_sport.lower() not in ["the", "this"] and len(clean_sport) > 3:
              print(f"⚡ Intent: Sport Schedule ({clean_sport})")
              try:
-                 schedules = get_sport_schedule(clean_sport)
-                 if schedules:
-                     txt = f"### 📅 {clean_sport.title()} Schedule (Next 5)\n"
-                     for m in schedules[:5]:
-                         txt += f"- **{m.get('event_name')}**: {m.get('team1_name')} vs {m.get('team2_name')} @ {m.get('venue')}\n"
+                 from rag.sql_queries import get_discipline_info
+                 info = get_discipline_info(clean_sport)
+                 if info:
+                     game_id = info['game_id']
+                     game_name = info['dist_game_nm']
+                     url = f"https://satg.telangana.gov.in/cmcup/viewschedulegames/{game_id}"
+                     txt = f"🗓️ **Schedule for {game_name}**\n\n"
+                     txt += f"You can view the specific schedule and fixtures here:\n"
+                     txt += f"👉 [View {game_name} Schedule]({url})"
                      return create_api_response(txt, "sql_database", session_id)
              except Exception as e:
                  print(f"SQL Error (Schedule): {e}")
