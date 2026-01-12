@@ -133,8 +133,8 @@ GLOBAL_NAV_MAP = {
     "2.3": {"type": "menu", "target": MENU_MEDALS},
     
     # 2.2 Schedule Sub-menu
-    "2.2.1": {"type": "text", "msg": "🗓️ **Tournament Schedule**\n\n🔸 **Gram Panchayat / Cluster:** 17 Jan - 22 Jan 2026\n🔸 **Mandal Level:** 28 Jan - 31 Jan 2026\n🔸 **Assembly Constituency:** 03 Feb - 07 Feb 2026\n🔸 **District Level:** 10 Feb - 14 Feb 2026\n🔸 **State Level:** 19 Feb - 26 Feb 2026\n\n🔙 *Type 'Back' to return to Main Menu*"},
-    "2.2.2": {"type": "state_prompt", "target": STATE_WAIT_SPORT_SCHEDULE, "msg": "🏀 **Game Schedule Lookup**\n\nPlease enter the **Sport Name** (e.g., Cricket, Kabaddi)."},
+    "2.2.1": {"type": "text", "key": "TXT_TOURNAMENT_SCHEDULE"},
+    "2.2.2": {"type": "state_prompt", "target": STATE_WAIT_SPORT_SCHEDULE, "key": "TXT_SCHEDULE_GAME_SEARCH_PROMPT"},
 
     # 3. Venues
     "3.1": {"type": "menu", "target": MENU_VENUES}, 
@@ -145,12 +145,12 @@ GLOBAL_NAV_MAP = {
     # 4. Player Status
 
     # 4. Player Status
-    "4.1": {"type": "state_prompt", "target": STATE_WAIT_PHONE, "msg": "📱 **Search by Phone No**\n\nPlease enter your registered **Mobile Number** (10 digits)."},
-    "4.2": {"type": "state_prompt", "target": STATE_WAIT_ACK, "msg": "🔢 **Search by Acknowledgment No**\n\nPlease enter your **Acknowledgment Number** (e.g., SATGCMC-...)."},
+    "4.1": {"type": "state_prompt", "target": STATE_WAIT_PHONE, "key": "TXT_PLAYER_STATUS_PHONE_PROMPT"},
+    "4.2": {"type": "state_prompt", "target": STATE_WAIT_ACK, "key": "TXT_PLAYER_STATUS_ACK_PROMPT"},
 
     # 5. Help
-    "5.1": {"type": "text", "msg": "📞 **Helpline Numbers:**\n\n- General Enquiry: 7286851734"},
-    "5.2": {"type": "text", "msg": "📧 **Email Support:**\n\n satgcmcup2026@gmail.com"},
+    "5.1": {"type": "text", "key": "TXT_HELPLINE"},
+    "5.2": {"type": "text", "key": "TXT_EMAIL_SUPPORT"},
     "5.3": {"type": "menu", "target": MENU_LANGUAGE},
 }
 STATE_WAIT_CLUSTER_INCHARGE = "STATE_WAIT_CLUSTER_INCHARGE"
@@ -285,11 +285,18 @@ def search_cluster_incharge_helper(user_query):
         return f"Error searching data: {str(e)}"
 
 # --- MENU TEXT HELPERS ---
+def get_session_language(session_id=None):
+    """
+    Helper function to get language from session.
+    Returns language code: "en", "te", or "hi"
+    """
+    if session_id:
+        return SESSION_DATA.get(session_id, {}).get("language", "en")
+    return "en"
+
 def get_menu_data(menu_name, session_id=None):
     # 1. Determine Language
-    lang = "en"
-    if session_id:
-        lang = SESSION_DATA.get(session_id, {}).get("language", "en")
+    lang = get_session_language(session_id)
     
     logger.debug(f"get_menu_data called with {menu_name} [Lang: {lang}]")
     
@@ -407,17 +414,59 @@ def get_discipline_response(level_num, session_id):
     if level_num in level_map:
         from rag.sql_queries import get_disciplines_by_level
         level_name = level_map[level_num]
-        try:
-            games = get_disciplines_by_level(level_name)
-            
-            titles = {
+        lang = get_session_language(session_id)
+        
+        # Translated titles
+        titles = {
+            "en": {
                 "cluster": "Cluster / Gram Panchayat Level",
                 "mandal": "Mandal Level",
                 "assembly": "Assembly Constituency Level",
                 "district": "District Level",
                 "state": "State Level"
+            },
+            "te": {
+                "cluster": "క్లస్టర్ / గ్రామ పంచాయతీ స్థాయి",
+                "mandal": "మండల స్థాయి",
+                "assembly": "అసెంబ్లీ నియోజకవర్గ స్థాయి",
+                "district": "జిల్లా స్థాయి",
+                "state": "రాష్ట్ర స్థాయి"
+            },
+            "hi": {
+                "cluster": "क्लस्टर / ग्राम पंचायत स्तर",
+                "mandal": "मंडल स्तर",
+                "assembly": "विधानसभा क्षेत्र स्तर",
+                "district": "जिला स्तर",
+                "state": "राज्य स्तर"
             }
-            display_title = titles.get(level_name, level_name.title() + " Level")
+        }
+        
+        # Translated messages
+        messages = {
+            "en": {
+                "header": "### 🏅 Sports at {level}\n\nSelect a sport below:",
+                "no_sports": "ℹ️ No sports found specifically for **{level}** in the database.",
+                "error": "❌ An error occurred while fetching disciplines. Please try again.",
+                "back": "Back"
+            },
+            "te": {
+                "header": "### 🏅 {level}లో క్రీడలు\n\nదయచేసి క్రింద క్రీడను ఎంచుకోండి:",
+                "no_sports": "ℹ️ **{level}** కోసం డేటాబేస్లో నిర్దిష్ట క్రీడలు కనుగొనబడలేదు.",
+                "error": "❌ క్రీడలను పొందడంలో లోపం సంభవించింది. దయచేసి మళ్లీ ప్రయత్నించండి.",
+                "back": "వెనుకకు"
+            },
+            "hi": {
+                "header": "### 🏅 {level} में खेल\n\nकृपया नीचे एक खेल चुनें:",
+                "no_sports": "ℹ️ **{level}** के लिए डेटाबेस में कोई विशिष्ट खेल नहीं मिले।",
+                "error": "❌ खेल प्राप्त करने में त्रुटि हुई। कृपया पुनः प्रयास करें।",
+                "back": "वापस"
+            }
+        }
+        
+        try:
+            games = get_disciplines_by_level(level_name)
+            display_title = titles.get(lang, titles["en"]).get(level_name, level_name.title() + " Level")
+            msg = messages.get(lang, messages["en"])
 
             if games:
                 if session_id:
@@ -426,15 +475,15 @@ def get_discipline_response(level_num, session_id):
                     SESSION_DATA[session_id].update({"sports": games, "level_title": display_title})
 
                 buttons = [{"name": g, "value": str(i)} for i, g in enumerate(games, 1)]
-                buttons.append({"name": "Back", "value": "Back"})
+                buttons.append({"name": msg["back"], "value": "Back"})
                 
-                txt = f"### 🏅 Sports at {display_title}\n\nSelect a sport below:"
+                txt = msg["header"].format(level=display_title)
                 return create_api_response({"text": txt, "buttons": buttons}, "sql_database", session_id)
             else:
-                 return create_api_response(f"ℹ️ No sports found specifically for **{display_title}** in the database.", "sql_database", session_id)
+                 return create_api_response(msg["no_sports"].format(level=display_title), "sql_database", session_id)
         except Exception as e:
             logger.error(f"Error fetching disciplines: {e}", exc_info=True)
-            return create_api_response("❌ An error occurred while fetching disciplines. Please try again.", "error_handler", session_id)
+            return create_api_response(messages.get(lang, messages["en"])["error"], "error_handler", session_id)
     return None
 
 async def process_user_query(raw_query: str, session_id: str = None):
@@ -554,11 +603,16 @@ async def process_user_query(raw_query: str, session_id: str = None):
         nav = GLOBAL_NAV_MAP[user_query]
         n_type = nav.get("type")
         
+        # Get language from session
+        lang = get_session_language(session_id)
+        
         if n_type == "text":
             # Return static text (either from key or msg)
             if "key" in nav:
-                return create_api_response(get_translation(nav["key"], session_id), "global_nav", session_id)
-            else:
+                trans_data = get_translation(nav["key"], lang)
+                return create_api_response(trans_data, "global_nav", session_id)
+            elif "msg" in nav:
+                # Fallback for hardcoded messages (should be migrated to translations)
                 return create_api_response(nav["msg"], "global_nav", session_id)
                 
         elif n_type == "menu":
@@ -570,9 +624,16 @@ async def process_user_query(raw_query: str, session_id: str = None):
         elif n_type == "state_prompt":
             # set state and return prompt msg
             target = nav["target"]
-            msg = nav["msg"]
-            if session_id: SESSION_STATE[session_id] = target
-            return create_api_response(msg, "menu_system", session_id)
+            if "key" in nav:
+                # Use translation key
+                trans_data = get_translation(nav["key"], lang)
+                if session_id: SESSION_STATE[session_id] = target
+                return create_api_response(trans_data, "menu_system", session_id)
+            elif "msg" in nav:
+                # Fallback for hardcoded messages
+                msg = nav["msg"]
+                if session_id: SESSION_STATE[session_id] = target
+                return create_api_response(msg, "menu_system", session_id)
             
         elif n_type == "menu_with_state":
             # set state AND return menu (which acts as prompt)
@@ -730,7 +791,7 @@ async def process_user_query(raw_query: str, session_id: str = None):
             rag_bot = get_or_init_rag_chain()
             
             # Inject Language Instruction
-            lang_code = SESSION_DATA.get(session_id, {}).get('language', 'en')
+            lang_code = get_session_language(session_id)
             lang_map = {"en": "English", "te": "Telugu", "hi": "Hindi"}
             lang_name = lang_map.get(lang_code, "English")
             
@@ -931,12 +992,13 @@ async def process_user_query(raw_query: str, session_id: str = None):
                      return create_api_response(f"❌ Error loading Mandal In-Charge menu: {str(e)}", "error_handler", session_id)
         
         elif current_state == MENU_GROUP_HELP:
+             lang = get_session_language(session_id)
              if choice == 1:
                  # Helpline Numbers
-                 return create_api_response("📞 **Helpline Numbers:**\n\nState Control Room: **040-12345678**\nWhatsApp Support: **+91-9876543210**", "static_info", session_id)
+                 return create_api_response(get_translation("TXT_HELPLINE", lang), "static_info", session_id)
              elif choice == 2:
                  # Email Support
-                 return create_api_response("📧 **Email Support:**\n\nPlease reach us at: **support@cmcup.telangana.gov.in**", "static_info", session_id)
+                 return create_api_response(get_translation("TXT_EMAIL_SUPPORT", lang), "static_info", session_id)
              elif choice == 3:
                  if session_id: SESSION_STATE[session_id] = MENU_LANGUAGE
                  return create_api_response(get_menu_data(MENU_LANGUAGE, session_id), "menu_system", session_id)
@@ -949,6 +1011,7 @@ async def process_user_query(raw_query: str, session_id: str = None):
         elif current_state == MENU_LANGUAGE:
             resp_text = ""
             lang_set = False
+            lang = get_session_language(session_id)  # Get current language for error messages
             
             if choice == 1:
                 # Set to English
@@ -962,17 +1025,22 @@ async def process_user_query(raw_query: str, session_id: str = None):
                 if session_id:
                     if session_id not in SESSION_DATA: SESSION_DATA[session_id] = {}
                     SESSION_DATA[session_id]["language"] = "te"
-                resp_text = "✅ **భాష తెలుగుకి మార్చబడింది** (Language set to Telugu)."
+                resp_text = "✅ **భాష తెలుగుకి మార్చబడింది**"
                 lang_set = True
             elif choice == 3:
                 # Set to Hindi
                 if session_id:
                     if session_id not in SESSION_DATA: SESSION_DATA[session_id] = {}
                     SESSION_DATA[session_id]["language"] = "hi"
-                resp_text = "✅ **भाषा हिंदी में सेट की गई है** (Language set to Hindi)."
+                resp_text = "✅ **भाषा हिंदी में सेट की गई है**"
                 lang_set = True
             else:
-                return create_api_response("❌ Invalid Option. Please select 1, 2, or 3.", "menu_system", session_id)
+                error_msgs = {
+                    "en": "❌ Invalid Option. Please select 1, 2, or 3.",
+                    "te": "❌ అవైధమైన ఎంపిక. దయచేసి 1, 2, లేదా 3 ఎంచుకోండి.",
+                    "hi": "❌ अमान्य विकल्प। कृपया 1, 2, या 3 चुनें।"
+                }
+                return create_api_response(error_msgs.get(lang, error_msgs["en"]), "menu_system", session_id)
             
             # Auto-Redirect to Main Menu if language changed
             if lang_set:
@@ -1057,7 +1125,7 @@ async def process_user_query(raw_query: str, session_id: str = None):
         # --- SUB MENU: REGISTRATION (PLAYER DETAILS) ---
         # --- SUB MENU: PLAYER STATUS ---
         elif current_state == MENU_PLAYER_STATUS:
-            lang = SESSION_DATA.get(session_id, {}).get("language", "en")
+            lang = get_session_language(session_id)
             if choice == 1:
                 # Search by Phone No
                 if session_id: SESSION_STATE[session_id] = STATE_WAIT_PHONE
@@ -1079,7 +1147,7 @@ async def process_user_query(raw_query: str, session_id: str = None):
         
         # --- SUB MENU: REG FAQ ---
         elif current_state == MENU_REG_FAQ:
-            lang = SESSION_DATA.get(session_id, {}).get("language", "en")
+            lang = get_session_language(session_id)
             
             if choice == 1: # How to Register
                 return create_api_response(get_translation("TXT_REG_HOWTO", lang), "static", session_id)
@@ -1097,7 +1165,7 @@ async def process_user_query(raw_query: str, session_id: str = None):
         # --- SUB MENU: SCHEDULE ---
         # --- SUB MENU: SCHEDULE ---
         elif current_state == MENU_SCHEDULE:
-            lang = SESSION_DATA.get(session_id, {}).get("language", "en")
+            lang = get_session_language(session_id)
             if choice == 1:
                 # Tournament Schedule (Localized)
                 return create_api_response(
@@ -1672,7 +1740,7 @@ async def process_user_query(raw_query: str, session_id: str = None):
         
         # Invoke Chain with History
         # Inject Language Instruction
-        lang_code = SESSION_DATA.get(session_id, {}).get('language', 'en')
+        lang_code = get_session_language(session_id)
         lang_map = {"en": "English", "te": "Telugu", "hi": "Hindi"}
         lang_name = lang_map.get(lang_code, "English")
         

@@ -431,6 +431,15 @@ MENU_TRANSLATIONS = {
     ("TXT_VENUE_LIST_HEADER", "te"): {"text": "### 🏟️ టోర్నమెంట్ వేదికలు\n\nఈ క్రింది వేదికలలో మ్యాచ్‌లు జరుగుతున్నాయి:\n\n", "buttons": []},
     ("TXT_VENUE_LIST_HEADER", "hi"): {"text": "### 🏟️ टूर्नामेंट के स्थान\n\nनिम्नलिखित स्थानों पर मैच आयोजित किए जा रहे हैं:\n\n", "buttons": []},
 
+    # --- HELPLINE & EMAIL ---
+    ("TXT_HELPLINE", "en"): {"text": "📞 **Helpline Numbers:**\n\n- General Enquiry: 7286851734", "buttons": []},
+    ("TXT_HELPLINE", "te"): {"text": "📞 **హెల్ప్‌లైన్ నంబర్లు:**\n\n- సాధారణ విచారణ: 7286851734", "buttons": []},
+    ("TXT_HELPLINE", "hi"): {"text": "📞 **हेल्पलाइन नंबर:**\n\n- सामान्य पूछताछ: 7286851734", "buttons": []},
+    
+    ("TXT_EMAIL_SUPPORT", "en"): {"text": "📧 **Email Support:**\n\n satgcmcup2026@gmail.com", "buttons": []},
+    ("TXT_EMAIL_SUPPORT", "te"): {"text": "📧 **ఇమెయిల్ మద్దతు:**\n\n satgcmcup2026@gmail.com", "buttons": []},
+    ("TXT_EMAIL_SUPPORT", "hi"): {"text": "📧 **ईमेल सहायता:**\n\n satgcmcup2026@gmail.com", "buttons": []},
+
     # --- GENERIC BACK ---
     ("BACK_TO_MAIN", "en"): {"text": "🔙 *Type 'Back' for Main Menu*", "buttons": [{"name": "Main Menu", "value": "Menu"}]},
     ("BACK_TO_MAIN", "te"): {"text": "🔙 *ప్రధాన మెనూకి 'Back' అని టైప్ చేయండి*", "buttons": [{"name": "Main Menu", "value": "Menu"}]},
