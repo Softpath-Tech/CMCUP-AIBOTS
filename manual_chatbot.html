@@ -4,7 +4,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chatbot UI (Manual)</title>
+    <title>Chatbot Blade Manual Test</title>
+</head>
+
+<body>
+
+    <!-- BEGIN COPIED CONTENT FROM chatbot.blade.php -->
     <style>
         /* Chatbot Container Styles */
         #chat-icon {
@@ -335,15 +340,6 @@
             background: rgba(255, 255, 255, 0.2);
         }
     </style>
-</head>
-
-<body style="background-color: #f0f2f5; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
-
-    <div style="text-align: center; margin-top: 50px;">
-        <h1>Chatbot UI (Manual Mode)</h1>
-        <p>This is the content from <code>chatbot.blade.php</code> running as a standalone file.</p>
-        <p>Click the purple icon in the bottom-right to start chatting!</p>
-    </div>
 
     <!-- Chat Icon -->
     <div id="chat-icon" onclick="toggleChat()">
@@ -633,8 +629,7 @@
                     throw new Error('Failed to get response from server');
                 }
 
-                const data = await response.json();
-                if (data.session_id) {
+                const data = await response.json(); if (data.session_id) {
                     currentSessionId = data.session_id;
                 }
                 // Handle the response - adjust based on your API response structure
@@ -667,6 +662,9 @@
                 input.focus();
             }
         }
+
+
+
     </script>
 </body>
 

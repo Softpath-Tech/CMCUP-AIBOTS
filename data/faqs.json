@@ -1,0 +1,44 @@
+{
+    "en": [
+        {
+            "question": "Is it free?",
+            "answer": "Yes."
+        },
+        {
+            "question": "Can I play multiple sports?",
+            "answer": "Yes, if schedules allow."
+        },
+        {
+            "question": "Where to report?",
+            "answer": "Check Venue details."
+        }
+    ],
+    "te": [
+        {
+            "question": "ఇది ఉచితమేనా?",
+            "answer": "అవును."
+        },
+        {
+            "question": "నేను బహుళ క్రీడలలో పాల్గొనవచ్చా?",
+            "answer": "అవును, షెడ్యూల్ అనుమతిస్తే."
+        },
+        {
+            "question": "ఎక్కడ రిపోర్ట్ చేయాలి?",
+            "answer": "వేదిక వివరాలను తనిఖీ చేయండి."
+        }
+    ],
+    "hi": [
+        {
+            "question": "क्या यह मुफ़्त है?",
+            "answer": "हाँ।"
+        },
+        {
+            "question": "क्या मैं कई खेल खेल सकता हूँ?",
+            "answer": "हाँ, यदि समय सारिणी अनुमति देती है।"
+        },
+        {
+            "question": "कहाँ रिपोर्ट करें?",
+            "answer": "स्थान विवरण देखें।"
+        }
+    ]
+}

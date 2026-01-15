@@ -286,7 +286,27 @@ def get_menu_data(menu_name, session_id=None):
     print(f"DEBUG: get_menu_data called with {menu_name} [Lang: {lang}]")
     
     # 2. Return Translation Dict
+    # 2. Return Translation Dict
     return get_translation(menu_name, lang)
+
+def get_msg(key, session_id, **kwargs):
+    """
+    Helper to get translated text with dynamic formatting.
+    """
+    lang = "en"
+    if session_id:
+        lang = SESSION_DATA.get(session_id, {}).get("language", "en")
+    
+    t = get_translation(key, lang)
+    text = t.get("text", "")
+    
+    if kwargs:
+        try:
+            text = text.format(**kwargs)
+        except Exception as e:
+            print(f"Error formatting message {key}: {e}")
+    return text
+
 
 def create_api_response(content, source="menu_system", session_id=None):
     """
@@ -311,14 +331,15 @@ def create_api_response(content, source="menu_system", session_id=None):
         "session_id": session_id
     }
 
-def format_registrations(registrations):
+def format_registrations(registrations, session_id=None):
     """
     Standardized formatting for player registration details.
     """
     if not registrations:
         return None
     
-    txt = "👤 **Player Details Found**\n\n"
+    header = get_msg("MSG_PLAYER_FOUND_HEADER", session_id)
+    txt = header # E.g. "👤 **Player Details Found**\n\n"
     
     for idx, rec in enumerate(registrations):
         name = rec.get('player_nm', 'N/A')
@@ -473,7 +494,7 @@ def get_discipline_response(level_num, session_id):
                 txt = f"### 🏅 Sports at {display_title}\n\nSelect a sport below:"
                 return create_api_response({"text": txt, "buttons": buttons}, "sql_database", session_id)
             else:
-                 return create_api_response(f"ℹ️ No sports found specifically for **{display_title}** in the database.", "sql_database", session_id)
+                 return create_api_response(get_msg("MSG_NO_SPORTS_LEVEL", session_id, level=display_title), "sql_database", session_id)
         except Exception as e:
             print(f"Error fetching disciplines: {e}")
             return create_api_response("❌ An error occurred while fetching disciplines. Please try again.", "error_handler", session_id)
@@ -493,7 +514,9 @@ async def process_user_query(raw_query: str, session_id: str = None):
     # Global Exit Commands
     if user_query in ["0", "exit", "quit"]:
          SESSION_STATE.pop(session_id, None)
-         return create_api_response("👋 Chat Session Ended. Type 'Hi' to start again.", "menu_system", session_id)
+    if user_query in ["0", "exit", "quit"]:
+         SESSION_STATE.pop(session_id, None)
+         return create_api_response(get_msg("MSG_SESSION_ENDED", session_id), "menu_system", session_id)
 
     # Global Reset (Home) Commands
     reset_cmds = ["hi", "hello", "menu", "start", "restart", "home", "cmcup", "main menu", "menu main", "main", "go to main menu"]
@@ -649,12 +672,12 @@ async def process_user_query(raw_query: str, session_id: str = None):
             registrations = get_player_venues_by_phone(phone)
             
             if registrations:
-                txt = format_registrations(registrations)
+                txt = format_registrations(registrations, session_id)
                 return create_api_response(txt, "sql_database", session_id)
             else:
-                return create_api_response(f"ℹ️ No registrations found for **{phone}**. Please check the number or register at the official site.", "sql_database", session_id)
+                return create_api_response(get_msg("ERR_NO_REGISTRATION", session_id, phone=phone), "sql_database", session_id)
         else:
-             return create_api_response("❌ Invalid Phone Number. Please enter a 10-digit mobile number starting with 6-9.\n\nType 'Back' to cancel.", "validation_error", session_id)
+             return create_api_response(get_msg("ERR_INVALID_PHONE", session_id), "validation_error", session_id)
     
     # State: WAITING FOR LOCATION
     if current_state == STATE_WAIT_LOCATION:
@@ -678,7 +701,7 @@ async def process_user_query(raw_query: str, session_id: str = None):
                 txt += "\n\nType another location to check, or 'Back'."
                 return create_api_response(txt, "sql_database", session_id)
             else:
-                return create_api_response(f"🚫 **{loc_name}** could not be found in our database.\n\nType another name or 'Back'.", "sql_database", session_id)
+                return create_api_response(get_msg("MSG_LOC_NOT_FOUND", session_id, name=loc_name), "sql_database", session_id)
         except Exception as e:
             return create_api_response(f"Error looking up location: {str(e)}", "error", session_id)
 
@@ -701,7 +724,7 @@ async def process_user_query(raw_query: str, session_id: str = None):
                  txt += f"👉 [View {disp_name} Schedule]({url})"
                  return create_api_response(txt, "sql_database", session_id)
              else:
-                 return create_api_response(f"ℹ️ No specific schedule found for **{sport_name}**. It might not be scheduled yet or check spelling.\n\nType another sport or 'Back'.", "sql_database", session_id)
+                 return create_api_response(get_msg("MSG_NO_SCHEDULE", session_id, name=sport_name), "sql_database", session_id)
         except Exception as e:
              return create_api_response(f"Error retrieving schedule: {str(e)}", "error", session_id)
 
@@ -721,7 +744,7 @@ async def process_user_query(raw_query: str, session_id: str = None):
                 txt += "Type another sport to check, or 'Back'."
                 return create_api_response(txt, "sql_database", session_id)
             else:
-                return create_api_response(f"ℹ️ Could not find rules for **{sport_input}**. Please check the spelling or try another sport.", "sql_database", session_id)
+                return create_api_response(get_msg("MSG_NO_RULES", session_id, name=sport_input), "sql_database", session_id)
         except Exception as e:
             return create_api_response(f"Error looking up age rules: {e}", "error", session_id)
 
@@ -784,7 +807,7 @@ async def process_user_query(raw_query: str, session_id: str = None):
             else:
                  # Keep state to try again
                  if session_id: SESSION_STATE[session_id] = STATE_WAIT_DIST_OFFICER
-                 return create_api_response(f"ℹ️ No District Sports Officer found for **{clean_dist}**. Please check the spelling or try another district.\n\nType another district or 'Back'.", "file_search", session_id)
+                 return create_api_response(get_msg("MSG_NO_DIST_OFFICER", session_id, district=clean_dist), "file_search", session_id)
         except Exception as e:
             return create_api_response(f"Error searching for district officer: {str(e)}", "error", session_id)
 
@@ -1443,7 +1466,7 @@ async def process_user_query(raw_query: str, session_id: str = None):
                 txt += f"**Round:** {res['round_name']}"
                 return create_api_response(txt, "sql_database", session_id)
             else:
-                 return create_api_response(f"❌ No match found with ID **{fid}**.", "sql_database", session_id)
+                 return create_api_response(get_msg("MSG_NO_MATCH_ID", session_id, id=fid), "sql_database", session_id)
         except Exception as e:
             print(f"SQL Error: {e}")
     sport_pattern_1 = r'(?:schedule|events|matches)\s*(?:for|of|in)?\s*([a-zA-Z\s]+)'
