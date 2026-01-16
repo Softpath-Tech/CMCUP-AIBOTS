@@ -124,8 +124,20 @@ GLOBAL_NAV_MAP = {
     "2.3": {"type": "menu", "target": MENU_MEDALS},
     
     # 2.2 Schedule Sub-menu
-    "2.2.1": {"type": "text", "msg": "🗓️ **Tournament Schedule**\n\n🔸 **Gram Panchayat / Cluster:** 17 Jan - 22 Jan 2026\n🔸 **Mandal Level:** 28 Jan - 31 Jan 2026\n🔸 **Assembly Constituency:** 03 Feb - 07 Feb 2026\n🔸 **District Level:** 10 Feb - 14 Feb 2026\n🔸 **State Level:** 19 Feb - 26 Feb 2026\n\n🔙 *Type 'Back' to return to Main Menu*"},
-    "2.2.2": {"type": "state_prompt", "target": STATE_WAIT_SPORT_SCHEDULE, "msg": "🏀 **Game Schedule Lookup**\n\nPlease enter the **Sport Name** (e.g., Cricket, Kabaddi)."},
+    "2.2.1": {"type": "text", "key": "TXT_TOURNAMENT_SCHEDULE"},
+    "2.2.2": {"type": "state_prompt", "target": STATE_WAIT_SPORT_SCHEDULE, "msg": "key:TXT_SCHEDULE_GAME_SEARCH_PROMPT"}, # Special Handling logic needed for msg=key:? Or just make logic handle it?
+    # Actually, logic at line 625 handles 'msg' as raw text. I should change 'msg' to 'key' implies logic change.
+    # Line 635: return create_api_response(msg...
+    # I cannot easily change logic for state_prompt cleanly without changing the handler.
+    # Let's use 'key' for state_prompt too?
+    # Handler for state_prompt (line 633):
+    # msg = nav["msg"]
+    # So I must update handler too if I want to use key.
+    
+    # Let's stick to updating GLOBAL_NAV to use 'key' where 'type' param allows it, BUT line 633 doesn't check 'key'.
+    # I will modify the handler logic in next step. For now, I put "key" here and will update handler.
+    
+    "2.2.2": {"type": "state_prompt", "target": STATE_WAIT_SPORT_SCHEDULE, "key": "TXT_SCHEDULE_GAME_SEARCH_PROMPT"},
 
     # 3. Venues
     "3.1": {"type": "menu", "target": MENU_VENUES}, 
@@ -134,14 +146,12 @@ GLOBAL_NAV_MAP = {
     "3.4": {"type": "menu_with_state", "target": "MENU_OFFICERS_MANDAL", "state": "STATE_WAIT_MANDAL_INCHARGE"},
 
     # 4. Player Status
-
-    # 4. Player Status
-    "4.1": {"type": "state_prompt", "target": STATE_WAIT_PHONE, "msg": "📱 **Search by Phone No**\n\nPlease enter your registered **Mobile Number** (10 digits)."},
-    "4.2": {"type": "state_prompt", "target": STATE_WAIT_ACK, "msg": "🔢 **Search by Acknowledgment No**\n\nPlease enter your **Acknowledgment Number** (e.g., SATGCMC-...)."},
+    "4.1": {"type": "state_prompt", "target": STATE_WAIT_PHONE, "key": "TXT_PLAYER_STATUS_PHONE_PROMPT"},
+    "4.2": {"type": "state_prompt", "target": STATE_WAIT_ACK, "key": "TXT_PLAYER_STATUS_ACK_PROMPT"},
 
     # 5. Help
-    "5.1": {"type": "text", "msg": "📞 **Helpline Numbers:**\n\n- General Enquiry: 7286851734"},
-    "5.2": {"type": "text", "msg": "📧 **Email Support:**\n\n satgcmcup2026@gmail.com"},
+    "5.1": {"type": "text", "key": "TXT_HELPLINE_ANSWER"},
+    "5.2": {"type": "text", "key": "TXT_EMAIL_ANSWER"},
     "5.3": {"type": "menu", "target": MENU_LANGUAGE},
 }
 STATE_WAIT_CLUSTER_INCHARGE = "STATE_WAIT_CLUSTER_INCHARGE"
@@ -170,10 +180,9 @@ PARENT_MAP = {
     STATE_WAIT_LOCATION: MENU_VENUES,     # Back to Venues menu
     STATE_WAIT_SPORT_SCHEDULE: MENU_SCHEDULE,
     STATE_WAIT_SPORT_RULES: MENU_MAIN, # Or relevant parent
-    STATE_WAIT_DIST_OFFICER: MENU_OFFICERS,
-    STATE_WAIT_DIST_OFFICER: MENU_OFFICERS,
-    STATE_WAIT_CLUSTER_INCHARGE: MENU_OFFICERS,
-    STATE_WAIT_MANDAL_INCHARGE: MENU_OFFICERS,
+    STATE_WAIT_DIST_OFFICER: MENU_GROUP_VENUES,
+    STATE_WAIT_CLUSTER_INCHARGE: MENU_GROUP_VENUES,
+    STATE_WAIT_MANDAL_INCHARGE: MENU_GROUP_VENUES,
     
     MENU_DISCIPLINES_LEVEL: MENU_MAIN,
     MENU_SELECT_SPORT: MENU_DISCIPLINES,  # Back to Level Selection
@@ -181,8 +190,8 @@ PARENT_MAP = {
     MENU_SCHEDULE_GAME_SEARCH: MENU_SCHEDULE, # Back to Schedules Menu
 
     # Officers Sub-menus
-    MENU_OFFICERS_DISTRICT: MENU_OFFICERS,
-    MENU_OFFICERS_CLUSTER: MENU_OFFICERS,
+    MENU_OFFICERS_DISTRICT: MENU_GROUP_VENUES,
+    MENU_OFFICERS_CLUSTER: MENU_GROUP_VENUES,
 
     # Intermediate Groups Back Pointers
     MENU_GROUP_SPORTS: MENU_MAIN,
@@ -603,7 +612,8 @@ async def process_user_query(raw_query: str, session_id: str = None):
             if not venues:
                  return create_api_response("ℹ️ No specific venue names are currently listed in the schedule.", "sql_database", session_id)
                  
-            txt = "### 🏟️ Tournament Venues\n\nThe following venues are hosting matches:\n\n"
+            lang = SESSION_DATA.get(session_id, {}).get("language", "en")     
+            txt = get_translation("TXT_VENUE_LIST_HEADER", lang)["text"]
             for v in venues[:50]:
                 txt += f"• **{v}**\n"
             
@@ -619,8 +629,10 @@ async def process_user_query(raw_query: str, session_id: str = None):
         
         if n_type == "text":
             # Return static text (either from key or msg)
+            lang = SESSION_DATA.get(session_id, {}).get("language", "en") if session_id else "en"
+            
             if "key" in nav:
-                return create_api_response(get_translation(nav["key"], session_id), "global_nav", session_id)
+                return create_api_response(get_translation(nav["key"], lang), "global_nav", session_id)
             else:
                 return create_api_response(nav["msg"], "global_nav", session_id)
                 
@@ -633,7 +645,15 @@ async def process_user_query(raw_query: str, session_id: str = None):
         elif n_type == "state_prompt":
             # set state and return prompt msg
             target = nav["target"]
-            msg = nav["msg"]
+            
+            # Use 'key' if available
+            if "key" in nav:
+                 lang = SESSION_DATA.get(session_id, {}).get("language", "en") if session_id else "en"
+                 msg = get_translation(nav["key"], lang) # Returns dict or text? get_translation returns dict {"text":..., "buttons":...}
+                 # create_api_response handles dict fine
+            else:
+                 msg = nav["msg"]
+
             if session_id: SESSION_STATE[session_id] = target
             return create_api_response(msg, "menu_system", session_id)
             
@@ -960,12 +980,13 @@ async def process_user_query(raw_query: str, session_id: str = None):
                      return create_api_response(f"❌ Error loading Mandal In-Charge menu: {str(e)}", "error_handler", session_id)
         
         elif current_state == MENU_GROUP_HELP:
+             lang = SESSION_DATA.get(session_id, {}).get("language", "en")
              if choice == 1:
                  # Helpline Numbers
-                 return create_api_response("📞 **Helpline Numbers:**\n\nState Control Room: **040-12345678**\nWhatsApp Support: **+91-9876543210**", "static_info", session_id)
+                 return create_api_response(get_translation("TXT_HELPLINE_ANSWER", lang), "static_info", session_id)
              elif choice == 2:
                  # Email Support
-                 return create_api_response("📧 **Email Support:**\n\nPlease reach us at: **support@cmcup.telangana.gov.in**", "static_info", session_id)
+                 return create_api_response(get_translation("TXT_EMAIL_ANSWER", lang), "static_info", session_id)
              elif choice == 3:
                  if session_id: SESSION_STATE[session_id] = MENU_LANGUAGE
                  return create_api_response(get_menu_data(MENU_LANGUAGE, session_id), "menu_system", session_id)
