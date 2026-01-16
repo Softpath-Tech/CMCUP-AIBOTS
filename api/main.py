@@ -353,38 +353,49 @@ def format_registrations(registrations, session_id=None):
     for idx, rec in enumerate(registrations):
         name = rec.get('player_nm', 'N/A')
         reg_id = rec.get('player_reg_id', 'N/A')
-        sport = rec.get('sport_name') or rec.get('event_name') or "Unknown Sport"
+        sport = rec.get('sport_name') or rec.get('event_name') or get_msg("TXT_UNKNOWN_SPORT", session_id) or "Unknown Sport"
         
         # Location
         loc_parts = [rec.get('villagename'), rec.get('mandalname'), rec.get('districtname')]
         loc_str = ", ".join([p for p in loc_parts if p]) or "N/A"
         
         # Status
-        status = "Cluster/Village Level"
-        if rec.get('is_state_level') == 1: status = "State Level"
-        elif rec.get('is_district_level') == 1: status = "District Level"
-        elif rec.get('is_mandal_level') == 1: status = "Mandal Level"
+        status = get_msg("TXT_LEVEL_CLUSTER", session_id) or "Cluster/Village Level"
+        if rec.get('is_state_level') == 1: status = get_msg("TXT_LEVEL_STATE", session_id) or "State Level"
+        elif rec.get('is_district_level') == 1: status = get_msg("TXT_LEVEL_DISTRICT", session_id) or "District Level"
+        elif rec.get('is_mandal_level') == 1: status = get_msg("TXT_LEVEL_MANDAL", session_id) or "Mandal Level"
 
-        venue = rec.get('venue') or "Venue 2" # Defaulting to User's example if missing? Actually using pendning/TBD is safer.
-        # However, the user example said: Venue: Venue 2
-        venue = rec.get('venue') or "Venue details pending/TBD"
+        venue_val = rec.get('venue')
+        venue = venue_val if venue_val and str(venue_val).lower() != 'nan' else (get_msg("TXT_VENUE_PENDING", session_id) or "Venue details pending/TBD")
         
-        date = rec.get('match_date') or "Check Schedule"
-        incharge = rec.get('cluster_incharge') or "0" # User example said Name: 0
+        date = rec.get('match_date') or get_msg("TXT_CHECK_SCHEDULE", session_id) or "Check Schedule"
+        incharge = rec.get('cluster_incharge') or "0" 
         contact = rec.get('incharge_mobile') or "N/A"
 
+        # Fetch Labels
+        lbl_name = get_msg("TXT_LABEL_NAME", session_id)
+        lbl_reg = get_msg("TXT_LABEL_REG_ID", session_id)
+        lbl_loc = get_msg("TXT_LABEL_LOCATION", session_id)
+        lbl_status = get_msg("TXT_LABEL_STATUS", session_id)
+        lbl_venue_det = get_msg("TXT_LABEL_VENUE_DETAILS", session_id)
+        lbl_sport = get_msg("TXT_LABEL_SPORT", session_id)
+        lbl_venue = get_msg("TXT_LABEL_VENUE", session_id)
+        lbl_date = get_msg("TXT_LABEL_DATE", session_id)
+        lbl_coach = get_msg("TXT_LABEL_COACH", session_id)
+        lbl_contact = get_msg("TXT_LABEL_CONTACT", session_id)
+
         entry = (
-            f"**Name:** {name}\n"
-            f"**Reg ID:** {reg_id}\n\n"
-            f"📍 **Location:** {loc_str}\n"
-            f"🏅 **Status:** {status}\n\n"
-            f"🏟️ **Venue Details:**\n"
-            f"Sport: {sport}\n"
-            f"Venue: {venue}\n"
-            f"Date: {date}\n\n"
-            f"👤 **Coach/Incharge:**\n"
-            f"Name: {incharge}\n"
-            f"Contact: {contact}"
+            f"{lbl_name} {name}\n"
+            f"{lbl_reg} {reg_id}\n\n"
+            f"{lbl_loc} {loc_str}\n"
+            f"{lbl_status} {status}\n\n"
+            f"{lbl_venue_det}\n"
+            f"{lbl_sport} {sport}\n"
+            f"{lbl_venue} {venue}\n"
+            f"{lbl_date} {date}\n\n"
+            f"{lbl_coach}\n"
+            f"Name: {incharge}\n"  # "Name" inside subgroup might need label too? using generic Name for now as it wasn't in list
+            f"{lbl_contact} {contact}"
         )
         
         if idx > 0:
@@ -483,12 +494,13 @@ def get_discipline_response(level_num, session_id):
         try:
             games = get_disciplines_by_level(level_name)
             
+            # Retrieve Localized Level Titles
             titles = {
-                "cluster": "Cluster / Gram Panchayat Level",
-                "mandal": "Mandal Level",
-                "assembly": "Assembly Constituency Level",
-                "district": "District Level",
-                "state": "State Level"
+                "cluster": get_msg("TXT_LEVEL_CLUSTER", session_id),
+                "mandal": get_msg("TXT_LEVEL_MANDAL", session_id),
+                "assembly": get_msg("TXT_LEVEL_ASSEMBLY", session_id),
+                "district": get_msg("TXT_LEVEL_DISTRICT", session_id),
+                "state": get_msg("TXT_LEVEL_STATE", session_id)
             }
             display_title = titles.get(level_name, level_name.title() + " Level")
 
@@ -500,7 +512,9 @@ def get_discipline_response(level_num, session_id):
 
                 buttons = [{"name": g, "value": str(i)} for i, g in enumerate(games, 1)]
                 
-                txt = f"### 🏅 Sports at {display_title}\n\nSelect a sport below:"
+                header = get_msg("TXT_SPORTS_AT_LEVEL", session_id, level=display_title)
+                prompt = get_msg("TXT_SELECT_SPORT_BELOW", session_id)
+                txt = f"### {header}\n\n{prompt}"
                 return create_api_response({"text": txt, "buttons": buttons}, "sql_database", session_id)
             else:
                  return create_api_response(get_msg("MSG_NO_SPORTS_LEVEL", session_id, level=display_title), "sql_database", session_id)
@@ -547,12 +561,38 @@ async def process_user_query(raw_query: str, session_id: str = None):
             except:
                 pass
 
+
         # If it's just a reset command, return menu immediately.
         if user_query in reset_cmds:
+            # Check if we are already at main menu and this is a redundant "back" or "menu"
+            # But usually we just show proper menu. 
+            # If the user says "back" but is at main menu?
+            # GLOBAL_NAV "back" isn't explicitly defined, it's usually dynamic.
+            # Wait, invalid logic in verification script implies "back" calls this block?
+            # "back" is NOT in reset_cmds list above (line 531).
+            # Ah, "back" logic is likely further down or implicitly handled?
+            # Let's check implicit "back" logic.
+            
             return create_api_response(get_menu_data(MENU_MAIN, session_id), "menu_system", session_id)
             
     # Get Current State
     current_state = SESSION_STATE.get(session_id, MENU_MAIN) if session_id else MENU_MAIN
+    
+    # Implicit "Back" Handling
+    if user_query in ["back", "go back", "return"]:
+        parent = PARENT_MAP.get(current_state)
+        if parent:
+            if session_id: SESSION_STATE[session_id] = parent
+            return create_api_response(get_menu_data(parent, session_id), "menu_system", session_id)
+        else:
+            # Already at root or no parent
+            # If at MENU_MAIN, say so
+            if current_state == MENU_MAIN:
+                return create_api_response(get_msg("MSG_ALREADY_MAIN_MENU", session_id), "menu_system", session_id)
+            else:
+                 # Default fallback to Main
+                 if session_id: SESSION_STATE[session_id] = MENU_MAIN
+                 return create_api_response(get_menu_data(MENU_MAIN, session_id), "menu_system", session_id)
         
     # Get Current State
     current_state = SESSION_STATE.get(session_id, MENU_MAIN) if session_id else MENU_MAIN
@@ -1045,13 +1085,15 @@ async def process_user_query(raw_query: str, session_id: str = None):
                 
                 # Dynamic Buttons for Game Options
                 buttons = [
-                    {"name": "Age Criteria", "value": "1"},
-                    {"name": "Events of the Game", "value": "2"},
-                    {"name": "Rules of Game", "value": "3"},
+                    {"name": get_msg("TXT_BTN_AGE_CRITERIA", session_id), "value": "1"},
+                    {"name": get_msg("TXT_BTN_GAME_EVENTS", session_id), "value": "2"},
+                    {"name": get_msg("TXT_BTN_RULES", session_id), "value": "3"},
                 ]
                 
+                txt = get_msg("TXT_GAME_OPTIONS_HEADER", session_id, sport=selected_sport)
+                
                 return create_api_response({
-                    "text": f"🏅 **{selected_sport}** - Options\n\nSelect an option below:",
+                    "text": txt,
                     "buttons": buttons
                 }, "menu_system", session_id)
             else:
@@ -1094,7 +1136,7 @@ async def process_user_query(raw_query: str, session_id: str = None):
                 )
 
             elif choice == 3: # Rules
-                 return create_api_response("📜 **Rules of Game**\n\nThe rulebook is currently being updated. Please check back later!", "static_placeholder", session_id)
+                 return create_api_response(get_msg("TXT_RULES_UPDATE_PENDING", session_id), "static_placeholder", session_id)
 
         # --- SUB MENU: REGISTRATION ---
         # --- SUB MENU: REGISTRATION (PLAYER DETAILS) ---
@@ -1358,7 +1400,7 @@ async def process_user_query(raw_query: str, session_id: str = None):
         registrations = get_player_venues_by_phone(phone)
         
         if registrations:
-            txt = format_registrations(registrations)
+            txt = format_registrations(registrations, session_id)
             return create_api_response(txt, "sql_database", session_id)
         else:
              return create_api_response(f"ℹ️ No registrations found for **{phone}**. Please check the number or register at the official site.", "sql_database", session_id)
@@ -1390,14 +1432,15 @@ async def process_user_query(raw_query: str, session_id: str = None):
                 sport = rec.get('sport_name') or rec.get('event_name')
                 
                 # Parse Level
-                level_str = "Cluster/Village Level"
-                if rec.get('is_state_level') == '1': level_str = "Selected for State Level 🏆"
-                elif rec.get('is_district_level') == '1': level_str = "Selected for District Level 🥇"
-                elif rec.get('is_mandal_level') == '1': level_str = "Selected for Mandal Level 🥈"
+                # Parse Level
+                level_str = get_msg("TXT_LEVEL_CLUSTER", session_id) or "Cluster/Village Level"
+                if rec.get('is_state_level') == '1': level_str = get_msg("TXT_SELECTED_STATE", session_id)
+                elif rec.get('is_district_level') == '1': level_str = get_msg("TXT_SELECTED_DISTRICT", session_id)
+                elif rec.get('is_mandal_level') == '1': level_str = get_msg("TXT_SELECTED_MANDAL", session_id)
                 
-                txt = f"### 👤 Player Details Found\n"
-                txt += f"**Name:** {rec.get('player_nm', 'N/A')}\n"
-                txt += f"**Reg ID:** {rec.get('player_reg_id', ack_no)}\n\n"
+                txt = get_msg("MSG_PLAYER_FOUND_HEADER", session_id)
+                txt += f"{get_msg('TXT_LABEL_NAME', session_id)} {rec.get('player_nm', 'N/A')}\n"
+                txt += f"{get_msg('TXT_LABEL_REG_ID', session_id)} {rec.get('player_reg_id', ack_no)}\n\n"
                 
                 # Format Location (Remove None/N/A)
                 loc_parts = [
@@ -1409,18 +1452,18 @@ async def process_user_query(raw_query: str, session_id: str = None):
                 clean_locs = [l for l in loc_parts if l and l.lower() not in ['none', 'n/a', '']]
                 location_str = ", ".join(clean_locs) if clean_locs else "Location Pending"
 
-                txt += f"**📍 Location:** {location_str}\n"
-                txt += f"**🏅 Status:** {level_str}\n\n"
+                txt += f"{get_msg('TXT_LABEL_LOCATION', session_id)} {location_str}\n"
+                txt += f"{get_msg('TXT_LABEL_STATUS', session_id)} {level_str}\n\n"
                 
-                txt += f"**🏟️ Venue Details:**\n"
-                txt += f"**Sport:** {sport}\n"
+                txt += f"{get_msg('TXT_LABEL_VENUE_DETAILS', session_id)}\n"
+                txt += f"{get_msg('TXT_LABEL_SPORT', session_id)} {sport}\n"
                 if venue:
-                    txt += f"**Venue:** {venue}\n"
-                    txt += f"**Date:** {rec.get('match_date') or 'Check Schedule'}\n"
+                    txt += f"{get_msg('TXT_LABEL_VENUE', session_id)} {venue}\n"
+                    txt += f"{get_msg('TXT_LABEL_DATE', session_id)} {rec.get('match_date') or get_msg('TXT_CHECK_SCHEDULE', session_id)}\n"
                 else:
-                    txt += "**Venue:** Not assigned yet.\n"
+                    txt += f"{get_msg('TXT_LABEL_VENUE', session_id)} {get_msg('TXT_NOT_ASSIGNED', session_id)}\n"
                     
-                txt += f"\n**👤 Coach/Incharge:**\n"
+                txt += f"\n{get_msg('TXT_LABEL_COACH', session_id)}\n"
                 
                 # HYBRID LOGIC: If SQL returns None for Incharge, ask RAG
                 incharge_name = rec.get('cluster_incharge')
@@ -1437,23 +1480,29 @@ async def process_user_query(raw_query: str, session_id: str = None):
                         if rec.get('mandalname'): rag_query += f"Mandal: {rec.get('mandalname')}, "
                         if rec.get('districtname'): rag_query += f"District: {rec.get('districtname')}?"
                         
-                        rag_resp = rag_bot.invoke({"question": rag_query})
+                        # Pass Language to RAG!
+                        lang_code = SESSION_DATA.get(session_id, {}).get('language', 'en')
+                        lang_map = {"en": "English", "te": "Telugu", "hi": "Hindi"}
+                        lang_name = lang_map.get(lang_code, "English")
+                        
+                        input_payload = {"question": rag_query, "language": lang_name}
+                        rag_resp = rag_bot.invoke(input_payload)
                         
                         # Extract simple text from chain response
                         rag_text = rag_resp.get('result', str(rag_resp)) if isinstance(rag_resp, dict) else str(rag_resp)
                         
                         # Filter out generic 'not found' messages to keep UI clean
                         if "couldn't find" in rag_text.lower() or "not available" in rag_text.lower():
-                             txt += "**Status:** To be assigned by District Sports Officer.\n"
+                             txt += f"{get_msg('TXT_LABEL_STATUS', session_id)} {get_msg('TXT_STATUS_ASSIGNED', session_id)}\n"
                         else:
-                             txt += f"*(Retrieved via AI)*: {rag_text}\n"
+                             txt += f"*{get_msg('TXT_RETRIEVED_AI', session_id)}*: {rag_text}\n"
 
                     except Exception as e:
                         print(f"Hybrid RAG Failed: {e}")
-                        txt += "**Status:** Contact District Helpdesk.\n"
+                        txt += f"{get_msg('TXT_LABEL_STATUS', session_id)} {get_msg('TXT_CONTACT_HELPDESK', session_id)}\n"
                 else:
-                    txt += f"**Name:** {incharge_name or 'N/A'}\n"
-                    txt += f"**Contact:** {incharge_contact or 'N/A'}\n"
+                    txt += f"Name: {incharge_name or 'N/A'}\n"
+                    txt += f"{get_msg('TXT_LABEL_CONTACT', session_id)} {incharge_contact or 'N/A'}\n"
                 
                 
                 return create_api_response(txt, "sql_database", session_id)
@@ -1653,7 +1702,10 @@ async def process_user_query(raw_query: str, session_id: str = None):
     if re.search(r"\b(born|birth)\b", original_query, re.IGNORECASE):
         print(f"🤖 Intent: Rule/Age Query (Triggering SQL Agent)")
         try:
-             sql_response = run_sql_agent(original_query)
+             lang_code = SESSION_DATA.get(session_id, {}).get('language', 'en')
+             lang_map = {"en": "English", "te": "Telugu", "hi": "Hindi"}
+             lang_name = lang_map.get(lang_code, "English")
+             sql_response = run_sql_agent(original_query, language=lang_name)
              if "I try to query" not in sql_response and "error" not in sql_response.lower():
                  return create_api_response(sql_response, "sql_agent", session_id)
         except Exception as e:
@@ -1664,7 +1716,10 @@ async def process_user_query(raw_query: str, session_id: str = None):
     if re.search(sql_intent_pattern, original_query, re.IGNORECASE):
         print(f"🤖 Intent: Complex/Agentic SQL Query")
         try:
-            sql_response = run_sql_agent(original_query)
+            lang_code = SESSION_DATA.get(session_id, {}).get('language', 'en')
+            lang_map = {"en": "English", "te": "Telugu", "hi": "Hindi"}
+            lang_name = lang_map.get(lang_code, "English")
+            sql_response = run_sql_agent(original_query, language=lang_name)
             # if agent fails to understand, it might return a generic error.
             # We can check specific error strings if we want to fallback to RAG.
             if "I try to query" not in sql_response and "error" not in sql_response.lower():
@@ -1695,9 +1750,9 @@ async def process_user_query(raw_query: str, session_id: str = None):
         lang_map = {"en": "English", "te": "Telugu", "hi": "Hindi"}
         lang_name = lang_map.get(lang_code, "English")
         
-        final_query = f"{original_query} (Answer in {lang_name} language)"
+        final_query = f"{original_query}" # Removed redundant instruction since we pass language param now
                      
-        input_payload = {"question": final_query, "chat_history": chat_history}
+        input_payload = {"question": final_query, "chat_history": chat_history, "language": lang_name}
         
         # rag.invoke now expects a dict because we updated chain.py
         response_data = rag.invoke(input_payload)
@@ -1763,3 +1818,5 @@ async def whatsapp_chat_endpoint(request: WhatsAppChatRequest):
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Processing Error: {str(e)}")
+
+# Trigger Reload: Fixed CSV Data

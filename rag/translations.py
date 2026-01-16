@@ -204,7 +204,7 @@ MENU_TRANSLATIONS = {
 
     # --- LIST MENUS (Disciplines) ---
     ("MENU_DISCIPLINES", "en"): {
-        "text": "📅 **2.1 Disciplines - Select Level**",
+        "text": "📅 **2.1 Sports Disciplines - Select Level**\n\nChoose a level to view sports:",
         "buttons": [
             {"name": "Gram Panchayat / Cluster Level", "value": "LEVEL_1"},
             {"name": "Mandal Level", "value": "LEVEL_2"},
@@ -214,7 +214,7 @@ MENU_TRANSLATIONS = {
         ]
     },
     ("MENU_DISCIPLINES", "te"): {
-        "text": "📅 **2.1 క్రీడా విభాగాలు - స్థాయిని ఎంచుకోండి**",
+        "text": "📅 **2.1 క్రీడా విభాగాలు - స్థాయిని ఎంచుకోండి**\n\nక్రీడలను వీక్షించడానికి స్థాయిని ఎంచుకోండి:",
         "buttons": [
             {"name": "గ్రామ పంచాయతీ / క్లస్టర్ స్థాయి", "value": "LEVEL_1"},
             {"name": "మండల స్థాయి", "value": "LEVEL_2"},
@@ -224,7 +224,7 @@ MENU_TRANSLATIONS = {
         ]
     },
     ("MENU_DISCIPLINES", "hi"): {
-        "text": "📅 **2.1 खेल विधाएं - स्तर चुनें**",
+        "text": "📅 **2.1 खेल विधाएं - स्तर चुनें**\n\nखेल देखने के लिए एक स्तर चुनें:",
         "buttons": [
             {"name": "ग्राम पंचायत / क्लस्टर स्तर", "value": "LEVEL_1"},
             {"name": "मंडल स्तर", "value": "LEVEL_2"},
@@ -477,6 +477,137 @@ MENU_TRANSLATIONS = {
     ("MSG_NO_MATCH_ID", "en"): {"text": "❌ No match found with ID **{id}**."},
     ("MSG_NO_MATCH_ID", "te"): {"text": "❌ ID **{id}** తో మ్యాచ్ కనుగొనబడలేదు."},
     ("MSG_NO_MATCH_ID", "hi"): {"text": "❌ ID **{id}** के साथ कोई मैच नहीं मिला।"},
+
+    ("MSG_ALREADY_MAIN_MENU", "en"): {"text": "You are already at the Main Menu."},
+    ("MSG_ALREADY_MAIN_MENU", "te"): {"text": "మీరు ఇప్పటికే ప్రధాన మెనూలో ఉన్నారు."},
+    ("MSG_ALREADY_MAIN_MENU", "hi"): {"text": "आप पहले से ही मुख्य मेनू में हैं।"},
+
+    # --- REGISTRATION DETAILS LABELS ---
+    ("TXT_LABEL_NAME", "en"): {"text": "**Name:**"},
+    ("TXT_LABEL_NAME", "te"): {"text": "**పేరు:**"},
+    ("TXT_LABEL_NAME", "hi"): {"text": "**नाम:**"},
+
+    ("TXT_LABEL_REG_ID", "en"): {"text": "**Reg ID:**"},
+    ("TXT_LABEL_REG_ID", "te"): {"text": "**రిజిస్ట్రేషన్ ID:**"},
+    ("TXT_LABEL_REG_ID", "hi"): {"text": "**पंजीकरण ID:**"},
+
+    ("TXT_LABEL_LOCATION", "en"): {"text": "📍 **Location:**"},
+    ("TXT_LABEL_LOCATION", "te"): {"text": "📍 **ప్రాంతం:**"},
+    ("TXT_LABEL_LOCATION", "hi"): {"text": "📍 **स्थान:**"},
+
+    ("TXT_LABEL_STATUS", "en"): {"text": "🏅 **Status:**"},
+    ("TXT_LABEL_STATUS", "te"): {"text": "🏅 **స్థితి:**"},
+    ("TXT_LABEL_STATUS", "hi"): {"text": "🏅 **स्थिति:**"},
+
+    ("TXT_LABEL_VENUE_DETAILS", "en"): {"text": "🏟️ **Venue Details:**"},
+    ("TXT_LABEL_VENUE_DETAILS", "te"): {"text": "🏟️ **వేదిక వివరాలు:**"},
+    ("TXT_LABEL_VENUE_DETAILS", "hi"): {"text": "🏟️ **स्थान विवरण:**"},
+
+    ("TXT_LABEL_SPORT", "en"): {"text": "Sport:"},
+    ("TXT_LABEL_SPORT", "te"): {"text": "క్రీడ:"},
+    ("TXT_LABEL_SPORT", "hi"): {"text": "खेल:"},
+
+    ("TXT_LABEL_VENUE", "en"): {"text": "Venue:"},
+    ("TXT_LABEL_VENUE", "te"): {"text": "వేదిక:"},
+    ("TXT_LABEL_VENUE", "hi"): {"text": "स्थान:"},
+
+    ("TXT_LABEL_DATE", "en"): {"text": "Date:"},
+    ("TXT_LABEL_DATE", "te"): {"text": "తేదీ:"},
+    ("TXT_LABEL_DATE", "hi"): {"text": "तारीख:"},
+
+    ("TXT_LABEL_COACH", "en"): {"text": "👤 **Coach/Incharge:**"},
+    ("TXT_LABEL_COACH", "te"): {"text": "👤 **కోచ్/ఇన్-ఛార్జ్:**"},
+    ("TXT_LABEL_COACH", "hi"): {"text": "👤 **कोच/इन-चार्ज:**"},
+
+    ("TXT_LABEL_CONTACT", "en"): {"text": "Contact:"},
+    ("TXT_LABEL_CONTACT", "te"): {"text": "సంప్రదించండి:"},
+    ("TXT_LABEL_CONTACT", "hi"): {"text": "संपर्क:"},
+
+    ("TXT_VENUE_PENDING", "en"): {"text": "Venue details pending/TBD"},
+    ("TXT_VENUE_PENDING", "te"): {"text": "వేదిక వివరాలు ఇంకా నిర్ణయించబడలేదు"},
+    ("TXT_VENUE_PENDING", "hi"): {"text": "स्थान विवरण लंबित/TBD"},
+
+    ("TXT_CHECK_SCHEDULE", "en"): {"text": "Check Schedule"},
+    ("TXT_CHECK_SCHEDULE", "te"): {"text": "షెడ్యూల్ తనిఖీ చేయండి"},
+    ("TXT_CHECK_SCHEDULE", "hi"): {"text": "अनुसूची जांचें"},
+
+    ("TXT_STATUS_ASSIGNED", "en"): {"text": "To be assigned by District Sports Officer."},
+    ("TXT_STATUS_ASSIGNED", "te"): {"text": "జిల్లా క్రీడా అధికారి ద్వారా కేటాయించబడుతుంది."},
+    ("TXT_STATUS_ASSIGNED", "hi"): {"text": "जिला खेल अधिकारी द्वारा आवंटित किया जाएगा।"},
+
+    ("TXT_CONTACT_HELPDESK", "en"): {"text": "Contact District Helpdesk."},
+    ("TXT_CONTACT_HELPDESK", "te"): {"text": "జిల్లా హెల్ప్‌డెస్క్‌ని సంప్రదించండి."},
+    ("TXT_CONTACT_HELPDESK", "hi"): {"text": "जिला हेल्पडेस्क से संपर्क करें।"},
+
+    ("TXT_SELECTED_STATE", "en"): {"text": "Selected for State Level 🏆"},
+    ("TXT_SELECTED_STATE", "te"): {"text": "రాష్ట్ర స్థాయికి ఎంపికయ్యారు 🏆"},
+    ("TXT_SELECTED_STATE", "hi"): {"text": "राज्य स्तर के लिए चयनित 🏆"},
+
+    ("TXT_SELECTED_DISTRICT", "en"): {"text": "Selected for District Level 🥇"},
+    ("TXT_SELECTED_DISTRICT", "te"): {"text": "జిల్లా స్థాయికి ఎంపికయ్యారు 🥇"},
+    ("TXT_SELECTED_DISTRICT", "hi"): {"text": "जिला स्तर के लिए चयनित 🥇"},
+
+    ("TXT_SELECTED_MANDAL", "en"): {"text": "Selected for Mandal Level 🥈"},
+    ("TXT_SELECTED_MANDAL", "te"): {"text": "మండల స్థాయికి ఎంపికయ్యారు 🥈"},
+    ("TXT_SELECTED_MANDAL", "hi"): {"text": "मंडल स्तर के लिए चयनित 🥈"},
+
+    ("TXT_NOT_ASSIGNED", "en"): {"text": "Not assigned yet."},
+    ("TXT_NOT_ASSIGNED", "te"): {"text": "ఇంకా కేటాయించబడలేదు."},
+    ("TXT_NOT_ASSIGNED", "hi"): {"text": "अभी आवंटित नहीं किया गया।"},
+
+    ("TXT_RETRIEVED_AI", "en"): {"text": "(Retrieved via AI)"},
+    ("TXT_RETRIEVED_AI", "te"): {"text": "(AI ద్వారా పొందబడింది)"},
+    ("TXT_RETRIEVED_AI", "hi"): {"text": "(AI के माध्यम से प्राप्त)"},
+
+    # --- LEVELS & DYNAMIC HEADERS ---
+    ("TXT_LEVEL_CLUSTER", "en"): {"text": "Cluster / Gram Panchayat Level"},
+    ("TXT_LEVEL_CLUSTER", "te"): {"text": "క్లస్టర్ / గ్రామ పంచాయతీ స్థాయి"},
+    ("TXT_LEVEL_CLUSTER", "hi"): {"text": "ग्राम पंचायत / क्लस्टर स्तर"},
+
+    ("TXT_LEVEL_MANDAL", "en"): {"text": "Mandal Level"},
+    ("TXT_LEVEL_MANDAL", "te"): {"text": "మండల స్థాయి"},
+    ("TXT_LEVEL_MANDAL", "hi"): {"text": "मंडल स्तर"},
+
+    ("TXT_LEVEL_ASSEMBLY", "en"): {"text": "Assembly Constituency Level"},
+    ("TXT_LEVEL_ASSEMBLY", "te"): {"text": "అసెంబ్లీ నియోజకవర్గ స్థాయి"},
+    ("TXT_LEVEL_ASSEMBLY", "hi"): {"text": "विधानसभा क्षेत्र स्तर"},
+
+    ("TXT_LEVEL_DISTRICT", "en"): {"text": "District Level"},
+    ("TXT_LEVEL_DISTRICT", "te"): {"text": "జిల్లా స్థాయి"},
+    ("TXT_LEVEL_DISTRICT", "hi"): {"text": "जिला स्तर"},
+
+    ("TXT_LEVEL_STATE", "en"): {"text": "State Level"},
+    ("TXT_LEVEL_STATE", "te"): {"text": "రాష్ట్ర స్థాయి"},
+    ("TXT_LEVEL_STATE", "hi"): {"text": "राज्य स्तर"},
+
+    ("TXT_SPORTS_AT_LEVEL", "en"): {"text": "🏅 Sports at **{level}**"},
+    ("TXT_SPORTS_AT_LEVEL", "te"): {"text": "🏅 **{level}** లో క్రీడలు"},
+    ("TXT_SPORTS_AT_LEVEL", "hi"): {"text": "🏅 **{level}** पर खेल"},
+
+    ("TXT_SELECT_SPORT_BELOW", "en"): {"text": "Select a sport below:"},
+    ("TXT_SELECT_SPORT_BELOW", "te"): {"text": "దిగువన ఉన్న క్రీడను ఎంచుకోండి:"},
+    ("TXT_SELECT_SPORT_BELOW", "hi"): {"text": "नीचे एक खेल चुनें:"},
+
+    # --- GAME OPTIONS BUTTONS ---
+    ("TXT_BTN_AGE_CRITERIA", "en"): {"text": "Age Criteria"},
+    ("TXT_BTN_AGE_CRITERIA", "te"): {"text": "వయో పరిమితి"},
+    ("TXT_BTN_AGE_CRITERIA", "hi"): {"text": "आयु मानदंड"},
+
+    ("TXT_BTN_GAME_EVENTS", "en"): {"text": "Events of the Game"},
+    ("TXT_BTN_GAME_EVENTS", "te"): {"text": "క్రీడా అంశాలు"},
+    ("TXT_BTN_GAME_EVENTS", "hi"): {"text": "खेल की स्पर्धाएं"},
+
+    ("TXT_BTN_RULES", "en"): {"text": "Rules of Game"},
+    ("TXT_BTN_RULES", "te"): {"text": "క్రీడా నియమాలు"},
+    ("TXT_BTN_RULES", "hi"): {"text": "खेल के नियम"},
+
+    ("TXT_GAME_OPTIONS_HEADER", "en"): {"text": "🏅 **{sport}** - Options\n\nSelect an option below:"},
+    ("TXT_GAME_OPTIONS_HEADER", "te"): {"text": "🏅 **{sport}** - ఎంపికలు\n\nదయచేసి ఎంపిక చేసుకోండి:"},
+    ("TXT_GAME_OPTIONS_HEADER", "hi"): {"text": "🏅 **{sport}** - विकल्प\n\nकृपया एक विकल्प चुनें:"},
+
+    ("TXT_RULES_UPDATE_PENDING", "en"): {"text": "📜 **Rules of Game**\n\nThe rulebook is currently being updated. Please check back later!"},
+    ("TXT_RULES_UPDATE_PENDING", "te"): {"text": "📜 **క్రీడా నియమాలు**\n\nనియమావళి ప్రస్తుతం అప్‌డేట్ చేయబడుతోంది. దయచేసి కాసేపటి తర్వాత తనిఖీ చేయండి!"},
+    ("TXT_RULES_UPDATE_PENDING", "hi"): {"text": "📜 **खेल के नियम**\n\nनियम पुस्तिका अभी अपडेट की जा रही है। कृपया बाद में चेक करें!"},
 }
 
 def get_translation(menu_key, lang_code, default_text=None):

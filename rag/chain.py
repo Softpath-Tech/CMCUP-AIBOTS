@@ -19,12 +19,13 @@ def get_rag_chain():
         question = input_dict["question"]
         context = input_dict["context"]
         chat_history = input_dict.get("chat_history", [])
+        language = input_dict.get("language", "English")
         
         # Call the manager which handles:
         # 1. Language Detection
         # 2. System Prompt Selection
         # 3. Model Fallback (Gemini -> OpenAI)
-        result = ask_llm(context, question, chat_history=chat_history)
+        result = ask_llm(context, question, chat_history=chat_history, language=language)
         return result
 
     # 4. Build Chain

@@ -18,23 +18,22 @@ def test_language_selection_failure():
     
     # 2. Go to Help (Option 5)
     resp = client.post("/chat", json={"query": "5", "session_id": session_id})
-    assert "Help & Language" in resp.json()["response"]
+    assert "Help & Language" in resp.json()["text"]
     
     # 3. Go to Language (Option 3)
     resp = client.post("/chat", json={"query": "3", "session_id": session_id})
-    assert "Select Language" in resp.json()["response"]
+    assert "Select Language" in resp.json()["text"]
     
     # 4. Select Telugu (Option 2) - This should fail currently
     resp = client.post("/chat", json={"query": "2", "session_id": session_id})
     data = resp.json()
-    print(f"Response: {data['response']}")
+    print(f"Response: {data.get('text', data)}")
     
-    # We expect this to contain confirmation of Telugu selection, but logic is missing so it might show RAG or Error
-    # For repro, we'll assert that it fails to show "Telugu"
-    if "Telugu" in data["response"] and "selected" in data["response"].lower():
-        print("UNEXPECTED: Language selection worked?")
+    # We expect this to contain confirmation of Telugu selection (Main Menu in Telugu)
+    if "స్వాగతం" in data.get("text", "") or "తెలంగాణ" in data.get("text", ""):
+        print("SUCCESS: Language selection worked! Telugu content found.")
     else:
-        print("CONFIRMED: Language selection failed as expected.")
+        print("FAILURE: Language selection failed. Content still English/Incorrect.")
 
 if __name__ == "__main__":
     test_language_selection_failure()

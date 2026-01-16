@@ -516,7 +516,7 @@
                 resetBtn.innerHTML = 'Main Menu';
                 resetBtn.style.color = '#d9534f';
                 resetBtn.style.borderColor = '#d9534f';
-                resetBtn.onclick = () => sendMessage('Hi', true);
+                resetBtn.onclick = () => sendMessage('Menu', true);
                 optionsDiv.appendChild(resetBtn);
                 hasButtons = true;
             }
@@ -594,9 +594,11 @@
 
         try {
             // Reset session if user types "Hi" (case-insensitive)
+            /*
             if (message.trim().toLowerCase() === 'hi') {
                 currentSessionId = null;
             }
+            */
 
             const payload = { query: message };
             if (currentSessionId) {

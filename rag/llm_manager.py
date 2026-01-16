@@ -160,11 +160,22 @@ def ask_llm(context: str, question: str, chat_history: list = [], language: str 
     """
     Orchestrates the LLM call with manual fallback.
     """
-    if not language:
+    # If language is not provided or explicitly "English" (default), try to detect from question
+    # But if specifically passed as None, we detect.
+    if not language or language == "en":
         try:
-            language = detect_language(question)
+            detected = detect_language(question)
+            # If we detected something other than English, use it.
+            if detected != "English":
+                language = detected
+            elif not language:
+                language = "English"
         except:
-            language = "English"
+            if not language: language = "English"
+            
+    # Map code to name if needed
+    lang_map = {"en": "English", "te": "Telugu", "hi": "Hindi"}
+    if language in lang_map: language = lang_map[language]
         
     system_prompt = get_system_prompt(language)
     

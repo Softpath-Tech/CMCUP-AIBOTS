@@ -41,7 +41,7 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import RunnablePassthrough
 
-def run_sql_agent(user_query: str):
+def run_sql_agent(user_query: str, language: str = "English"):
     """
     Executes a Text-to-SQL run using the secure view.
     """
@@ -160,7 +160,7 @@ def run_sql_agent(user_query: str):
                 result_str = df.to_markdown()
                 
         # 6. Final Answer Generation
-        final_template = """Based on the User Question and SQL Result, provide a natural language answer.
+        final_template = """Based on the User Question and SQL Result, provide a natural language answer in {language}.
         
         Question: {question}
         SQL Result: {result}
@@ -169,7 +169,7 @@ def run_sql_agent(user_query: str):
         
         final_prompt = ChatPromptTemplate.from_template(final_template)
         final_chain = final_prompt | llm | StrOutputParser()
-        final_answer = final_chain.invoke({"question": user_query, "result": result_str})
+        final_answer = final_chain.invoke({"question": user_query, "result": result_str, "language": language})
         
         return final_answer
         
