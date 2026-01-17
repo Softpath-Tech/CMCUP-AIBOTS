@@ -1087,7 +1087,6 @@ async def process_user_query(raw_query: str, session_id: str = None):
                 buttons = [
                     {"name": get_msg("TXT_BTN_AGE_CRITERIA", session_id), "value": "1"},
                     {"name": get_msg("TXT_BTN_GAME_EVENTS", session_id), "value": "2"},
-                    {"name": get_msg("TXT_BTN_RULES", session_id), "value": "3"},
                 ]
                 
                 txt = get_msg("TXT_GAME_OPTIONS_HEADER", session_id, sport=selected_sport)
