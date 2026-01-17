@@ -509,7 +509,7 @@ def get_discipline_response(level_num, session_id):
             return create_api_response("❌ An error occurred while fetching disciplines. Please try again.", "error_handler", session_id)
     return None
 
-async def process_user_query(raw_query: str, session_id: str = None):
+async def process_user_query(raw_query: str, session_id: str = None, phone_number: str = None):
     """
     Unified Logic Handler: Menu -> SQL -> RAG
     """
@@ -1103,6 +1103,24 @@ async def process_user_query(raw_query: str, session_id: str = None):
             lang = SESSION_DATA.get(session_id, {}).get("language", "en")
             if choice == 1:
                 # Search by Phone No
+                # Automated for WhatsApp users
+                if phone_number:
+                    # Sanitize phone number (take last 10 digits)
+                    clean_phone = re.sub(r'\D', '', phone_number)[-10:]
+                    print(f"⚡ Automated Phone Search for session {session_id} using {clean_phone}")
+                    
+                    try:
+                        registrations = get_player_venues_by_phone(clean_phone)
+                        if registrations:
+                            txt = format_registrations(registrations)
+                            if session_id: SESSION_STATE[session_id] = STATE_WAIT_PHONE # Set state so they can enter another phone if they want
+                            return create_api_response(txt, "sql_database", session_id)
+                        else:
+                             return create_api_response(f"ℹ️ No registrations found for **{clean_phone}**. Please check the number or register at the official site.", "sql_database", session_id)
+                    except Exception as e:
+                        print(f"Error in automated phone search: {e}")
+                        # Fallback to prompt if error
+                
                 if session_id: SESSION_STATE[session_id] = STATE_WAIT_PHONE
                 return create_api_response(get_translation("TXT_PLAYER_STATUS_PHONE_PROMPT", lang), "menu_system", session_id)
             elif choice == 2:
@@ -1758,7 +1776,7 @@ async def whatsapp_chat_endpoint(request: WhatsAppChatRequest):
 
     try:
         # Call the unified logic
-        return await process_user_query(user_message, session_id)
+        return await process_user_query(user_message, session_id, request.phone_number)
     except Exception as e:
         import traceback
         traceback.print_exc()
