@@ -426,13 +426,13 @@ MENU_TRANSLATIONS = {
 
     # --- DYNAMIC MESSAGES & ERRORS ---
     # --- HELPDESK ANSWERS ---
-    ("TXT_HELPLINE_ANSWER", "en"): {"text": "📞 **Helpline Numbers:**\n\nState Control Room: **040-12345678**\nWhatsApp Support: **+91-9876543210**", "buttons": []},
-    ("TXT_HELPLINE_ANSWER", "te"): {"text": "📞 **హెల్ప్‌లైన్ నంబర్లు:**\n\nరాష్ట్ర కంట్రోల్ రూమ్: **040-12345678**\nవాట్సాప్ మద్దతు: **+91-9876543210**", "buttons": []},
-    ("TXT_HELPLINE_ANSWER", "hi"): {"text": "📞 **हेल्पलाइन नंबर:**\n\nराज्य नियंत्रण कक्ष: **040-12345678**\nव्हाट्सएप सहायता: **+91-9876543210**", "buttons": []},
+    ("TXT_HELPLINE_ANSWER", "en"): {"text": "📞 **Helpline Numbers:** **+917286851734**", "buttons": []},
+    ("TXT_HELPLINE_ANSWER", "te"): {"text": "📞 **హెల్ప్‌లైన్ నంబర్లు:** **+917286851734**", "buttons": []},
+    ("TXT_HELPLINE_ANSWER", "hi"): {"text": "📞 **हेल्पलाइन नंबर:** **+917286851734**", "buttons": []},
 
-    ("TXT_EMAIL_ANSWER", "en"): {"text": "📧 **Email Support:**\n\nPlease reach us at: **support@cmcup.telangana.gov.in**", "buttons": []},
-    ("TXT_EMAIL_ANSWER", "te"): {"text": "📧 **ఇమెయిల్ మద్దతు:**\n\nదయచేసి మమ్మల్ని సంప్రదించండి: **support@cmcup.telangana.gov.in**", "buttons": []},
-    ("TXT_EMAIL_ANSWER", "hi"): {"text": "📧 **ईमेल सहायता:**\n\nकृपया हमसे संपर्क करें: **support@cmcup.telangana.gov.in**", "buttons": []},
+    ("TXT_EMAIL_ANSWER", "en"): {"text": "📧 **Email Support:**\n\nPlease reach us at: **satgcmcup2026@gmail.com**", "buttons": []},
+    ("TXT_EMAIL_ANSWER", "te"): {"text": "📧 **ఇమెయిల్ మద్దతు:**\n\nదయచేసి మమ్మల్ని సంప్రదించండి: **satgcmcup2026@gmail.com**", "buttons": []},
+    ("TXT_EMAIL_ANSWER", "hi"): {"text": "📧 **ईमेल सहायता:**\n\nकृपया हमसे संपर्क करें: **satgcmcup2026@gmail.com**", "buttons": []},
 
     ("MSG_SESSION_ENDED", "en"): {"text": "👋 Chat Session Ended. Type 'Hi' to start again."},
     ("MSG_SESSION_ENDED", "te"): {"text": "👋 చాట్ సెషన్ ముగిసింది. మళ్లీ ప్రారంభించడానికి 'Hi' అని టైప్ చేయండి."},
