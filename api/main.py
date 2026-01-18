@@ -107,7 +107,11 @@ STATE_WAIT_LOCATION = "STATE_WAIT_LOCATION"
 STATE_WAIT_SPORT_SCHEDULE = "STATE_WAIT_SPORT_SCHEDULE"
 STATE_WAIT_SPORT_RULES = "STATE_WAIT_SPORT_RULES"
 STATE_WAIT_SPORT_AGE = "STATE_WAIT_SPORT_AGE"
-STATE_WAIT_DIST_OFFICER = "STATE_WAIT_DIST_OFFICER"
+STATE_WAIT_DIST_OFFICER = "STATE_WAIT_DIST_OFFICER" # Deprecated/Old
+STATE_WAIT_VENUE_CLUSTER = "STATE_WAIT_VENUE_CLUSTER"
+STATE_WAIT_VENUE_MANDAL = "STATE_WAIT_VENUE_MANDAL"
+STATE_WAIT_VENUE_ASSEMBLY = "STATE_WAIT_VENUE_ASSEMBLY"
+STATE_WAIT_VENUE_DISTRICT = "STATE_WAIT_VENUE_DISTRICT"
 
 # GLOBAL NAVIGATION MAP
 GLOBAL_NAV_MAP = {
@@ -139,7 +143,14 @@ GLOBAL_NAV_MAP = {
     
     "2.2.2": {"type": "state_prompt", "target": STATE_WAIT_SPORT_SCHEDULE, "key": "TXT_SCHEDULE_GAME_SEARCH_PROMPT"},
 
-    # 3. Venues
+    # 3. Venues (New Structure)
+    "VENUE_CLUSTER": {"type": "state_prompt", "target": STATE_WAIT_VENUE_CLUSTER, "key": "TXT_VENUE_SEARCH_CLUSTER"},
+    "VENUE_MANDAL": {"type": "state_prompt", "target": STATE_WAIT_VENUE_MANDAL, "key": "TXT_VENUE_SEARCH_MANDAL"},
+    "VENUE_ASSEMBLY": {"type": "state_prompt", "target": STATE_WAIT_VENUE_ASSEMBLY, "key": "TXT_VENUE_SEARCH_ASSEMBLY"},
+    "VENUE_DISTRICT": {"type": "state_prompt", "target": STATE_WAIT_VENUE_DISTRICT, "key": "TXT_VENUE_SEARCH_DISTRICT"},
+    "VENUE_STATE": {"type": "text", "key": "TXT_VENUE_STATE_INFO"},
+
+    # Old keys kept for safety or if directly typed
     "3.1": {"type": "menu", "target": MENU_VENUES}, 
     "3.2": {"type": "menu_with_state", "target": "MENU_OFFICERS_DISTRICT", "state": STATE_WAIT_DIST_OFFICER},
     "3.3": {"type": "menu_with_state", "target": "MENU_OFFICERS_CLUSTER", "state": "STATE_WAIT_CLUSTER_INCHARGE"},
@@ -183,6 +194,12 @@ PARENT_MAP = {
     STATE_WAIT_DIST_OFFICER: MENU_GROUP_VENUES,
     STATE_WAIT_CLUSTER_INCHARGE: MENU_GROUP_VENUES,
     STATE_WAIT_MANDAL_INCHARGE: MENU_GROUP_VENUES,
+    
+    # New Venue States Back Pointers
+    STATE_WAIT_VENUE_CLUSTER: MENU_GROUP_VENUES,
+    STATE_WAIT_VENUE_MANDAL: MENU_GROUP_VENUES,
+    STATE_WAIT_VENUE_ASSEMBLY: MENU_GROUP_VENUES,
+    STATE_WAIT_VENUE_DISTRICT: MENU_GROUP_VENUES,
     
     MENU_DISCIPLINES_LEVEL: MENU_MAIN,
     MENU_SELECT_SPORT: MENU_DISCIPLINES,  # Back to Level Selection
@@ -831,7 +848,8 @@ async def process_user_query(raw_query: str, session_id: str = None):
              return create_api_response(f"Error retrieving rules: {str(e)}", "error", session_id)
 
     # State: WAITING FOR DISTRICT OFFICER
-    if current_state == STATE_WAIT_DIST_OFFICER:
+    # State: WAITING FOR DISTRICT OFFICER / VENUE
+    if current_state in [STATE_WAIT_DIST_OFFICER, STATE_WAIT_VENUE_DISTRICT]:
         district_name = user_query
         # Strip NLQ keywords for better match
         clean_dist = district_name.lower().replace("incharge", "").replace("officer", "").replace("district", "").strip()
@@ -855,7 +873,7 @@ async def process_user_query(raw_query: str, session_id: str = None):
                 # But we might want to allow "Back" to work. 
                 # If we keep STATE_WAIT_DIST_OFFICER, "Back" needs to be handled in main loop or here.
                 # "Back" is usually handled at top of process_user_query.
-                if session_id: SESSION_STATE[session_id] = STATE_WAIT_DIST_OFFICER # Fix for Sequential Lookup
+                if session_id: SESSION_STATE[session_id] = current_state # Keep current state
                 
                 # Format output properly
                 txt = f"### 👮‍♂️ District Sports Officer - {officer.get('district_name')}\n\n"
@@ -872,7 +890,8 @@ async def process_user_query(raw_query: str, session_id: str = None):
             return create_api_response(f"Error searching for district officer: {str(e)}", "error", session_id)
 
     # State: WAITING FOR CLUSTER INCHARGE
-    if current_state == STATE_WAIT_CLUSTER_INCHARGE:
+    # State: WAITING FOR CLUSTER INCHARGE / VENUE
+    if current_state in [STATE_WAIT_CLUSTER_INCHARGE, STATE_WAIT_VENUE_CLUSTER]:
         cluster_name = user_query
         print(f"⚡ Intent: Cluster In-Charge Lookup ({cluster_name})")
         
@@ -885,20 +904,44 @@ async def process_user_query(raw_query: str, session_id: str = None):
             
             if res:
                 # Keep state in WAITING mode to allow sequential lookups
-                if session_id: SESSION_STATE[session_id] = STATE_WAIT_CLUSTER_INCHARGE
+                if session_id: SESSION_STATE[session_id] = current_state
                 
                 t = res.get('type', 'Cluster')
                 d = res.get('data', {})
                 
-                if t == 'Village':
-                     txt = f"### 🏟️ Venue In-Charge (Village: {d.get('villagename')})\n"
-                     txt += f"mapped to **Cluster: {res.get('mapped_cluster')}**\n\n"
-                else:
-                     txt = f"### 🏟️ Venue In-Charge (Cluster: {d.get('clustername')})\n\n"
+                # Fetch Mandal Officer Details for the layout
+                mandal_name = d.get('mandal_name', '')
+                mandal_details = ""
                 
-                txt += f"**In-Charge:** {d.get('incharge_name')}\n"
-                txt += f"**Contact:** {d.get('mobile_no')}\n\n"
-                txt += "Type another Cluster/Village Name or 'Back'."
+                if mandal_name:
+                    try:
+                        from rag.location_search import search_mandal_incharge
+                        m_res = search_mandal_incharge(mandal_name)
+                        if m_res:
+                            mandal_details = f"\nMandal Officer Details:\nName: {m_res.get('incharge_name', 'N/A')}\nMobile: {m_res.get('mobile_no', 'N/A')}\n"
+                        else:
+                            mandal_details = f"\nMandal Officer Details:\nDetails not available for {mandal_name}\n"
+                    except Exception as e:
+                        print(f"Error fetching mandal details: {e}")
+                        mandal_details = "\nMandal Officer Details:\nError fetching details\n"
+
+                # Construct Response matching User Request
+                # Gram Panchayat / Cluster Level: Allikori
+                # Venue: ADILABAD
+                
+                cluster_display_name = d.get('clustername') or d.get('villagename') or cluster_name
+                venue_location = d.get('district_name') or "N/A" # User example showed District as Venue
+                
+                txt = f"Gram Panchayat / Cluster Level: {cluster_display_name}\n"
+                txt += f"Venue: {venue_location}\n\n"
+                
+                txt += "In-charge Details:\n"
+                txt += f"Name: {d.get('incharge_name', 'N/A')}\n"
+                txt += f"Mobile: {d.get('mobile_no', 'N/A')}\n"
+                
+                txt += mandal_details
+                
+                txt += "\nType another Cluster/Village Name or 'Back'."
                 return create_api_response(txt, "file_search", session_id)
             else:
                 return create_api_response(f"ℹ️ No Venue In-Charge found for **{cluster_name}**. Please check the spelling or try another cluster.\n\nType another cluster or 'Back'.", "file_search", session_id)
@@ -906,7 +949,8 @@ async def process_user_query(raw_query: str, session_id: str = None):
             return create_api_response(f"Error searching for cluster in-charge: {str(e)}", "error", session_id)
 
     # State: WAITING FOR MANDAL INCHARGE
-    if current_state == STATE_WAIT_MANDAL_INCHARGE:
+    # State: WAITING FOR MANDAL INCHARGE / VENUE
+    if current_state in [STATE_WAIT_MANDAL_INCHARGE, STATE_WAIT_VENUE_MANDAL]:
         mandal_name = user_query
         print(f"⚡ Intent: Mandal In-Charge Lookup ({mandal_name})")
         
@@ -918,7 +962,7 @@ async def process_user_query(raw_query: str, session_id: str = None):
             
             if res:
                 # Keep state in WAITING mode to allow sequential lookups
-                if session_id: SESSION_STATE[session_id] = STATE_WAIT_MANDAL_INCHARGE
+                if session_id: SESSION_STATE[session_id] = current_state
                 
                 txt = f"### 🏫 Mandal In-Charge (MEO) - {res.get('mandal_name')}\n\n"
                 txt += f"**Name:** {res.get('incharge_name')}\n"
@@ -930,6 +974,10 @@ async def process_user_query(raw_query: str, session_id: str = None):
                 return create_api_response(f"ℹ️ No Mandal In-Charge found for **{mandal_name}**. Please check the spelling or try another mandal.\n\nType another mandal or 'Back'.", "file_search", session_id)
         except Exception as e:
             return create_api_response(f"Error searching for mandal in-charge: {str(e)}", "error", session_id)
+
+    # State: WAITING FOR ASSEMBLY (Placeholder)
+    if current_state == STATE_WAIT_VENUE_ASSEMBLY:
+        return create_api_response("ℹ️ **Assembly Constituency Level** data is coming soon.\n\nPlease check back later or try another level.", "static_info", session_id)
 
     # State Handling Logic
     if user_query.isdigit():
@@ -999,7 +1047,7 @@ async def process_user_query(raw_query: str, session_id: str = None):
                     return create_api_response("ℹ️ No venue information found in the schedule database.", "sql_database", session_id)
             elif choice == 2:
                  try:
-                     if session_id: SESSION_STATE[session_id] = STATE_WAIT_DIST_OFFICER
+                     if session_id: SESSION_STATE[session_id] = current_state
                      return create_api_response(get_menu_data("MENU_OFFICERS_DISTRICT", session_id), "menu_system", session_id)
                  except Exception as e:
                      print(f"CRASH in Option 2: {e}")
