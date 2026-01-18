@@ -108,6 +108,10 @@ STATE_WAIT_SPORT_SCHEDULE = "STATE_WAIT_SPORT_SCHEDULE"
 STATE_WAIT_SPORT_RULES = "STATE_WAIT_SPORT_RULES"
 STATE_WAIT_SPORT_AGE = "STATE_WAIT_SPORT_AGE"
 STATE_WAIT_DIST_OFFICER = "STATE_WAIT_DIST_OFFICER"
+STATE_WAIT_VENUE_CLUSTER = "STATE_WAIT_VENUE_CLUSTER"
+STATE_WAIT_VENUE_MANDAL = "STATE_WAIT_VENUE_MANDAL"
+STATE_WAIT_VENUE_ASSEMBLY = "STATE_WAIT_VENUE_ASSEMBLY"
+STATE_WAIT_VENUE_DISTRICT = "STATE_WAIT_VENUE_DISTRICT"
 
 # GLOBAL NAVIGATION MAP
 GLOBAL_NAV_MAP = {
@@ -140,10 +144,16 @@ GLOBAL_NAV_MAP = {
     "2.2.2": {"type": "state_prompt", "target": STATE_WAIT_SPORT_SCHEDULE, "key": "TXT_SCHEDULE_GAME_SEARCH_PROMPT"},
 
     # 3. Venues
-    "3.1": {"type": "menu", "target": MENU_VENUES}, 
-    "3.2": {"type": "menu_with_state", "target": "MENU_OFFICERS_DISTRICT", "state": STATE_WAIT_DIST_OFFICER},
-    "3.3": {"type": "menu_with_state", "target": "MENU_OFFICERS_CLUSTER", "state": "STATE_WAIT_CLUSTER_INCHARGE"},
-    "3.4": {"type": "menu_with_state", "target": "MENU_OFFICERS_MANDAL", "state": "STATE_WAIT_MANDAL_INCHARGE"},
+    # 3. Venues & Officials (Updated Levels)
+    # The 'target' is the menu name, OR if it's a prompt, it's a state_prompt.
+    # MENU_GROUP_VENUES now has buttons: VENUE_LEVEL_1 to VENUE_LEVEL_5
+    
+    "VENUE_LEVEL_1": {"type": "state_prompt", "target": STATE_WAIT_VENUE_CLUSTER, "key": "TXT_VENUE_SEARCH_CLUSTER"},
+    "VENUE_LEVEL_2": {"type": "state_prompt", "target": STATE_WAIT_VENUE_MANDAL, "key": "TXT_VENUE_SEARCH_MANDAL"},
+    "VENUE_LEVEL_3": {"type": "state_prompt", "target": STATE_WAIT_VENUE_ASSEMBLY, "key": "TXT_VENUE_SEARCH_ASSEMBLY"},
+    "VENUE_LEVEL_4": {"type": "state_prompt", "target": STATE_WAIT_VENUE_DISTRICT, "key": "TXT_VENUE_SEARCH_DISTRICT"},
+    "VENUE_LEVEL_5": {"type": "text", "key": "TXT_VENUE_STATE_INFO"}, # State level is static info
+    "6": {"type": "menu", "target": MENU_MAIN}, # Option 6 Main Menu
 
     # 4. Player Status
     "4.1": {"type": "state_prompt", "target": STATE_WAIT_PHONE, "key": "TXT_PLAYER_STATUS_PHONE_PROMPT"},
@@ -191,7 +201,14 @@ PARENT_MAP = {
 
     # Officers Sub-menus
     MENU_OFFICERS_DISTRICT: MENU_GROUP_VENUES,
+    MENU_OFFICERS_DISTRICT: MENU_GROUP_VENUES,
     MENU_OFFICERS_CLUSTER: MENU_GROUP_VENUES,
+    
+    # New Venue States Back Pointers
+    STATE_WAIT_VENUE_CLUSTER: MENU_GROUP_VENUES,
+    STATE_WAIT_VENUE_MANDAL: MENU_GROUP_VENUES,
+    STATE_WAIT_VENUE_ASSEMBLY: MENU_GROUP_VENUES,
+    STATE_WAIT_VENUE_DISTRICT: MENU_GROUP_VENUES,
 
     # Intermediate Groups Back Pointers
     MENU_GROUP_SPORTS: MENU_MAIN,
@@ -931,6 +948,85 @@ async def process_user_query(raw_query: str, session_id: str = None):
         except Exception as e:
             return create_api_response(f"Error searching for mandal in-charge: {str(e)}", "error", session_id)
 
+    # State: WAITING FOR VENUE CLUSTER
+    if current_state == STATE_WAIT_VENUE_CLUSTER:
+        cluster_name = user_query
+        print(f"⚡ Intent: Venue Cluster Lookup ({cluster_name})")
+        try:
+            from rag.location_search import search_cluster_incharge
+            from api.venue_helpers import format_venue_response
+            
+            res = search_cluster_incharge(cluster_name)
+            if res:
+                # Keep state to allow retry? Or go back to menu?
+                # Usually keep state or reset? Let's keep state for now or go to menu.
+                # User might want to search another.
+                if session_id: SESSION_STATE[session_id] = STATE_WAIT_VENUE_CLUSTER
+                
+                txt = format_venue_response("Cluster", res.get('data', {}), session_id)
+                txt += "\n\nType another Cluster Name or 'Back'."
+                return create_api_response(txt, "file_search", session_id)
+            else:
+                 return create_api_response(f"ℹ️ No details found for Cluster **{cluster_name}**. Please check spelling.\n\nType another name or 'Back'.", "file_search", session_id)
+        except Exception as e:
+            return create_api_response(f"Error: {str(e)}", "error", session_id)
+
+    # State: WAITING FOR VENUE MANDAL
+    if current_state == STATE_WAIT_VENUE_MANDAL:
+        mandal_name = user_query
+        print(f"⚡ Intent: Venue Mandal Lookup ({mandal_name})")
+        try:
+            from rag.location_search import search_mandal_incharge
+            from api.venue_helpers import format_venue_response
+            
+            res = search_mandal_incharge(mandal_name)
+            if res:
+                if session_id: SESSION_STATE[session_id] = STATE_WAIT_VENUE_MANDAL
+                txt = format_venue_response("Mandal", res, session_id)
+                txt += "\n\nType another Mandal Name or 'Back'."
+                return create_api_response(txt, "file_search", session_id)
+            else:
+                return create_api_response(f"ℹ️ No details found for Mandal **{mandal_name}**. Please check spelling.\n\nType another name or 'Back'.", "file_search", session_id)
+        except Exception as e:
+            return create_api_response(f"Error: {str(e)}", "error", session_id)
+
+    # State: WAITING FOR VENUE ASSEMBLY
+    if current_state == STATE_WAIT_VENUE_ASSEMBLY:
+        assembly_name = user_query
+        print(f"⚡ Intent: Venue Assembly Lookup ({assembly_name})")
+        try:
+            from api.venue_helpers import search_assembly_incharge_helper, format_venue_response
+            
+            res = search_assembly_incharge_helper(assembly_name)
+            if res:
+                if session_id: SESSION_STATE[session_id] = STATE_WAIT_VENUE_ASSEMBLY
+                txt = format_venue_response("Assembly", res, session_id)
+                txt += "\n\nType another Assembly Name or 'Back'."
+                return create_api_response(txt, "file_search", session_id)
+            else:
+                return create_api_response(f"ℹ️ No details found for Assembly Constituency **{assembly_name}**.\n(Note: Specific Assembly Incharge data might be limited. Try checking District Level.)\n\nType another name or 'Back'.", "file_search", session_id)
+        except Exception as e:
+            return create_api_response(f"Error: {str(e)}", "error", session_id)
+
+    # State: WAITING FOR VENUE DISTRICT
+    if current_state == STATE_WAIT_VENUE_DISTRICT:
+        district_name = user_query
+        print(f"⚡ Intent: Venue District Lookup ({district_name})")
+        try:
+            from rag.location_search import search_district_officer
+            from api.venue_helpers import format_venue_response
+            
+            res = search_district_officer(district_name)
+            if res:
+                if session_id: SESSION_STATE[session_id] = STATE_WAIT_VENUE_DISTRICT
+                txt = format_venue_response("District", res, session_id)
+                txt += "\n\nType another District Name or 'Back'."
+                return create_api_response(txt, "file_search", session_id)
+            else:
+                return create_api_response(f"ℹ️ No details found for District **{district_name}**. Please check spelling.\n\nType another name or 'Back'.", "file_search", session_id)
+        except Exception as e:
+            return create_api_response(f"Error: {str(e)}", "error", session_id)
+
     # State Handling Logic
     if user_query.isdigit():
         choice = int(user_query)
@@ -971,53 +1067,34 @@ async def process_user_query(raw_query: str, session_id: str = None):
                 return create_api_response(get_menu_data(MENU_MEDALS, session_id), "menu_system", session_id)
 
         elif current_state == MENU_GROUP_VENUES:
-            # 1. Venues, 2. Dist Officers, 3. Cluster In-Charge
+            # New Structure:
+            # 1. Cluster, 2. Mandal, 3. Assembly, 4. District, 5. State, 6. Main
+            
             if choice == 1:
-                # LIST VENUES (Menu 3.1) - Dynamic Data
-                from rag.data_store import get_datastore
-                ds = get_datastore()
-                if not ds.initialized: ds.init_db()
-                
-                # Query distinct venues
-                lang = SESSION_DATA.get(session_id, {}).get("language", "en")
-                df = ds.query("SELECT DISTINCT venue FROM tb_fixtures WHERE venue IS NOT NULL AND venue != ''")
-                
-                if not df.empty:
-                    venues = [v['venue'] for v in df.to_dict(orient="records")]
-                    venues = sorted(list(set([v.strip() for v in venues if v and str(v).lower() != 'nan'])))
-                    
-                    if not venues:
-                         return create_api_response("ℹ️ No specific venue names are currently listed in the schedule.", "sql_database", session_id)
-                         
-                    txt = get_translation("TXT_VENUE_LIST_HEADER", lang)["text"]
-                    for v in venues[:50]:
-                        txt += f"• **{v}**\n"
-                    
-                    txt += "\nType a **Venue Name** or 'Back'."
-                    return create_api_response(txt, "sql_database", session_id)
-                else:
-                    return create_api_response("ℹ️ No venue information found in the schedule database.", "sql_database", session_id)
+                 # Cluster Level
+                 if session_id: SESSION_STATE[session_id] = STATE_WAIT_VENUE_CLUSTER
+                 return create_api_response(get_translation("TXT_VENUE_SEARCH_CLUSTER", SESSION_DATA.get(session_id, {}).get("language", "en")), "menu_system", session_id)
             elif choice == 2:
-                 try:
-                     if session_id: SESSION_STATE[session_id] = STATE_WAIT_DIST_OFFICER
-                     return create_api_response(get_menu_data("MENU_OFFICERS_DISTRICT", session_id), "menu_system", session_id)
-                 except Exception as e:
-                     print(f"CRASH in Option 2: {e}")
-                     return create_api_response(f"❌ Error loading District Officers menu: {str(e)}", "error_handler", session_id)
+                 # Mandal Level
+                 if session_id: SESSION_STATE[session_id] = STATE_WAIT_VENUE_MANDAL
+                 return create_api_response(get_translation("TXT_VENUE_SEARCH_MANDAL", SESSION_DATA.get(session_id, {}).get("language", "en")), "menu_system", session_id)
             elif choice == 3:
-                 try:
-                     if session_id: SESSION_STATE[session_id] = STATE_WAIT_CLUSTER_INCHARGE
-                     return create_api_response(get_menu_data("MENU_OFFICERS_CLUSTER", session_id), "menu_system", session_id)
-                 except Exception as e:
-                     print(f"CRASH in Option 3: {e}")
-                     return create_api_response(f"❌ Error loading Venue In-Charge menu: {str(e)}", "error_handler", session_id)
+                 # Assembly Level
+                 if session_id: SESSION_STATE[session_id] = STATE_WAIT_VENUE_ASSEMBLY
+                 return create_api_response(get_translation("TXT_VENUE_SEARCH_ASSEMBLY", SESSION_DATA.get(session_id, {}).get("language", "en")), "menu_system", session_id)
             elif choice == 4:
-                 try:
-                     if session_id: SESSION_STATE[session_id] = STATE_WAIT_MANDAL_INCHARGE
-                     return create_api_response(get_menu_data("MENU_OFFICERS_MANDAL", session_id), "menu_system", session_id)
-                 except Exception as e:
-                     print(f"CRASH in Option 4: {e}")
-                     return create_api_response(f"❌ Error loading Mandal In-Charge menu: {str(e)}", "error_handler", session_id)
+                 # District Level
+                 if session_id: SESSION_STATE[session_id] = STATE_WAIT_VENUE_DISTRICT
+                 return create_api_response(get_translation("TXT_VENUE_SEARCH_DISTRICT", SESSION_DATA.get(session_id, {}).get("language", "en")), "menu_system", session_id)
+            elif choice == 5:
+                 # State Level (Static Info)
+                 return create_api_response(get_translation("TXT_VENUE_STATE_INFO", SESSION_DATA.get(session_id, {}).get("language", "en")), "static_info", session_id)
+            elif choice == 6:
+                 # Main Menu
+                 if session_id: SESSION_STATE[session_id] = MENU_MAIN
+                 return create_api_response(get_menu_data(MENU_MAIN, session_id), "menu_system", session_id)
+            else:
+                 return create_api_response("❌ Invalid Option. Please select a number from 1 to 6.", "menu_system", session_id)
         
         elif current_state == MENU_GROUP_HELP:
              lang = SESSION_DATA.get(session_id, {}).get("language", "en")
